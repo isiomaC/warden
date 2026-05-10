@@ -1,0 +1,11 @@
+{
+  "name": "@wardenlabs/mcp-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/gateway.ts",
+  "dependencies": {
+    "@wardenlabs/core": "*",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.warden/ledger.db
+.env
+*.log
+docs/
+agents/
+dispatch/
+AGENTS.md

@@ -1,0 +1,8 @@
+{
+  "name": "@wardenlabs/opencode-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./warden-plugin.ts",
+  "description": "Warden security plugin for OpenCode — policy enforcement, injection scanning, permission control"
+}

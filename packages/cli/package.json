@@ -1,0 +1,11 @@
+{
+  "name": "@wardenlabs/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@wardenlabs/core": "*",
+    "citty": "^0.1.6"
+  }
+}
