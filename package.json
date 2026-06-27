@@ -5,7 +5,8 @@
     "packages/core",
     "packages/hook-server",
     "packages/mcp-gateway",
-    "packages/cli"
+    "packages/cli",
+    "packages/opencode-plugin"
   ],
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

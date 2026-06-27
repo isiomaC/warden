@@ -20,5 +20,5 @@
     "types": ["vitest/globals"]
   },
   "include": ["packages/**/*.ts"],
-  "exclude": ["node_modules", "dist", "packages/opencode-plugin/warden-plugin.ts"]
+  "exclude": ["node_modules", "dist"]
 }
