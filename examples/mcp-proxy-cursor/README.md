@@ -152,5 +152,5 @@ Demo: Simulating 3 tool calls through Warden policy engine
 ## Docs
 
 - [Warden README](../../README.md) — project overview, architecture, quick start
-- [Plan V2](../../docs/planV2.md) — authoritative implementation spec
+- [Plan V2](../../docs/internal/docs/internal/planV2.md) — authoritative implementation spec
 - [Claude Code Example](../claude-code-basic/) — hook server integration

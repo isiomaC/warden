@@ -2,12 +2,12 @@
 
 ## What This Repo Is
 
-A monorepo for **Warden** — a security layer for Claude Code / MCP-connected AI agents. Built with Bun + TypeScript strict mode. See `README.md` for usage, `docs/planV2.md` for the implementation spec.
+A monorepo for **Warden** — a security layer for Claude Code / MCP-connected AI agents. Built with Bun + TypeScript strict mode. See `README.md` for usage, `docs/internal/docs/internal/planV2.md` for the implementation spec.
 
 ## Authoritative Spec
 
-- **`docs/planV2.md`** is the canonical implementation spec. Every architectural decision in it is a hard requirement. The implementing agent must follow its patterns and never deviate without flagging a conflict.
-- `docs/planV1.md` is the earlier draft — superseded, retained for reference only.
+- **`docs/internal/docs/internal/planV2.md`** is the canonical implementation spec. Every architectural decision in it is a hard requirement. The implementing agent must follow its patterns and never deviate without flagging a conflict.
+- `docs/internal/planV1.md` is the earlier draft — superseded, retained for reference only.
 
 ## Multi-Agent Workflow
 
@@ -27,7 +27,7 @@ Agents are defined in `agents/*.agent.md`. Each has a specific role and phase:
 
 Dispatch templates in `dispatch/*.md` are designed to be pasted into OpenCode's `task` tool as prompts for subagent invocations.
 
-## Tech Stack (Locked — from docs/planV2.md)
+## Tech Stack (Locked — from docs/internal/docs/internal/planV2.md)
 
 - **Runtime:** Bun + TypeScript strict mode (no `any`, no implicit returns)
 - **HTTP server:** Hono ^4 (hook server on localhost:7429)
@@ -43,7 +43,7 @@ Dispatch templates in `dispatch/*.md` are designed to be pasted into OpenCode's 
 
 ## Key Architectural Invariants
 
-From docs/planV2.md § "Architectural Commandments":
+From docs/internal/docs/internal/planV2.md § "Architectural Commandments":
 
 1. **DENY is the default.** Every unmatched policy case returns DENY. No implicit ALLOW.
 2. **No LLM in the security path.** Policy engine and hook handlers are pure deterministic code.
@@ -58,7 +58,7 @@ From docs/planV2.md § "Architectural Commandments":
 
 ## Implementation Order
 
-Build in this exact sequence to avoid forward dependencies (from docs/planV2.md § "Implementation Sequence"):
+Build in this exact sequence to avoid forward dependencies (from docs/internal/docs/internal/planV2.md § "Implementation Sequence"):
 
 1. `packages/core/src/errors.ts` → `trust.ts` → `redact.ts` → `ledger.ts` → `policy.ts` → `vault.ts` → `context.ts` → `scanner.ts` → `pins.ts` → `supply-chain.ts` → core tests
 2. `packages/hook-server/` — middleware first, then handlers, then approvals, then server
@@ -86,4 +86,4 @@ All sub-agents must run these before reporting done:
 
 ## Package Name
 
-`@warden/sdk` (from docs/planV2.md). Not `@openclaw/guard` — that was the V1 name, now superseded.
+`@warden/sdk` (from docs/internal/docs/internal/planV2.md). Not `@openclaw/guard` — that was the V1 name, now superseded.

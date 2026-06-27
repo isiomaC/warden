@@ -63,7 +63,7 @@ These are **hard requirements**. PRs that violate them will not be merged.
 
 ### Architecture
 
-- Follow the implementation order in `planV2.md`. Do not introduce forward dependencies.
+- Follow the implementation order in `docs/internal/planV2.md`. Do not introduce forward dependencies.
 - Respect the 10 architectural invariants (see `README.md`). DENY is always the default.
 - Policy engine and hook handlers are **pure deterministic code** — no LLM calls in the security path.
 
@@ -91,7 +91,7 @@ These are **hard requirements**. PRs that violate them will not be merged.
 5. **Open the PR** against `main`. The CI will run typecheck and tests automatically.
 
 6. **One approval required.** A maintainer must review and approve before merge. The reviewer follows a two-stage process:
-   - Stage 1: spec compliance (does it match `planV2.md`?)
+   - Stage 1: spec compliance (does it match `docs/internal/planV2.md`?)
    - Stage 2: code quality (standards, tests, architecture)
 
 7. **Merge.** Once approved and CI is green, a maintainer will merge.

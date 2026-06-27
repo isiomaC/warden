@@ -19,7 +19,7 @@ Warden is a security layer. A missing test for a policy decision, injection patt
 
 If you add a policy rule, add a test. If you add an injection pattern, add a test. If you add a hook handler, add an integration test. **Tests are not optional — they are the specification.**
 
-> See `docs/planV2.md` § "Testing Strategy" for the authoritative testing requirements.
+> See `docs/internal/docs/internal/planV2.md` § "Testing Strategy" for the authoritative testing requirements.
 
 ---
 

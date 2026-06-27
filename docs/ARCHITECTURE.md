@@ -376,7 +376,7 @@ policies:
 
 ## Implementation Order
 
-Matching the phases defined in `docs/ENTERPRISE_ROADMAP.md`:
+Matching the phases defined in `docs/internal/ENTERPRISE_ROADMAP.md`:
 
 ### Phase 1: Solidify Model A
 - `SqliteLedgerStore` -- persistent local storage

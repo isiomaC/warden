@@ -144,6 +144,6 @@ Trust flows downward only. EXTERNAL content can never be promoted upward.
 ## Next Steps
 
 - See [`README.md`](../../README.md) for the full project overview
-- See [`docs/planV2.md`](../../docs/planV2.md) for the authoritative implementation spec
+- See [`docs/internal/docs/internal/planV2.md`](../../docs/internal/docs/internal/planV2.md) for the authoritative implementation spec
 - For programmatic MCP gateway usage: use `@warden/mcp-gateway` (wraps real MCP servers)
 - For hook server integration: see the CLI `warden start` command
