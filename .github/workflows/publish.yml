@@ -1,0 +1,74 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Build, Test & Publish
+    runs-on: ubuntu-latest
+    environment: npm-release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npx vitest run
+
+      # ── Build in dependency order ──────────────────────────────────
+
+      - name: Build @wardenlabs/core
+        run: cd packages/core && npx tsc && cd ../..
+
+      - name: Build @wardenlabs/hook-server
+        run: cd packages/hook-server && npx tsc && cd ../..
+
+      - name: Build @wardenlabs/mcp-gateway
+        run: cd packages/mcp-gateway && npx tsc && cd ../..
+
+      - name: Build @wardenlabs/cli
+        run: cd packages/cli && npx tsc && cd ../..
+
+      # ── Publish in dependency order ────────────────────────────────
+
+      - name: Publish @wardenlabs/core
+        run: npm publish --provenance --access public
+        working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @wardenlabs/hook-server
+        run: npm publish --provenance --access public
+        working-directory: packages/hook-server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @wardenlabs/mcp-gateway
+        run: npm publish --provenance --access public
+        working-directory: packages/mcp-gateway
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @wardenlabs/cli
+        run: npm publish --provenance --access public
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

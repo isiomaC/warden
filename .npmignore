@@ -1,0 +1,8 @@
+docs/internal/
+.github/
+agents/
+dispatch/
+*.test.ts
+tests/
+vitest.config.ts
+tsconfig.json

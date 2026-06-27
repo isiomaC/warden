@@ -1,0 +1,44 @@
+# Dependencies (installed fresh in build)
+node_modules/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Runtime state (created fresh per container)
+.warden/
+*.log
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Documentation (not needed in image)
+docs/
+AGENTS.md
+agents/
+dispatch/
+CHECKLIST.md
+README.md
+*.md
+
+# Test files
+packages/*/tests/
+**/*.test.ts
+**/*.spec.ts
+vitest.config.ts
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# CI
+.github/

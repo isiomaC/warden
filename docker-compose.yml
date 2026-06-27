@@ -1,0 +1,22 @@
+services:
+  warden:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: warden-hook-server
+    ports:
+      - "7429:7429"
+    volumes:
+      # Mount config as read-only — create warden.config.yml first with 'warden init'
+      - ./warden.config.yml:/app/warden.config.yml:ro
+      # Persist ledger database and vault secrets
+      - ./.warden:/app/.warden
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD", "bun", "-e", "try{const r=await fetch('http://localhost:7429/health');process.exit(r.ok?0:1)}catch(_){process.exit(1)}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
