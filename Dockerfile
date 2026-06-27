@@ -12,32 +12,28 @@ COPY packages/opencode-plugin/package.json packages/opencode-plugin/
 
 RUN npm ci
 
-# Copy source and compile
+# Copy source and type-check
 COPY . .
-RUN npx tsc -p packages/core/tsconfig.json
-RUN npx tsc -p packages/hook-server/tsconfig.json
-RUN npx tsc -p packages/mcp-gateway/tsconfig.json
-RUN npx tsc -p packages/cli/tsconfig.json
+RUN npx tsc --noEmit
 
 # ---- Runtime Stage ----
 FROM node:22-slim AS runtime
 WORKDIR /app
 
-# Copy installed dependencies (production only)
+# Copy installed dependencies
 COPY --from=build /app/node_modules ./node_modules
 
-# Copy compiled output per package
-COPY --from=build /app/packages/core/dist ./packages/core/dist
-COPY --from=build /app/packages/core/package.json ./packages/core/package.json
-COPY --from=build /app/packages/hook-server/dist ./packages/hook-server/dist
-COPY --from=build /app/packages/hook-server/package.json ./packages/hook-server/package.json
-COPY --from=build /app/packages/mcp-gateway/dist ./packages/mcp-gateway/dist
-COPY --from=build /app/packages/mcp-gateway/package.json ./packages/mcp-gateway/package.json
-COPY --from=build /app/packages/cli/dist ./packages/cli/dist
-COPY --from=build /app/packages/cli/package.json ./packages/cli/package.json
-
-# Copy root package.json for workspace resolution
+# Copy source code (tsx runs TypeScript directly)
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/packages/core/src ./packages/core/src
+COPY --from=build /app/packages/core/package.json ./packages/core/package.json
+COPY --from=build /app/packages/hook-server/src ./packages/hook-server/src
+COPY --from=build /app/packages/hook-server/package.json ./packages/hook-server/package.json
+COPY --from=build /app/packages/mcp-gateway/src ./packages/mcp-gateway/src
+COPY --from=build /app/packages/mcp-gateway/package.json ./packages/mcp-gateway/package.json
+COPY --from=build /app/packages/cli/src ./packages/cli/src
+COPY --from=build /app/packages/cli/package.json ./packages/cli/package.json
 
 # Create persistent data directory
 RUN mkdir -p .warden && chown -R node:node /app
@@ -52,8 +48,8 @@ EXPOSE 7429
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://localhost:7429/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Start the hook server
-CMD ["node", "packages/cli/dist/src/bin.js", "start", \
+# Start the hook server via tsx (TypeScript runner)
+CMD ["npx", "tsx", "packages/cli/src/bin.ts", "start", \
      "--config", "warden.config.yml", \
      "--db", ".warden/ledger.db", \
      "--port", "7429"]
