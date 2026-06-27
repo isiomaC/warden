@@ -5,8 +5,8 @@ export type PolicyAction = "ALLOW" | "DENY" | "CONFIRM" | "QUARANTINE";
 export type PolicyDecision =
   | { action: "ALLOW"; reason: string }
   | { action: "DENY"; reason: string }
-  | { action: "CONFIRM"; reason: string; channel: "telegram" | "slack" | "stdout" }
-  | { action: "QUARANTINE"; reason: string; strippedContext: string[] };
+  | { action: "CONFIRM"; reason: string; channel: "telegram" | "slack" | "stdout" | "webhook" }
+  | { action: "QUARANTINE"; reason: string; strippedContext: string[]; updatedInput?: Record<string, unknown>; additionalContext?: string };
 
 export interface PolicyRule {
   id: string;
@@ -22,7 +22,9 @@ export interface PolicyRule {
     tool?: string;
   };
   action: PolicyAction;
-  channel?: "telegram" | "slack" | "stdout";
+  channel?: "telegram" | "slack" | "stdout" | "webhook";
+  webhookUrl?: string;
+  pollUrl?: string;
   timeoutSeconds?: number;
 }
 
