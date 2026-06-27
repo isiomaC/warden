@@ -21,7 +21,17 @@ export interface WardenConfig {
   };
 }
 
-export class ContextManager {
+export interface ContextStore {
+  createTask(sessionId: string, ttlMinutes?: number): TaskContext;
+  getTask(taskId: string): TaskContext | undefined;
+  recordToolCall(taskId: string, serverName: string): void;
+  checkLateralMovement(taskId: string, config: WardenConfig): boolean;
+  expireTask(taskId: string): void;
+  expireAllForSession(sessionId: string): void;
+  listActiveTasks?(): TaskContext[];
+}
+
+export class ContextManager implements ContextStore {
   private contexts = new Map<string, TaskContext>();
 
   createTask(sessionId: string, ttlMinutes = 30): TaskContext {
@@ -79,5 +89,12 @@ export class ContextManager {
         this.contexts.delete(id);
       }
     }
+  }
+
+  listActiveTasks(): TaskContext[] {
+    const now = new Date();
+    return Array.from(this.contexts.values()).filter(
+      (ctx) => now <= new Date(ctx.expiresAt),
+    );
   }
 }

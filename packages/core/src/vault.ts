@@ -28,6 +28,8 @@ export interface VaultAdapter {
   verifyToken(tokenId: string): TaskToken | null;
   revokeToken(tokenId: string): void;
   revokeAllForSession(sessionId: string): void;
+  tokenCount?(): number;
+  revokedCount?(): number;
 }
 
 export class LocalVault implements VaultAdapter {
@@ -84,5 +86,17 @@ export class LocalVault implements VaultAdapter {
         this.tokens.set(id, token);
       }
     }
+  }
+
+  tokenCount(): number {
+    return this.tokens.size;
+  }
+
+  revokedCount(): number {
+    let count = 0;
+    for (const token of this.tokens.values()) {
+      if (token.revoked) count++;
+    }
+    return count;
   }
 }
