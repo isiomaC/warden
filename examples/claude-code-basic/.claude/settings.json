@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "timeout": 10 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "timeout": 5, "async": true }] }],
+    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "timeout": 10 }] }],
+    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "timeout": 10, "async": true }] }]
+  }
+}

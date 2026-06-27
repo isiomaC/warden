@@ -1,0 +1,98 @@
+# Warden v2 Policy Config
+# MCP Proxy Example for Cursor
+#
+# This config is hashed at session start and cannot be modified mid-session.
+# Any runtime mutation triggers a ConfigChange block.
+
+version: "2"
+
+meta:
+  environment: "development"   # development | staging | production
+
+# Only servers listed here are allowed. Unknown server = DENY (fail-closed).
+mcpServers:
+  allowed:
+    - name: "filesystem"
+      type: local
+      transport: stdio
+      allowedTools:
+        - "read_file"
+        - "list_directory"
+        - "search_file"
+        - "get_file_info"
+      # Restrict to workspace paths
+      allowedPaths:
+        - "/home/**"
+        - "/Users/**"
+        - "/tmp/warden-demo/**"
+      authRequired: false      # local stdio — no auth needed
+
+# Policy rules evaluated top-to-bottom.
+# DENY > QUARANTINE > CONFIRM > ALLOW (deny-wins precedence).
+# Unmatched = DENY (default deny — no implicit ALLOW).
+policies:
+  # -----------------------------------------------------------------------
+  # Allow: read operations
+  # -----------------------------------------------------------------------
+  - id: "allow-reads"
+    description: "Allow all read operations in development"
+    match:
+      tools:
+        - "read_file"
+        - "list_directory"
+        - "search_file"
+        - "get_file_info"
+        - "search_code"
+        - "get_file_contents"
+      environment:
+        - "development"
+    action: ALLOW
+
+  # -----------------------------------------------------------------------
+  # Block: dangerous shell patterns
+  # -----------------------------------------------------------------------
+  - id: "block-dangerous"
+    description: "Block destructive operations and dangerous shell patterns"
+    match:
+      tools:
+        - "delete_file"
+        - "Bash"
+      inputPatterns:
+        - "rm\\s+-rf"
+        - "drop\\s+table"
+        - "curl.*\\|.*sh"
+        - "wget.*\\|.*sh"
+        - "eval\\s*\\("
+        - "base64.*decode"
+    action: DENY
+
+# Approval channels (optional — for CONFIRM decisions)
+approvalChannels:
+  stdout: {}
+  # telegram:                     # Uncomment to enable Telegram approvals
+  #   botToken: "${WARDEN_TELEGRAM_TOKEN}"
+  #   chatId: "${WARDEN_TELEGRAM_CHAT_ID}"
+  # slack:                        # Uncomment to enable Slack approvals
+  #   webhookUrl: "${WARDEN_SLACK_WEBHOOK}"
+
+# Ledger configuration
+ledger:
+  type: "sqlite"
+  path: ".warden/ledger.db"
+  retentionDays: 90
+  # Patterns for secret redaction before ledger write
+  redactPatterns:
+    - "sk-[a-zA-Z0-9]{32,}"
+    - "ghp_[a-zA-Z0-9]{36}"
+    - "Bearer\\s+[\\w\\-\\.]+\\.[\\w\\-\\.]+\\.[\\w\\-\\.]*"
+
+# Threat detection
+threatDetection:
+  lateralMovement:
+    enabled: true
+    maxMCPServersPerTaskChain: 4
+    alertAction: CONFIRM
+
+# Vault (no static secrets — tokens are ephemeral, scoped, TTL-bounded)
+vault:
+  type: "local"

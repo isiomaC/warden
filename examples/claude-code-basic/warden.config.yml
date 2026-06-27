@@ -1,0 +1,38 @@
+version: "2"
+
+meta:
+  environment: "development"
+
+mcpServers:
+  allowed:
+    - name: "filesystem"
+      type: local
+      transport: stdio
+      allowedTools: ["read_file", "list_directory", "write_file"]
+      authRequired: false
+
+policies:
+  - id: "block-shell-injection"
+    description: "Block dangerous shell patterns"
+    match:
+      tool: "Bash"
+      inputPatterns:
+        - "rm\\s+-rf"
+        - "curl.*\\|.*sh"
+        - "eval\\s*\\("
+    action: DENY
+
+  - id: "confirm-writes"
+    description: "Human approval for file writes"
+    match:
+      tools: ["write_file"]
+    action: CONFIRM
+    channel: "stdout"
+    timeoutSeconds: 30
+
+  - id: "allow-reads"
+    description: "Allow all read operations"
+    match:
+      tools: ["read_file", "list_directory"]
+      environment: ["development"]
+    action: ALLOW
