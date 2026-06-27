@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHookServer } from "@wardenlabs/hook-server";
+import { FileConfigSource } from "@wardenlabs/core";
 
 export const startCommand = defineCommand({
   meta: {
@@ -19,6 +20,11 @@ export const startCommand = defineCommand({
       description: "Port to listen on",
       default: "7429",
     },
+    db: {
+      type: "string",
+      description: "Path to SQLite ledger database",
+      default: ".warden/ledger.db",
+    },
   },
   async run({ args }) {
     const configPath = resolve(args.config);
@@ -31,49 +37,19 @@ export const startCommand = defineCommand({
 
     const port = Number.parseInt(args.port, 10);
 
+    const configSource = new FileConfigSource(configPath);
+    const config = await configSource.load();
+
+    const dbDir = resolve(args.db, "..");
+    if (!existsSync(dbDir)) {
+      const { mkdirSync } = await import("node:fs");
+      mkdirSync(dbDir, { recursive: true });
+    }
+
     const { fetch } = createHookServer({
-      config: {
-        version: "2",
-        meta: {
-          environment: "development",
-          sessionApprovalRequired: false,
-        },
-        policies: [
-          {
-            id: "block-prod-writes",
-            description: "No writes to production",
-            match: { tools: ["write_file", "db_write"], environment: ["production"] },
-            action: "DENY",
-          },
-          {
-            id: "confirm-destructive",
-            description: "Confirm destructive ops",
-            match: { tools: ["delete_file", "git_push", "send_email"] },
-            action: "CONFIRM",
-            channel: "stdout",
-          },
-          {
-            id: "block-shell-injection",
-            description: "Block shell injection",
-            match: {
-              tool: "Bash",
-              inputPatterns: ["rm\\s+-rf", "curl.*\\|.*sh", "eval\\s*\\(", "wget.*\\|.*sh", "base64.*decode"],
-            },
-            action: "DENY",
-          },
-          {
-            id: "allow-read-development",
-            description: "Allow reads in development",
-            match: {
-              tools: ["read_file", "list_directory", "query"],
-              trustSource: [3, 2, 1],
-              environment: ["staging", "development"],
-            },
-            action: "ALLOW",
-          },
-        ],
-      },
+      config,
       port,
+      dbPath: resolve(args.db),
     });
 
     const bun = (globalThis as unknown as { Bun?: { serve: (opts: { port: number; fetch: typeof fetch }) => { port: number } } }).Bun;

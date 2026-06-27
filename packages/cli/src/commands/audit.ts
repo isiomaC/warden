@@ -1,13 +1,22 @@
 import { defineCommand } from "citty";
-import { MemoryLedgerStore } from "@wardenlabs/core";
+import { MemoryLedgerStore, SqliteLedgerStore } from "@wardenlabs/core";
+import { existsSync } from "node:fs";
 
 export const auditCommand = defineCommand({
   meta: {
     name: "audit",
     description: "View and verify the action ledger",
   },
-  async run() {
-    const ledger = new MemoryLedgerStore();
+  args: {
+    db: {
+      type: "string",
+      description: "Path to SQLite ledger (default: in-memory only)",
+    },
+  },
+  async run({ args }) {
+    const ledger = args.db && existsSync(args.db)
+      ? new SqliteLedgerStore(args.db)
+      : new MemoryLedgerStore();
 
     const entries = ledger.getEntries();
     const chain = ledger.verifyChain();
@@ -15,6 +24,7 @@ export const auditCommand = defineCommand({
     process.stdout.write(`
 === Warden Audit ===
 
+Ledger backend: ${args.db ? `SQLite (${args.db})` : "In-memory"}
 Ledger entries: ${entries.length}
 Chain integrity: ${chain.valid ? "VALID" : "BROKEN"}
 ${chain.brokenAt !== undefined ? `Broken at entry: ${chain.brokenAt}` : ""}
@@ -40,5 +50,6 @@ ${entries.length === 0 ? "  (no entries)" : ""}
     }
 
     process.stdout.write(`\nChain status: ${chain.valid ? "OK" : "FAIL"}\n`);
+    ledger.close();
   },
 });
