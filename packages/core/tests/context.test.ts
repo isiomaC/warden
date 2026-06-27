@@ -128,4 +128,23 @@ describe("ContextManager", () => {
       expect(ctx.getTask(taskB.taskId)).toBeDefined();
     });
   });
+
+  describe("listActiveTasks", () => {
+    it("should return empty when no tasks exist", () => {
+      expect(ctx.listActiveTasks()).toEqual([]);
+    });
+
+    it("should return active tasks", () => {
+      ctx.createTask("session_a");
+      ctx.createTask("session_b");
+      const tasks = ctx.listActiveTasks();
+      expect(tasks.length).toBe(2);
+    });
+
+    it("should not return expired tasks", () => {
+      const task = ctx.createTask("session_a", -1); // TTL -1 = already expired
+      const tasks = ctx.listActiveTasks();
+      expect(tasks.find((t) => t.taskId === task.taskId)).toBeUndefined();
+    });
+  });
 });

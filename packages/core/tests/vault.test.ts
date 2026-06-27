@@ -80,4 +80,65 @@ describe("LocalVault", () => {
       expect(vault.verifyToken(t2.tokenId)).not.toBeNull();
     });
   });
+
+  describe("tokenCount", () => {
+    it("should return 0 when no tokens exist", () => {
+      const vault = new LocalVault();
+      expect(vault.tokenCount()).toBe(0);
+    });
+
+    it("should return correct count after minting", () => {
+      const vault = new LocalVault();
+      vault.mintToken({
+        taskId: "task_1",
+        sessionId: "session_a",
+        allowedTools: ["read_file"],
+        environment: "development",
+        ttlSeconds: 300,
+      });
+      vault.mintToken({
+        taskId: "task_2",
+        sessionId: "session_b",
+        allowedTools: ["write_file"],
+        environment: "development",
+        ttlSeconds: 300,
+      });
+      expect(vault.tokenCount()).toBe(2);
+    });
+  });
+
+  describe("revokedCount", () => {
+    it("should return 0 when no tokens have been revoked", () => {
+      const vault = new LocalVault();
+      vault.mintToken({
+        taskId: "task_1",
+        sessionId: "session_a",
+        allowedTools: ["read_file"],
+        environment: "development",
+        ttlSeconds: 300,
+      });
+      expect(vault.revokedCount()).toBe(0);
+    });
+
+    it("should return correct count of revoked tokens", () => {
+      const vault = new LocalVault();
+      const t1 = vault.mintToken({
+        taskId: "task_1",
+        sessionId: "session_a",
+        allowedTools: ["read_file"],
+        environment: "development",
+        ttlSeconds: 300,
+      });
+      vault.mintToken({
+        taskId: "task_2",
+        sessionId: "session_b",
+        allowedTools: ["read_file"],
+        environment: "development",
+        ttlSeconds: 300,
+      });
+
+      vault.revokeToken(t1.tokenId);
+      expect(vault.revokedCount()).toBe(1);
+    });
+  });
 });
