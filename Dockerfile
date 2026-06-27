@@ -1,10 +1,6 @@
 # ---- Build Stage ----
-# Install dependencies and run type-check as a validation gate
-FROM oven/bun:1.2 AS build
+FROM node:22 AS build
 WORKDIR /app
-
-# Install build tools for native modules (better-sqlite3)
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (layer caching)
 COPY package.json package-lock.json ./
@@ -14,42 +10,50 @@ COPY packages/mcp-gateway/package.json packages/mcp-gateway/
 COPY packages/cli/package.json packages/cli/
 COPY packages/opencode-plugin/package.json packages/opencode-plugin/
 
-RUN bun install
+RUN npm ci
 
-# Copy source and type-check
+# Copy source and compile
 COPY . .
-RUN bun run tsc --noEmit
+RUN npx tsc -p packages/core/tsconfig.json
+RUN npx tsc -p packages/hook-server/tsconfig.json
+RUN npx tsc -p packages/mcp-gateway/tsconfig.json
+RUN npx tsc -p packages/cli/tsconfig.json
 
 # ---- Runtime Stage ----
-FROM oven/bun:1.2-slim AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 
-# Copy installed dependencies from build stage
+# Copy installed dependencies (production only)
 COPY --from=build /app/node_modules ./node_modules
 
-# Copy workspace metadata and source
+# Copy compiled output per package
+COPY --from=build /app/packages/core/dist ./packages/core/dist
+COPY --from=build /app/packages/core/package.json ./packages/core/package.json
+COPY --from=build /app/packages/hook-server/dist ./packages/hook-server/dist
+COPY --from=build /app/packages/hook-server/package.json ./packages/hook-server/package.json
+COPY --from=build /app/packages/mcp-gateway/dist ./packages/mcp-gateway/dist
+COPY --from=build /app/packages/mcp-gateway/package.json ./packages/mcp-gateway/package.json
+COPY --from=build /app/packages/cli/dist ./packages/cli/dist
+COPY --from=build /app/packages/cli/package.json ./packages/cli/package.json
+
+# Copy root package.json for workspace resolution
 COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/packages ./packages
 
-# Ensure TS config is available for Bun's internal resolver
-COPY --from=build /app/tsconfig.json ./tsconfig.json
+# Create persistent data directory
+RUN mkdir -p .warden && chown -R node:node /app
 
-# Create persistent data directory and set ownership for non-root user
-RUN mkdir -p .warden && chown -R bun:bun /app
-
-# Switch to non-root user (bun user already exists in base image, uid 1000)
-USER bun
+# Switch to non-root user
+USER node
 
 # Expose the hook server port
 EXPOSE 7429
 
-# Health check using the /health endpoint
+# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD bun -e "try{const r=await fetch('http://localhost:7429/health');process.exit(r.ok?0:1)}catch(_){process.exit(1)}"
+  CMD node -e "fetch('http://localhost:7429/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Start the hook server via the CLI
-# Default config path is warden.config.yml — mount or copy your config
-CMD ["bun", "run", "packages/cli/src/bin.ts", "start", \
+# Start the hook server
+CMD ["node", "packages/cli/dist/src/bin.js", "start", \
      "--config", "warden.config.yml", \
      "--db", ".warden/ledger.db", \
      "--port", "7429"]
