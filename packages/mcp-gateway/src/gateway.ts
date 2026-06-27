@@ -5,12 +5,16 @@ import {
   evaluate,
   tagValue,
   redactSecrets,
+  SlidingWindowRateLimiter,
+  WardenLogger,
+  parseLogLevel,
 } from "@wardenlabs/core";
 import type {
   PolicyConfig,
   LedgerStore,
-  ContextManager,
+  ContextStore,
   PolicyDecision,
+  RateLimiterConfig,
 } from "@wardenlabs/core";
 import { TrustLevel as TL } from "@wardenlabs/core";
 import type { ApprovalChannel } from "../../hook-server/src/approvals/types";
@@ -18,10 +22,11 @@ import type { ApprovalChannel } from "../../hook-server/src/approvals/types";
 export interface WardenGatewayOptions {
   config: PolicyConfig;
   ledger: LedgerStore;
-  contextManager: ContextManager;
+  contextManager: ContextStore;
   registry: MCPRegistry;
   oauth?: OAuthManager;
   approvalChannel?: ApprovalChannel | undefined;
+  logger?: WardenLogger;
 }
 
 export interface WrappedMCPServer {
@@ -34,11 +39,12 @@ export interface WrappedMCPServer {
 export class WardenGateway {
   private config: PolicyConfig;
   private ledger: LedgerStore;
-  private contextManager: ContextManager;
+  private contextManager: ContextStore;
   private registry: MCPRegistry;
   private oauth: OAuthManager;
   private approvalChannel: ApprovalChannel | undefined;
-  private callCounters = new Map<string, number[]>();
+  private rateLimiter: SlidingWindowRateLimiter;
+  private logger: WardenLogger;
 
   constructor(options: WardenGatewayOptions) {
     this.config = options.config;
@@ -47,6 +53,19 @@ export class WardenGateway {
     this.registry = options.registry;
     this.oauth = options.oauth ?? new OAuthManager();
     this.approvalChannel = options.approvalChannel;
+    this.logger = options.logger ?? new WardenLogger("mcp-gateway", parseLogLevel(process.env.LOG_LEVEL));
+
+    // Build rate-limiter config from policy config's rateLimits block,
+    // falling back to sensible defaults.
+    const rateLimits = (options.config as unknown as Record<string, unknown>).rateLimits as
+      | { global?: RateLimiterConfig; perTool?: Record<string, { maxCalls: number; windowMs: number }> }
+      | undefined;
+
+    this.rateLimiter = new SlidingWindowRateLimiter({
+      maxCalls: rateLimits?.global?.maxCalls ?? 1000,
+      windowMs: rateLimits?.global?.windowMs ?? 60_000,
+      ...(rateLimits?.perTool !== undefined ? { perToolLimits: rateLimits.perTool } : {}),
+    });
   }
 
   wrapMCP(serverName: string, options: WrappedMCPServer) {
@@ -75,11 +94,19 @@ export class WardenGateway {
           };
         }
 
-        if (!self.checkRateLimit(`${serverName}__${toolName}`, options.maxCallsPerMinute)) {
+        // Sliding-window rate-limit check (before policy evaluation).
+        // Per-tool limits are resolved from the gateway config.
+        const rateKey = `tool:${toolName}`;
+        const rateCheck = self.rateLimiter.check(rateKey);
+        if (!rateCheck.allowed) {
+          self.logger.warn("Rate limit exceeded.", {
+            serverName,
+            toolName,
+            retryAfterMs: rateCheck.retryAfterMs,
+          });
           return {
-            action: "CONFIRM" as const,
-            reason: `Rate limit exceeded for ${serverName}/${toolName}.`,
-            channel: "stdout" as const,
+            action: "DENY" as const,
+            reason: `Rate limit exceeded for ${serverName}/${toolName}. Retry after ${rateCheck.retryAfterMs}ms.`,
           };
         }
 
@@ -109,6 +136,13 @@ export class WardenGateway {
               serversContacted: lateralResult.serversContacted,
               maxAllowed: lateralResult.maxAllowed,
             },
+          });
+
+          self.logger.warn("Lateral movement detected.", {
+            taskId: currentTaskId,
+            serversContacted: lateralResult.serversContacted,
+            maxAllowed: lateralResult.maxAllowed,
+            alertAction: lateralResult.alertAction,
           });
 
           return {
@@ -161,18 +195,13 @@ export class WardenGateway {
         return decision;
       },
 
-      checkRateLimit: (id: string, max: number) => self.checkRateLimit(id, max),
+      checkRateLimit: (key: string) => self.rateLimiter.check(key),
     };
   }
 
-  checkRateLimit(key: string, maxPerMinute: number): boolean {
-    const now = Date.now();
-    let timestamps = this.callCounters.get(key) ?? [];
-    timestamps = timestamps.filter((t) => now - t < 60_000);
-    if (timestamps.length >= maxPerMinute) return false;
-    timestamps.push(now);
-    this.callCounters.set(key, timestamps);
-    return true;
+  /** Delegate to the sliding-window rate limiter. */
+  checkRateLimit(key: string): { allowed: boolean; retryAfterMs?: number } {
+    return this.rateLimiter.check(key);
   }
 
   getRegistry(): MCPRegistry {

@@ -1,4 +1,4 @@
-import type { ContextManager, PolicyConfig } from "@wardenlabs/core";
+import type { ContextStore, PolicyConfig } from "@wardenlabs/core";
 
 export interface LateralDetectionResult {
   shouldBlock: boolean;
@@ -9,7 +9,7 @@ export interface LateralDetectionResult {
 
 export function checkLateralMovement(
   taskId: string,
-  contextManager: ContextManager,
+  contextManager: ContextStore,
   config: PolicyConfig & {
     threatDetection: {
       lateralMovement: {
@@ -23,6 +23,10 @@ export function checkLateralMovement(
   const ctx = contextManager.getTask(taskId);
   if (!ctx) {
     return { shouldBlock: false, alertAction: "DENY", serversContacted: 0, maxAllowed: 0 };
+  }
+
+  if (!config.threatDetection.lateralMovement.enabled) {
+    return { shouldBlock: false, alertAction: "CONFIRM", serversContacted: 0, maxAllowed: 0 };
   }
 
   const max = config.threatDetection.lateralMovement.maxMCPServersPerTaskChain;
