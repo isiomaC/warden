@@ -3,6 +3,9 @@
 FROM oven/bun:1.2 AS build
 WORKDIR /app
 
+# Install build tools for native modules (better-sqlite3)
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first (layer caching)
 COPY package.json package-lock.json ./
 COPY packages/core/package.json packages/core/
@@ -31,13 +34,10 @@ COPY --from=build /app/packages ./packages
 # Ensure TS config is available for Bun's internal resolver
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 
-# Create non-root user and persistent data directory
-RUN addgroup -g 1001 bun && \
-    adduser -u 1001 -G bun -s /bin/sh -D bun && \
-    mkdir -p .warden && \
-    chown -R bun:bun .warden
+# Create persistent data directory and set ownership for non-root user
+RUN mkdir -p .warden && chown -R bun:bun /app
 
-# Switch to non-root user
+# Switch to non-root user (bun user already exists in base image, uid 1000)
 USER bun
 
 # Expose the hook server port
