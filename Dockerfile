@@ -9,6 +9,7 @@ COPY packages/core/package.json packages/core/
 COPY packages/hook-server/package.json packages/hook-server/
 COPY packages/mcp-gateway/package.json packages/mcp-gateway/
 COPY packages/cli/package.json packages/cli/
+COPY packages/opencode-plugin/package.json packages/opencode-plugin/
 
 RUN bun install
 
