@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
-import { evaluate, TrustLevel } from "@wardenlabs/core";
-import type { PolicyConfig } from "@wardenlabs/core";
+import { evaluate, TrustLevel } from "@warden/core";
+import type { PolicyConfig } from "@warden/core";
 
 export const policyCommand = defineCommand({
   meta: {

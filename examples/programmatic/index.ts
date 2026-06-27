@@ -1,7 +1,7 @@
 /**
  * Warden Programmatic Usage Example
  *
- * Demonstrates using @wardenlabs/core directly in your own project
+ * Demonstrates using @warden/core directly in your own project
  * for deterministic policy evaluation, hash-chained audit logging,
  * and per-task context isolation.
  *
@@ -15,8 +15,8 @@ import {
   TrustLevel,
   WardenLogger,
   LogLevel,
-} from "@wardenlabs/core";
-import type { PolicyConfig, PolicyDecision } from "@wardenlabs/core";
+} from "@warden/core";
+import type { PolicyConfig, PolicyDecision } from "@warden/core";
 
 // ---------------------------------------------------------------------------
 // 1. Create a WardenLogger for structured output

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { tagValue, hasSecrets, TrustLevel } from "@wardenlabs/core";
-import type { LedgerStore, ContextStore, TrustRegistry } from "@wardenlabs/core";
+import { tagValue, hasSecrets, TrustLevel } from "@warden/core";
+import type { LedgerStore, ContextStore, TrustRegistry } from "@warden/core";
 
 export function handlePostToolUse(
   ledger: LedgerStore,

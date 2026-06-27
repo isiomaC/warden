@@ -16,15 +16,15 @@
  *   Command: npx tsx /path/to/warden-proxy.ts
  */
 
-import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
+import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
 import {
   MemoryLedgerStore,
   ContextManager,
   WardenLogger,
   LogLevel,
   TrustLevel,
-} from "@wardenlabs/core";
-import type { PolicyConfig, PolicyDecision } from "@wardenlabs/core";
+} from "@warden/core";
+import type { PolicyConfig, PolicyDecision } from "@warden/core";
 
 // ---------------------------------------------------------------------------
 // Policy configuration

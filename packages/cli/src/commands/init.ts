@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { sha256 } from "@wardenlabs/core";
+import { sha256 } from "@warden/core";
 
 export const initCommand = defineCommand({
   meta: {

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { scanForInjection, TrustLevel } from "@wardenlabs/core";
-import type { LedgerStore } from "@wardenlabs/core";
+import { scanForInjection, TrustLevel } from "@warden/core";
+import type { LedgerStore } from "@warden/core";
 
 export function handlePromptSubmit(ledger: LedgerStore) {
   return async (c: Context) => {

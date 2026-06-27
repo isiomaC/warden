@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import type { WardenLogger } from "@wardenlabs/core";
+import type { WardenLogger } from "@warden/core";
 
 export function failClosedMiddleware(logger?: WardenLogger) {
   return async (_c: Context, next: Next) => {

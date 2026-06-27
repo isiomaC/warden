@@ -1,11 +1,14 @@
 {
-  "name": "@wardenlabs/core",
+  "name": "@warden/core",
   "version": "0.1.0",
   "description": "Deterministic policy engine for autonomous agent tool enforcement",
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
-  "files": ["dist", "LICENSE"],
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -15,7 +18,13 @@
     "url": "https://github.com/isiomaC/warden.git",
     "directory": "packages/core"
   },
-  "keywords": ["agent-security", "policy-engine", "mcp", "tool-enforcement", "ai-safety"],
+  "keywords": [
+    "agent-security",
+    "policy-engine",
+    "mcp",
+    "tool-enforcement",
+    "ai-safety"
+  ],
   "engines": {
     "node": ">=22"
   },

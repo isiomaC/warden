@@ -1,25 +1,38 @@
 {
-  "name": "@wardenlabs/mcp-gateway",
+  "name": "@warden/mcp-gateway",
   "version": "0.1.0",
   "description": "MCP proxy gateway with policy enforcement, server allowlist, and lateral movement detection",
   "type": "module",
-  "main": "dist/src/gateway.js",
-  "types": "dist/src/gateway.d.ts",
-  "files": ["dist", "LICENSE"],
-  "publishConfig": { "access": "public" },
+  "main": "./src/gateway.ts",
+  "types": "./src/gateway.ts",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/isiomaC/warden.git",
     "directory": "packages/mcp-gateway"
   },
-  "keywords": ["agent-security", "mcp-gateway", "mcp", "proxy", "ai-safety"],
-  "engines": { "node": ">=22" },
+  "keywords": [
+    "agent-security",
+    "mcp-gateway",
+    "mcp",
+    "proxy",
+    "ai-safety"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
-    "@wardenlabs/core": "*",
+    "@warden/core": "*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0"
+    "@warden/core": "^0.1.0"
   }
 }

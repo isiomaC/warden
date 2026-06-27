@@ -44,7 +44,7 @@ Configure your npm client to use the private registry (GitHub Packages):
 
 ```bash
 # .npmrc in your home directory or project root
-@wardenlabs:registry=https://npm.pkg.github.com
+@warden:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
@@ -52,13 +52,13 @@ Then install:
 
 ```bash
 # Option A: CLI only (includes hook-server as dependency)
-npm install -g @wardenlabs/cli
+npm install -g @warden/cli
 
 # Option B: Programmatic — install specific packages
-npm install @wardenlabs/core @wardenlabs/hook-server
+npm install @warden/core @warden/hook-server
 
 # Option C: All packages in a project
-npm install @wardenlabs/core @wardenlabs/hook-server @wardenlabs/mcp-gateway @wardenlabs/cli
+npm install @warden/core @warden/hook-server @warden/mcp-gateway @warden/cli
 ```
 
 ### Verify installation
@@ -379,14 +379,14 @@ Then register it in `opencode.json`:
 ### Option B: npm package
 
 ```bash
-npm install -g @wardenlabs/opencode-plugin
+npm install -g @warden/opencode-plugin
 ```
 
 Then in `opencode.json`:
 
 ```jsonc
 {
-  "plugin": ["@wardenlabs/opencode-plugin"]
+  "plugin": ["@warden/opencode-plugin"]
 }
 ```
 
@@ -759,8 +759,8 @@ warden start
 If you're building a tool that wraps MCP servers directly (not through Claude Code hooks):
 
 ```typescript
-import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
-import { MemoryLedgerStore, ContextManager, TrustLevel } from "@wardenlabs/core";
+import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
+import { MemoryLedgerStore, ContextManager, TrustLevel } from "@warden/core";
 
 const gateway = new WardenGateway({
   config: myPolicyConfig,
@@ -795,7 +795,7 @@ const decision = await safeFs.onToolCall(
 ## 11. Uninstalling
 
 ```bash
-npm uninstall -g @wardenlabs/cli
+npm uninstall -g @warden/cli
 ```
 
 Remove local files:

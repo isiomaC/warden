@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { createHookServer } from "../src/server";
-import type { PolicyConfig } from "@wardenlabs/core";
-import { TrustLevel } from "@wardenlabs/core";
+import type { PolicyConfig } from "@warden/core";
+import { TrustLevel } from "@warden/core";
 import type { ApprovalChannel } from "../src/approvals/types";
 import type { ApprovalRequest } from "../src/approvals/types";
 
@@ -745,7 +745,7 @@ describe("Hook Server — Mock LLM Integration", () => {
     it("should DENY tool call after task expires", async () => {
       const srv = createHookServer({
         config: testConfig,
-        contextManager: new (await import("@wardenlabs/core")).ContextManager(),
+        contextManager: new (await import("@warden/core")).ContextManager(),
       });
 
       const startRes = await srv.fetch(

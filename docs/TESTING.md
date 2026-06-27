@@ -333,8 +333,8 @@ describe("policy engine", () => {
 // packages/hook-server/tests/integration.test.ts
 import { describe, it, expect } from "vitest";
 import { createHookServer } from "../src/server";
-import type { PolicyConfig } from "@wardenlabs/core";
-import { TrustLevel } from "@wardenlabs/core";
+import type { PolicyConfig } from "@warden/core";
+import { TrustLevel } from "@warden/core";
 
 // 1. Create a test server with your config
 const config: PolicyConfig = {
@@ -661,10 +661,10 @@ The most comprehensive test exercises every component together:
 
 ```typescript
 // e2e-test.ts — Full integration flow
-import { createHookServer } from "@wardenlabs/hook-server";
-import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
-import { MemoryLedgerStore, ContextManager, TrustLevel } from "@wardenlabs/core";
-import type { PolicyConfig } from "@wardenlabs/core";
+import { createHookServer } from "@warden/hook-server";
+import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
+import { MemoryLedgerStore, ContextManager, TrustLevel } from "@warden/core";
+import type { PolicyConfig } from "@warden/core";
 
 const config: PolicyConfig = { /* ... full config ... */ };
 const ledger = new MemoryLedgerStore();

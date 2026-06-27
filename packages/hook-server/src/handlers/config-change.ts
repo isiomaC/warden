@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { LedgerStore } from "@wardenlabs/core";
+import type { LedgerStore } from "@warden/core";
 
 export function handleConfigChange(ledger: LedgerStore) {
   return async (c: Context) => {

@@ -260,22 +260,22 @@ jobs:
           cd packages/mcp-gateway && npx tsc && cd ../..
           cd packages/cli && npx tsc && cd ../..
 
-      - name: Publish @wardenlabs/core
+      - name: Publish @warden/core
         run: cd packages/core && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @wardenlabs/hook-server
+      - name: Publish @warden/hook-server
         run: cd packages/hook-server && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @wardenlabs/mcp-gateway
+      - name: Publish @warden/mcp-gateway
         run: cd packages/mcp-gateway && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @wardenlabs/cli
+      - name: Publish @warden/cli
         run: cd packages/cli && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -283,9 +283,9 @@ jobs:
 
 **Prerequisites (manual):**
 
-1. Register the `@wardenlabs` npm scope at https://www.npmjs.com/org/create — claim it before someone else does.
+1. Register the `@warden` npm scope at https://www.npmjs.com/org/create — claim it before someone else does.
 1. Generate an npm automation token and add it as `NPM_TOKEN` in GitHub repo secrets.
-1. Each package’s `package.json` must have `"name": "@wardenlabs/core"` (etc.), `"version": "0.1.0"`, `"publishConfig": { "access": "public" }`, and proper `"main"`, `"types"`, `"files"` fields.
+1. Each package’s `package.json` must have `"name": "@warden/core"` (etc.), `"version": "0.1.0"`, `"publishConfig": { "access": "public" }`, and proper `"main"`, `"types"`, `"files"` fields.
 
 **Verify:** Creating a GitHub Release triggers publish. Packages appear on npmjs.com.
 
@@ -301,7 +301,7 @@ Ensure these fields exist (add or update):
 
 ```json
 {
-  "name": "@wardenlabs/core",
+  "name": "@warden/core",
   "version": "0.1.0",
   "description": "Deterministic policy engine for autonomous agent tool enforcement",
   "main": "dist/src/index.js",
@@ -347,11 +347,11 @@ Same pattern as 3.1 but with:
 
 ```json
 {
-  "name": "@wardenlabs/hook-server",
+  "name": "@warden/hook-server",
   "version": "0.1.0",
   "description": "HTTP hook server for Claude Code, Codex CLI, and Copilot SDK integration",
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0"
+    "@warden/core": "^0.1.0"
   }
 }
 ```
@@ -365,11 +365,11 @@ Same pattern:
 
 ```json
 {
-  "name": "@wardenlabs/mcp-gateway",
+  "name": "@warden/mcp-gateway",
   "version": "0.1.0",
   "description": "MCP proxy gateway with policy enforcement, server allowlist, and lateral movement detection",
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0"
+    "@warden/core": "^0.1.0"
   }
 }
 ```
@@ -380,15 +380,15 @@ Copy LICENSE. Add local tsconfig.
 
 ```json
 {
-  "name": "@wardenlabs/cli",
+  "name": "@warden/cli",
   "version": "0.1.0",
   "description": "Developer CLI for Warden — init, start, audit, policy test, scan",
   "bin": {
     "warden": "dist/src/index.js"
   },
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0",
-    "@wardenlabs/hook-server": "^0.1.0"
+    "@warden/core": "^0.1.0",
+    "@warden/hook-server": "^0.1.0"
   }
 }
 ```
@@ -408,7 +408,7 @@ Copy LICENSE. Add local tsconfig.
 
 ```json
 {
-  "name": "@wardenlabs/opencode-plugin",
+  "name": "@warden/opencode-plugin",
   "version": "0.1.0",
   "description": "Warden policy enforcement plugin for OpenCode",
   "main": "warden-plugin.ts",
@@ -419,7 +419,7 @@ Copy LICENSE. Add local tsconfig.
     "directory": "packages/opencode-plugin"
   },
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0"
+    "@warden/core": "^0.1.0"
   }
 }
 ```
@@ -443,7 +443,7 @@ The README references docs that don’t appear to exist in the repo. Either they
 Create `docs/USER_DEPLOYMENT.md` covering:
 
 1. **Prerequisites**: Node.js >= 22, npm or Bun, git
-1. **Install from npm** (once published): `npm install -g @wardenlabs/cli`
+1. **Install from npm** (once published): `npm install -g @warden/cli`
 1. **Install from source**: clone, npm install, link
 1. **Initialize**: `warden init --environment development` — what files it creates, what each does
 1. **Configure policies**: Full annotated `warden.config.yml` walkthrough with common patterns:
@@ -492,14 +492,14 @@ Target length: 150-200 lines.
 
 Create `docs/NPM_PUBLISHING.md` covering:
 
-1. **Package names and scope**: `@wardenlabs/core`, `@wardenlabs/hook-server`, `@wardenlabs/mcp-gateway`, `@wardenlabs/cli`, `@wardenlabs/opencode-plugin`
+1. **Package names and scope**: `@warden/core`, `@warden/hook-server`, `@warden/mcp-gateway`, `@warden/cli`, `@warden/opencode-plugin`
 1. **Publish order**: core first (no deps), then hook-server + mcp-gateway (peer dep on core), then cli (peer deps on core + hook-server)
 1. **Version strategy**: All packages share the same version number (lockstep), semver
 1. **Build before publish**: `npx tsc` in each package, verify `dist/` output
 1. **npm provenance**: Using `--provenance` flag with GitHub Actions OIDC
 1. **Authentication**: npm automation token in GitHub secrets
 1. **Release workflow**: Create a GitHub Release → triggers publish workflow
-1. **Verify**: `npm info @wardenlabs/core` shows the published version
+1. **Verify**: `npm info @warden/core` shows the published version
 
 Target length: 100-150 lines.
 
@@ -520,7 +520,7 @@ Insert immediately after the `# Warden` heading:
 
 ```markdown
 [![CI](https://github.com/isiomaC/warden/actions/workflows/ci.yml/badge.svg)](https://github.com/isiomaC/warden/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@wardenlabs/core)](https://www.npmjs.com/package/@wardenlabs/core)
+[![npm](https://img.shields.io/npm/v/@warden/core)](https://www.npmjs.com/package/@warden/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ```
 
@@ -804,10 +804,10 @@ This example shows the minimum configuration to run Warden with Claude Code.
 
 ## Usage
 
-1. Start Warden: `npx @wardenlabs/cli start`
+1. Start Warden: `npx @warden/cli start`
 2. Start Claude Code: `claude`
 3. Try a blocked operation: Ask Claude to `rm -rf /tmp/test`
-4. Check the audit log: `npx @wardenlabs/cli audit`
+4. Check the audit log: `npx @warden/cli audit`
 ```
 
 **examples/claude-code-basic/warden.config.yml:**
@@ -871,7 +871,7 @@ policies:
 Create `examples/mcp-proxy-cursor/` with:
 
 - `README.md` — How to use Warden as an MCP proxy with Cursor
-- `warden-proxy.ts` — Minimal proxy setup using `@wardenlabs/mcp-gateway`
+- `warden-proxy.ts` — Minimal proxy setup using `@warden/mcp-gateway`
 - `warden.config.yml` — Policy config with server allowlist
 
 ### 7.3 — Create programmatic usage example
@@ -879,7 +879,7 @@ Create `examples/mcp-proxy-cursor/` with:
 Create `examples/programmatic/` with:
 
 - `README.md` — Using Warden as a library in your own agent
-- `index.ts` — Complete example importing from `@wardenlabs/core`, creating a policy config, evaluating decisions, writing to ledger, verifying chain integrity
+- `index.ts` — Complete example importing from `@warden/core`, creating a policy config, evaluating decisions, writing to ledger, verifying chain integrity
 
 -----
 
@@ -1009,10 +1009,10 @@ This triggers the publish workflow (Phase 2.2), which publishes all packages to 
 ### 9.3 — Post-release verification
 
 ```bash
-npm info @wardenlabs/core
-npm info @wardenlabs/cli
-npm info @wardenlabs/hook-server
-npm info @wardenlabs/mcp-gateway
+npm info @warden/core
+npm info @warden/cli
+npm info @warden/hook-server
+npm info @warden/mcp-gateway
 ```
 
 All should show version `0.1.0` with correct metadata.
@@ -1022,7 +1022,7 @@ Test install from npm:
 ```bash
 mkdir /tmp/warden-test && cd /tmp/warden-test
 npm init -y
-npm install @wardenlabs/core @wardenlabs/cli
+npm install @warden/core @warden/cli
 npx warden init --environment development
 npx warden policy test read_file --trust AGENT --environment development
 ```

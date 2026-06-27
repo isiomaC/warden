@@ -1,6 +1,6 @@
 # Warden — NPM Publishing Guide
 
-How to build and publish all five `@wardenlabs/*` packages to a private npm registry (GitHub Packages).
+How to build and publish all five `@warden/*` packages to a private npm registry (GitHub Packages).
 
 ---
 
@@ -8,11 +8,11 @@ How to build and publish all five `@wardenlabs/*` packages to a private npm regi
 
 | Package | npm Name | Internal Dependencies | External Dependencies |
 |---|---|---|---|
-| core | `@wardenlabs/core` | — | `better-sqlite3`, `ulid` |
-| hook-server | `@wardenlabs/hook-server` | `@wardenlabs/core` | `hono`, `grammy` |
-| mcp-gateway | `@wardenlabs/mcp-gateway` | `@wardenlabs/core` | `@modelcontextprotocol/sdk` |
-| cli | `@wardenlabs/cli` | `@wardenlabs/core`, `@wardenlabs/hook-server` | `citty` |
-| opencode-plugin | `@wardenlabs/opencode-plugin` | `@wardenlabs/core` (peer) | — |
+| core | `@warden/core` | — | `better-sqlite3`, `ulid` |
+| hook-server | `@warden/hook-server` | `@warden/core` | `hono`, `grammy` |
+| mcp-gateway | `@warden/mcp-gateway` | `@warden/core` | `@modelcontextprotocol/sdk` |
+| cli | `@warden/cli` | `@warden/core`, `@warden/hook-server` | `citty` |
+| opencode-plugin | `@warden/opencode-plugin` | `@warden/core` (peer) | — |
 
 **Publish order matters:** `core` first (no deps), then `hook-server` + `mcp-gateway` + `opencode-plugin` (all depend on core, parallel-safe), then `cli` last (depends on core + hook-server).
 
@@ -38,7 +38,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
 
 ```json
 {
-  "name": "@wardenlabs/core",
+  "name": "@warden/core",
   "version": "0.1.0",
   "description": "Warden core — policy engine, trust tagger, hash-chained ledger, injection scanner",
   "license": "MIT",
@@ -68,7 +68,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
 
 ```json
 {
-  "name": "@wardenlabs/hook-server",
+  "name": "@warden/hook-server",
   "version": "0.1.0",
   "description": "Warden hook server — Claude Code PreToolUse/PostToolUse/UserPromptSubmit HTTP handlers",
   "license": "MIT",
@@ -88,7 +88,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
     "access": "restricted"
   },
   "dependencies": {
-    "@wardenlabs/core": "^0.1.0",
+    "@warden/core": "^0.1.0",
     "hono": "^4.0.0",
     "grammy": "^1.32.0"
   },
@@ -103,7 +103,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
 
 ```json
 {
-  "name": "@wardenlabs/mcp-gateway",
+  "name": "@warden/mcp-gateway",
   "version": "0.1.0",
   "description": "Warden MCP gateway — wrapMCP with policy enforcement, server registry, lateral detection",
   "license": "MIT",
@@ -123,7 +123,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
     "access": "restricted"
   },
   "dependencies": {
-    "@wardenlabs/core": "^0.1.0",
+    "@warden/core": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "scripts": {
@@ -137,7 +137,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
 
 ```json
 {
-  "name": "@wardenlabs/cli",
+  "name": "@warden/cli",
   "version": "0.1.0",
   "description": "Warden CLI — init, start, audit, policy test, injection scan, supply-chain check",
   "license": "MIT",
@@ -154,8 +154,8 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
     "access": "restricted"
   },
   "dependencies": {
-    "@wardenlabs/core": "^0.1.0",
-    "@wardenlabs/hook-server": "^0.1.0",
+    "@warden/core": "^0.1.0",
+    "@warden/hook-server": "^0.1.0",
     "citty": "^0.1.6"
   },
   "scripts": {
@@ -169,7 +169,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
 
 ```json
 {
-  "name": "@wardenlabs/opencode-plugin",
+  "name": "@warden/opencode-plugin",
   "version": "0.1.0",
   "description": "Warden policy enforcement plugin for OpenCode",
   "license": "MIT",
@@ -184,7 +184,7 @@ Each package.json needs these publish-ready fields. Currently they have `"privat
     "access": "restricted"
   },
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0"
+    "@warden/core": "^0.1.0"
   },
   "scripts": {
     "build": "tsc",
@@ -237,7 +237,7 @@ Each package needs its own `tsconfig.json` for the `tsc` build step:
 
 ```bash
 # In .npmrc at repo root:
-@wardenlabs:registry=https://npm.pkg.github.com
+@warden:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
@@ -250,7 +250,7 @@ export GITHUB_TOKEN=ghp_...
 ### npm Private Registry (Verdaccio, npm Pro, etc.)
 
 ```bash
-npm login --registry=https://npm.pkg.github.com --scope=@wardenlabs
+npm login --registry=https://npm.pkg.github.com --scope=@warden
 # Enter GitHub username and token
 ```
 
@@ -307,16 +307,16 @@ chmod +x scripts/publish-all.sh
 
 ```bash
 # Check versions on registry
-npm view @wardenlabs/core version
-npm view @wardenlabs/hook-server version
-npm view @wardenlabs/mcp-gateway version
-npm view @wardenlabs/opencode-plugin version
-npm view @wardenlabs/cli version
+npm view @warden/core version
+npm view @warden/hook-server version
+npm view @warden/mcp-gateway version
+npm view @warden/opencode-plugin version
+npm view @warden/cli version
 
 # Test install in a fresh project
 mkdir /tmp/warden-test && cd /tmp/warden-test
 npm init -y
-npm install @wardenlabs/cli
+npm install @warden/cli
 npx warden scan --prompt "test"
 ```
 
@@ -371,7 +371,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: "@wardenlabs"
+          scope: "@warden"
 
       - run: npm ci
       - run: npx tsc --noEmit
@@ -423,7 +423,7 @@ The `--provenance` flag generates a signed build provenance attestation using Gi
   with:
     node-version: 22
     registry-url: https://registry.npmjs.org
-    scope: "@wardenlabs"
+    scope: "@warden"
 
 # Then authenticate with an npm automation token:
 env:

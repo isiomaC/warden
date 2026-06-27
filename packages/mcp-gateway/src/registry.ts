@@ -1,4 +1,4 @@
-import { SecurityError } from "@wardenlabs/core";
+import { SecurityError } from "@warden/core";
 
 export interface ServerEntry {
   name: string;

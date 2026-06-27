@@ -4,14 +4,14 @@ import {
   checkSupplyChain,
   parseLockDeps,
   TrustLevel,
-} from "@wardenlabs/core";
+} from "@warden/core";
 import type {
   PolicyConfig,
   VaultAdapter,
   LedgerStore,
   ContextStore,
   PackagePin,
-} from "@wardenlabs/core";
+} from "@warden/core";
 
 function loadPins(): Record<string, PackagePin> {
   const pinsPath = `${process.cwd()}/.warden/pins.json`;

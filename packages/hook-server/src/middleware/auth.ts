@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import type { VaultAdapter } from "@wardenlabs/core";
+import type { VaultAdapter } from "@warden/core";
 
 export function authMiddleware(vault: VaultAdapter) {
   return async (c: Context, next: Next) => {

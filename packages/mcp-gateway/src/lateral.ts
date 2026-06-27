@@ -1,4 +1,4 @@
-import type { ContextStore, PolicyConfig } from "@wardenlabs/core";
+import type { ContextStore, PolicyConfig } from "@warden/core";
 
 export interface LateralDetectionResult {
   shouldBlock: boolean;

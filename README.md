@@ -1,7 +1,7 @@
 # Warden
 
 [![CI](https://github.com/isiomaC/warden/actions/workflows/ci.yml/badge.svg)](https://github.com/isiomaC/warden/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@wardenlabs/core)](https://www.npmjs.com/package/@wardenlabs/core)
+[![npm](https://img.shields.io/npm/v/@warden/core)](https://www.npmjs.com/package/@warden/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **The policy layer for autonomous agents. Full permissions, zero blast radius.**
@@ -51,14 +51,14 @@ cp packages/opencode-plugin/warden-plugin.ts .opencode/plugins/
 **Option B: npm package (when published)**
 
 ```bash
-npm install -g @wardenlabs/opencode-plugin
+npm install -g @warden/opencode-plugin
 ```
 
 Then add to `opencode.json`:
 
 ```jsonc
 {
-  "plugin": ["@wardenlabs/opencode-plugin"]
+  "plugin": ["@warden/opencode-plugin"]
 }
 ```
 
@@ -90,7 +90,7 @@ Add Warden to your Copilot extension's `agent.json`:
 Hook handler (`warden-copilot.js`):
 
 ```javascript
-import { evaluate, MemoryLedgerStore, ContextStore } from "@wardenlabs/core";
+import { evaluate, MemoryLedgerStore, ContextStore } from "@warden/core";
 
 const ledger = new MemoryLedgerStore();
 const ctx = new ContextStore();
@@ -114,7 +114,7 @@ export async function onPreToolUse(event) {
 
 export async function onUserPromptSubmitted(event) {
   // Scan for injection patterns
-  const { scanForInjection } = await import("@wardenlabs/core");
+  const { scanForInjection } = await import("@warden/core");
   const result = scanForInjection(event.prompt, 0 /* EXTERNAL */);
   if (!result.clean) throw new Error("Injection detected");
 }
@@ -132,7 +132,7 @@ codex hooks set pre-tool-use --command "npx tsx warden-codex-hook.ts"
 Hook script (`warden-codex-hook.ts`):
 
 ```typescript
-import { evaluate, MemoryLedgerStore } from "@wardenlabs/core";
+import { evaluate, MemoryLedgerStore } from "@warden/core";
 
 const ledger = new MemoryLedgerStore();
 
@@ -173,8 +173,8 @@ Agent Tool Call → Warden Proxy (warden.wrapMCP) → Real MCP Server
 
 ```typescript
 // warden-mcp-proxy.ts
-import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
-import { MemoryLedgerStore, ContextStore } from "@wardenlabs/core";
+import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
+import { MemoryLedgerStore, ContextStore } from "@warden/core";
 
 const gateway = new WardenGateway({
   config,
@@ -516,8 +516,8 @@ warden/
 ## Programmatic Usage
 
 ```typescript
-import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
-import { MemoryLedgerStore, ContextStore, TrustLevel } from "@wardenlabs/core";
+import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
+import { MemoryLedgerStore, ContextStore, TrustLevel } from "@warden/core";
 
 const gateway = new WardenGateway({
   config: myConfig,

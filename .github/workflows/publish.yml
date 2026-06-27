@@ -35,39 +35,39 @@ jobs:
 
       # ── Build in dependency order ──────────────────────────────────
 
-      - name: Build @wardenlabs/core
+      - name: Build @warden/core
         run: cd packages/core && npx tsc && cd ../..
 
-      - name: Build @wardenlabs/hook-server
+      - name: Build @warden/hook-server
         run: cd packages/hook-server && npx tsc && cd ../..
 
-      - name: Build @wardenlabs/mcp-gateway
+      - name: Build @warden/mcp-gateway
         run: cd packages/mcp-gateway && npx tsc && cd ../..
 
-      - name: Build @wardenlabs/cli
+      - name: Build @warden/cli
         run: cd packages/cli && npx tsc && cd ../..
 
       # ── Publish in dependency order ────────────────────────────────
 
-      - name: Publish @wardenlabs/core
+      - name: Publish @warden/core
         run: npm publish --provenance --access public
         working-directory: packages/core
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @wardenlabs/hook-server
+      - name: Publish @warden/hook-server
         run: npm publish --provenance --access public
         working-directory: packages/hook-server
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @wardenlabs/mcp-gateway
+      - name: Publish @warden/mcp-gateway
         run: npm publish --provenance --access public
         working-directory: packages/mcp-gateway
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @wardenlabs/cli
+      - name: Publish @warden/cli
         run: npm publish --provenance --access public
         working-directory: packages/cli
         env:

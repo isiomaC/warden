@@ -1,15 +1,18 @@
 {
-  "name": "@wardenlabs/cli",
+  "name": "@warden/cli",
   "version": "0.1.0",
   "description": "Developer CLI for Warden — init, start, audit, policy test, scan",
   "license": "MIT",
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "bin": {
     "warden": "dist/src/index.js"
   },
-  "files": ["dist", "LICENSE"],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -18,16 +21,22 @@
     "url": "https://github.com/isiomaC/warden.git",
     "directory": "packages/cli"
   },
-  "keywords": ["agent-security", "cli", "mcp", "warden", "ai-safety"],
+  "keywords": [
+    "agent-security",
+    "cli",
+    "mcp",
+    "warden",
+    "ai-safety"
+  ],
   "engines": {
     "node": ">=22"
   },
   "peerDependencies": {
-    "@wardenlabs/core": "^0.1.0",
-    "@wardenlabs/hook-server": "^0.1.0"
+    "@warden/core": "^0.1.0",
+    "@warden/hook-server": "^0.1.0"
   },
   "dependencies": {
-    "@wardenlabs/core": "*",
+    "@warden/core": "*",
     "citty": "^0.1.6"
   }
 }

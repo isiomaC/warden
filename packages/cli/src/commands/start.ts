@@ -1,8 +1,8 @@
 import { defineCommand } from "citty";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { createHookServer } from "@wardenlabs/hook-server";
-import { FileConfigSource } from "@wardenlabs/core";
+import { createHookServer } from "@warden/hook-server";
+import { FileConfigSource } from "@warden/core";
 
 export const startCommand = defineCommand({
   meta: {

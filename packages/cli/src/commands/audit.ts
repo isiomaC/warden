@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { MemoryLedgerStore, SqliteLedgerStore } from "@wardenlabs/core";
+import { MemoryLedgerStore, SqliteLedgerStore } from "@warden/core";
 import { existsSync } from "node:fs";
 
 export const auditCommand = defineCommand({

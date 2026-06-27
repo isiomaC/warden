@@ -1,6 +1,6 @@
 # Programmatic Usage Example
 
-Demonstrates using `@wardenlabs/core` directly in your own Node.js or Bun project — no hook server, no MCP gateway. Just pure deterministic policy evaluation with hash-chained audit logging.
+Demonstrates using `@warden/core` directly in your own Node.js or Bun project — no hook server, no MCP gateway. Just pure deterministic policy evaluation with hash-chained audit logging.
 
 ## What This Shows
 
@@ -23,7 +23,7 @@ Demonstrates using `@wardenlabs/core` directly in your own Node.js or Bun projec
 
 ```bash
 # Install the core package
-npm install @wardenlabs/core
+npm install @warden/core
 ```
 
 ## Run
@@ -32,7 +32,7 @@ npm install @wardenlabs/core
 # From the repo root (local package)
 npx tsx examples/programmatic/index.ts
 
-# Or from any project with @wardenlabs/core installed
+# Or from any project with @warden/core installed
 npx tsx examples/programmatic/index.ts
 ```
 
@@ -76,7 +76,7 @@ const config: PolicyConfig = {
 ### 2. Evaluation
 
 ```typescript
-import { evaluate } from "@wardenlabs/core";
+import { evaluate } from "@warden/core";
 
 const decision = evaluate(config, {
   toolName: "read_file",
@@ -91,7 +91,7 @@ const decision = evaluate(config, {
 ### 3. Ledger (Hash-Chained Audit Trail)
 
 ```typescript
-import { MemoryLedgerStore } from "@wardenlabs/core";
+import { MemoryLedgerStore } from "@warden/core";
 
 const ledger = new MemoryLedgerStore();
 
@@ -121,7 +121,7 @@ const { valid } = ledger.verifyChain();
 ### 4. Context Isolation
 
 ```typescript
-import { ContextManager } from "@wardenlabs/core";
+import { ContextManager } from "@warden/core";
 
 const ctx = new ContextManager();
 const task = ctx.createTask("session-001");
@@ -145,5 +145,5 @@ Trust flows downward only. EXTERNAL content can never be promoted upward.
 
 - See [`README.md`](../../README.md) for the full project overview
 - See [`docs/planV2.md`](../../docs/planV2.md) for the authoritative implementation spec
-- For programmatic MCP gateway usage: use `@wardenlabs/mcp-gateway` (wraps real MCP servers)
+- For programmatic MCP gateway usage: use `@warden/mcp-gateway` (wraps real MCP servers)
 - For hook server integration: see the CLI `warden start` command

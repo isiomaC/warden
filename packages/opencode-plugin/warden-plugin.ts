@@ -12,8 +12,8 @@ import {
   redactSecrets,
   scanForInjection,
   TrustLevel,
-} from "@wardenlabs/core";
-import type { PolicyConfig, PolicyDecision, LedgerStore } from "@wardenlabs/core";
+} from "@warden/core";
+import type { PolicyConfig, PolicyDecision, LedgerStore } from "@warden/core";
 
 let ledger: LedgerStore;
 let contextManager: ContextManager;

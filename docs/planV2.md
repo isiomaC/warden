@@ -1108,7 +1108,7 @@ If and when relevant: OpenClaw agents can optionally wrap tool registrations via
 
 **Distribution strategy:**
 
-- `npm install @wardenlabs/sdk` — frictionless, discoverable
+- `npm install @warden/sdk` — frictionless, discoverable
 - GitHub README targeting “Claude Code security” and “MCP security” search
 - Claude Code community / Discord — exact ICP, underserved
 - Agent framework integrations (LangChain, CrewAI, etc.) — ecosystem surface area

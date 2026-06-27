@@ -86,4 +86,4 @@ All sub-agents must run these before reporting done:
 
 ## Package Name
 
-`@wardenlabs/sdk` (from docs/planV2.md). Not `@openclaw/guard` — that was the V1 name, now superseded.
+`@warden/sdk` (from docs/planV2.md). Not `@openclaw/guard` — that was the V1 name, now superseded.

@@ -17,7 +17,18 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "paths": {
+      "@warden/core": ["./packages/core/src/index.ts"],
+      "@warden/core/*": ["./packages/core/src/*"],
+      "@warden/hook-server": ["./packages/hook-server/src/server.ts"],
+      "@warden/hook-server/*": ["./packages/hook-server/src/*"],
+      "@warden/mcp-gateway": ["./packages/mcp-gateway/src/gateway.ts"],
+      "@warden/mcp-gateway/*": ["./packages/mcp-gateway/src/*"],
+      "@warden/cli": ["./packages/cli/src/index.ts"],
+      "@warden/cli/*": ["./packages/cli/src/*"],
+      "@warden/opencode-plugin": ["./packages/opencode-plugin/warden-plugin.ts"]
+    }
   },
   "include": ["packages/**/*.ts"],
   "exclude": ["node_modules", "dist"]

@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { FileConfigSource } from "@wardenlabs/core";
+import { FileConfigSource } from "@warden/core";
 
 export const configValidateCommand = defineCommand({
   meta: {

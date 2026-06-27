@@ -3,9 +3,9 @@ import { WardenGateway } from "../src/gateway";
 import {
   MemoryLedgerStore,
   ContextManager,
-} from "@wardenlabs/core";
-import { TrustLevel } from "@wardenlabs/core";
-import type { PolicyConfig } from "@wardenlabs/core";
+} from "@warden/core";
+import { TrustLevel } from "@warden/core";
+import type { PolicyConfig } from "@warden/core";
 import { MCPRegistry as Registry } from "../src/registry";
 import { OAuthManager as OAuth } from "../src/oauth";
 import { checkLateralMovement } from "../src/lateral";

@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
-import { checkSupplyChain } from "@wardenlabs/core";
-import type { Dependency } from "@wardenlabs/core";
+import { checkSupplyChain } from "@warden/core";
+import type { Dependency } from "@warden/core";
 
 export const supplyChainCommand = defineCommand({
   meta: {

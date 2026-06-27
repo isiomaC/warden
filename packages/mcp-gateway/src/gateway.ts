@@ -8,15 +8,15 @@ import {
   SlidingWindowRateLimiter,
   WardenLogger,
   parseLogLevel,
-} from "@wardenlabs/core";
+} from "@warden/core";
 import type {
   PolicyConfig,
   LedgerStore,
   ContextStore,
   PolicyDecision,
   RateLimiterConfig,
-} from "@wardenlabs/core";
-import { TrustLevel as TL } from "@wardenlabs/core";
+} from "@warden/core";
+import { TrustLevel as TL } from "@warden/core";
 import type { ApprovalChannel } from "../../hook-server/src/approvals/types";
 
 export interface WardenGatewayOptions {

@@ -4,9 +4,9 @@ import {
   tagValue,
   redactSecrets,
   sanitizeExternalValues,
-} from "@wardenlabs/core";
-import type { PolicyConfig, LedgerStore, ContextStore } from "@wardenlabs/core";
-import type { TrustRegistry } from "@wardenlabs/core";
+} from "@warden/core";
+import type { PolicyConfig, LedgerStore, ContextStore } from "@warden/core";
+import type { TrustRegistry } from "@warden/core";
 import type { ApprovalChannel } from "../approvals/types";
 
 export function handlePreToolUse(

@@ -10,21 +10,21 @@ How to deploy every package and service for Warden on an MCP-connected agent set
 
 | Package | npm Name | Role |
 |---|---|---|
-| `packages/core/` | `@wardenlabs/core` | Pure enforcement logic: trust tagger, policy engine, hash-chained ledger, vault, context isolation, injection scanner, tool pins, supply chain, redaction. Zero runtime deps beyond ulid + better-sqlite3. |
-| `packages/hook-server/` | `@wardenlabs/hook-server` | HTTP hook server (Hono on localhost:7429) for Claude Code. Handles all 6 hook events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, ConfigChange, SessionEnd. Includes approval channels (stdout, telegram, slack). |
-| `packages/mcp-gateway/` | `@wardenlabs/mcp-gateway` | Programmatic MCP wrapper. Provides `WardenGateway.wrapMCP()` to add policy enforcement to any MCP server connection. Includes registry (allowlist), OAuth 2.1 token management, and lateral movement detection. |
-| `packages/cli/` | `@wardenlabs/cli` | Developer CLI (citty). Commands: `init`, `start`, `audit`, `policy`, `scan`, `supply-chain`, `config-validate`, `reset`. |
+| `packages/core/` | `@warden/core` | Pure enforcement logic: trust tagger, policy engine, hash-chained ledger, vault, context isolation, injection scanner, tool pins, supply chain, redaction. Zero runtime deps beyond ulid + better-sqlite3. |
+| `packages/hook-server/` | `@warden/hook-server` | HTTP hook server (Hono on localhost:7429) for Claude Code. Handles all 6 hook events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, ConfigChange, SessionEnd. Includes approval channels (stdout, telegram, slack). |
+| `packages/mcp-gateway/` | `@warden/mcp-gateway` | Programmatic MCP wrapper. Provides `WardenGateway.wrapMCP()` to add policy enforcement to any MCP server connection. Includes registry (allowlist), OAuth 2.1 token management, and lateral movement detection. |
+| `packages/cli/` | `@warden/cli` | Developer CLI (citty). Commands: `init`, `start`, `audit`, `policy`, `scan`, `supply-chain`, `config-validate`, `reset`. |
 
 ### Dependency Graph
 
 ```
-@wardenlabs/cli
-  ├── @wardenlabs/hook-server
-  │     └── @wardenlabs/core
-  └── @wardenlabs/core
+@warden/cli
+  ├── @warden/hook-server
+  │     └── @warden/core
+  └── @warden/core
 
-@wardenlabs/mcp-gateway
-  └── @wardenlabs/core
+@warden/mcp-gateway
+  └── @warden/core
 ```
 
 **Build order (must follow this sequence):**
@@ -218,7 +218,7 @@ All channels respect a **60-second hard cap**. After timeout, the decision is au
 ### Programmatic Usage
 
 ```typescript
-import { createHookServer } from "@wardenlabs/hook-server";
+import { createHookServer } from "@warden/hook-server";
 
 const { app, fetch, vault, ledger, contextManager } = createHookServer({
   config,              // PolicyConfig from warden.config.yml
@@ -363,7 +363,7 @@ The hook server can be configured for verbose development logging:
 
 ```typescript
 // In your own start script or test harness:
-import { createHookServer } from "@wardenlabs/hook-server";
+import { createHookServer } from "@warden/hook-server";
 
 const { app } = createHookServer({
   config,
@@ -619,10 +619,10 @@ The monorepo uses npm workspaces. Four packages will be linked:
 
 ```
 warden/
-├── packages/core/         @wardenlabs/core
-├── packages/hook-server/  @wardenlabs/hook-server
-├── packages/mcp-gateway/  @wardenlabs/mcp-gateway
-└── packages/cli/          @wardenlabs/cli
+├── packages/core/         @warden/core
+├── packages/hook-server/  @warden/hook-server
+├── packages/mcp-gateway/  @warden/mcp-gateway
+└── packages/cli/          @warden/cli
 ```
 
 ---
@@ -740,7 +740,7 @@ The hook server runs on `localhost:7429` and handles all Claude Code hook events
 ### Option A: Programmatic (embedded in your app)
 
 ```typescript
-import { createHookServer } from "@wardenlabs/hook-server";
+import { createHookServer } from "@warden/hook-server";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -755,7 +755,7 @@ export default server;
 ### Option B: Standalone Bun server
 
 ```typescript
-import { startHookServer } from "@wardenlabs/hook-server";
+import { startHookServer } from "@warden/hook-server";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -770,7 +770,7 @@ console.log(`Warden hook server running on http://localhost:${server.port}`);
 
 ```typescript
 import { createServer } from "node:http";
-import { createHookServer } from "@wardenlabs/hook-server";
+import { createHookServer } from "@warden/hook-server";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -886,14 +886,14 @@ Add Warden hooks to `.claude/settings.json`:
 The MCP gateway wraps MCP server connections with policy enforcement.
 
 ```typescript
-import { WardenGateway } from "@wardenlabs/mcp-gateway";
-import { MCPRegistry } from "@wardenlabs/mcp-gateway";
+import { WardenGateway } from "@warden/mcp-gateway";
+import { MCPRegistry } from "@warden/mcp-gateway";
 import {
   MemoryLedgerStore,
   LocalVault,
   ContextManager,
   TrustLevel,
-} from "@wardenlabs/core";
+} from "@warden/core";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -1007,7 +1007,7 @@ your-project/
 │   ├── tool-pins.json         # Tool description hashes (commit this)
 │   └── package-pins.json      # Package integrity pins (commit this)
 ├── warden.config.yml          # Policy configuration (commit this)
-└── package.json               # Should include @wardenlabs/* as deps
+└── package.json               # Should include @warden/* as deps
 ```
 
 ---
