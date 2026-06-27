@@ -11,8 +11,11 @@ export function handleConfigChange(ledger: LedgerStore) {
     });
 
     return c.json({
-      decision: "block",
-      reason: "Warden: Runtime config mutation is not permitted. Warden policy is locked at session start. Restart session to apply new config.",
+      hookSpecificOutput: {
+        hookEventName: "ConfigChange",
+        permissionDecision: "deny",
+        permissionDecisionReason: "Warden: Runtime config mutation is not permitted. Warden policy is locked at session start. Restart session to apply new config.",
+      },
     });
   };
 }

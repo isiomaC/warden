@@ -3,14 +3,17 @@ import {
   evaluate,
   tagValue,
   redactSecrets,
+  sanitizeExternalValues,
 } from "@wardenlabs/core";
-import type { PolicyConfig, LedgerStore, ContextManager } from "@wardenlabs/core";
+import type { PolicyConfig, LedgerStore, ContextStore } from "@wardenlabs/core";
+import type { TrustRegistry } from "@wardenlabs/core";
 import type { ApprovalChannel } from "../approvals/types";
 
 export function handlePreToolUse(
   config: PolicyConfig,
   ledger: LedgerStore,
-  contextManager: ContextManager,
+  contextManager: ContextStore,
+  trustRegistry: TrustRegistry,
   approvalChannel?: ApprovalChannel,
 ) {
   return async (c: Context) => {
@@ -18,13 +21,31 @@ export function handlePreToolUse(
     const { tool_name, tool_input, session_id } = body;
     const taskId = c.get("taskId") as string;
 
+    const task = contextManager.getTask(taskId);
+    if (!task) {
+      return c.json({
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "deny",
+          permissionDecisionReason: "Warden: Task context not found or expired.",
+          errorCode: "WARDEN_TASK_EXPIRED",
+        },
+      }, 403);
+    }
+
     const trustedInput = tagValue(tool_input, `mcp__${tool_name}`, taskId);
+
+    const inputTrust = trustRegistry.lookup(tool_input);
+    const allSources = [{ source: trustedInput.source, trust: trustedInput.trust }];
+    if (inputTrust !== undefined) {
+      allSources.push({ source: "trust-registry", trust: inputTrust });
+    }
 
     const input = {
       toolName: tool_name,
       toolInput: tool_input as Record<string, unknown>,
       environment: config.meta.environment,
-      trustSources: [{ source: trustedInput.source, trust: trustedInput.trust }],
+      trustSources: allSources,
       serverInAllowlist: true,
     };
 
@@ -95,14 +116,38 @@ export function handlePreToolUse(
         });
       }
 
-      case "QUARANTINE":
+      case "QUARANTINE": {
+        const { sanitized, stripped } = sanitizeExternalValues(
+          tool_input as Record<string, unknown> ?? {},
+          trustRegistry,
+        );
+
+        const warningMessage =
+          "Warden: Quarantined external content was removed. Approve via Telegram to include external content.";
+
+        ledger.writeSecurityEvent({
+          id: `quarantine_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          eventType: "EXTERNAL_CONTENT_STRIPPED",
+          details: {
+            tool: tool_name,
+            strippedKeys: stripped,
+            decisionReason: decision.reason,
+            taskId,
+            sessionId: session_id,
+          },
+        });
+
         return c.json({
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
-            permissionDecision: "deny",
-            permissionDecisionReason: `Warden: QUARANTINE — ${decision.reason}. Context stripped before execution.`,
+            permissionDecision: "allow",
+            permissionDecisionReason: "Warden: EXTERNAL-trust context stripped before tool execution.",
+            updatedInput: sanitized,
+            additionalContext: warningMessage,
           },
         });
+      }
 
       default:
         return c.json({

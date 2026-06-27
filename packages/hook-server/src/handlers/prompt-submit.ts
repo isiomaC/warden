@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { scanForInjection, TrustLevel } from "@wardenlabs/core";
 import type { LedgerStore } from "@wardenlabs/core";
 
-export function handlePromptSubmit(_ledger: LedgerStore) {
+export function handlePromptSubmit(ledger: LedgerStore) {
   return async (c: Context) => {
     const body = await c.req.json();
     const prompt = body.prompt ?? body.text ?? "";
@@ -10,15 +10,31 @@ export function handlePromptSubmit(_ledger: LedgerStore) {
     const result = scanForInjection(prompt, TrustLevel.EXTERNAL);
 
     if (!result.clean) {
+      ledger.writeSecurityEvent({
+        id: `injection_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        eventType: "INJECTION_DETECTED",
+        details: {
+          prompt: prompt,
+          patterns: result.patterns,
+        },
+      });
+
       return c.json({
-        decision: "block",
-        reason: `Warden: Indirect prompt injection pattern detected. Patterns: ${result.patterns?.join(", ")}. Session logged.`,
+        hookSpecificOutput: {
+          hookEventName: "UserPromptSubmit",
+          permissionDecision: "deny",
+          permissionDecisionReason: `Warden: Indirect prompt injection pattern detected in submitted prompt. Patterns: [${result.patterns?.join(", ")}]. Session logged.`,
+        },
       });
     }
 
     return c.json({
-      decision: "allow",
-      reason: "Warden: Prompt clean.",
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        permissionDecision: "allow",
+        permissionDecisionReason: "Warden: Prompt clean.",
+      },
     });
   };
 }

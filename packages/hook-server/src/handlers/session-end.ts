@@ -1,9 +1,9 @@
 import type { Context } from "hono";
-import type { VaultAdapter, LedgerStore, ContextManager } from "@wardenlabs/core";
+import type { VaultAdapter, LedgerStore, ContextStore } from "@wardenlabs/core";
 
 export function handleSessionEnd(
   vault: VaultAdapter,
-  contextManager: ContextManager,
+  contextManager: ContextStore,
   _ledger: LedgerStore,
 ) {
   return async (c: Context) => {

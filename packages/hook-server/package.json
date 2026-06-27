@@ -1,12 +1,30 @@
 {
   "name": "@wardenlabs/hook-server",
   "version": "0.1.0",
-  "private": true,
+  "description": "HTTP hook server for Claude Code, Codex CLI, and Copilot SDK integration",
   "type": "module",
-  "main": "./src/server.ts",
+  "main": "dist/src/server.js",
+  "types": "dist/src/server.d.ts",
+  "files": ["dist", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isiomaC/warden.git",
+    "directory": "packages/hook-server"
+  },
+  "keywords": ["agent-security", "hook-server", "claude-code", "mcp", "ai-safety"],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@wardenlabs/core": "*",
     "hono": "^4.0.0",
     "grammy": "^1.32.0"
+  },
+  "peerDependencies": {
+    "@wardenlabs/core": "^0.1.0"
   }
 }
