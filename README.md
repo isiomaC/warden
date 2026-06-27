@@ -1,5 +1,9 @@
 # Warden
 
+[![CI](https://github.com/isiomaC/warden/actions/workflows/ci.yml/badge.svg)](https://github.com/isiomaC/warden/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@wardenlabs/core)](https://www.npmjs.com/package/@wardenlabs/core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **The policy layer for autonomous agents. Full permissions, zero blast radius.**
 
 Warden sits between your LLM agent and its tools, enforcing rules on every tool call. No LLM in the security path — just deterministic policy evaluation. If Warden is down, **all tool calls are blocked**. Fail-closed, always.
@@ -15,6 +19,17 @@ Warden integrates at different depths depending on the platform's capabilities:
 | **Full hooks + MCP** | Claude Code, GitHub Copilot SDK, OpenAI Codex CLI, OpenCode | PreToolUse/PostToolUse hooks, prompt scanning, session lifecycle | Full policy enforcement, per-call inspection, CONFIRM, ledger audit |
 | **MCP only (no hooks)** | Cursor, Windsurf, Continue.dev, Cody, Amazon Q | Warden acts as an MCP proxy — all tools go through `warden.wrapMCP()` | Tool-level policy, server allowlist, rate limiting. **Cannot** intercept tool calls from other agent types (non-MCP). |
 | **No MCP + no hooks** | Aider | Process-level proxy or fork modification | None out of the box. Requires custom integration. |
+
+---
+
+## Why Warden
+
+Enterprise MCP gateways (AWS AgentCore, Google Agent Gateway, Kong, Tyk) solve policy enforcement at the infrastructure layer. Warden solves it at the developer layer — local-first, zero-infrastructure, running on your machine as part of your agent's tool chain.
+
+- **No server to deploy.** Warden runs as a local hook server or in-process plugin.
+- **No vendor lock-in.** Works with Claude Code, OpenCode, Codex CLI, Copilot SDK, and any MCP-connected agent.
+- **No LLM in the security path.** Policy decisions are deterministic pattern matching, not probabilistic.
+- **Complements gateways.** Use Warden locally during development; use a gateway in production. Or use both.
 
 ---
 
@@ -75,10 +90,10 @@ Add Warden to your Copilot extension's `agent.json`:
 Hook handler (`warden-copilot.js`):
 
 ```javascript
-import { evaluate, MemoryLedgerStore, ContextManager } from "@wardenlabs/core";
+import { evaluate, MemoryLedgerStore, ContextStore } from "@wardenlabs/core";
 
 const ledger = new MemoryLedgerStore();
-const ctx = new ContextManager();
+const ctx = new ContextStore();
 
 export async function onPreToolUse(event) {
   const decision = evaluate(config, {
@@ -159,12 +174,12 @@ Agent Tool Call → Warden Proxy (warden.wrapMCP) → Real MCP Server
 ```typescript
 // warden-mcp-proxy.ts
 import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
-import { MemoryLedgerStore, ContextManager } from "@wardenlabs/core";
+import { MemoryLedgerStore, ContextStore } from "@wardenlabs/core";
 
 const gateway = new WardenGateway({
   config,
   ledger: new MemoryLedgerStore(),
-  contextManager: new ContextManager(),
+  contextManager: new ContextStore(),
   registry: new MCPRegistry([ /* your allowed servers */ ]),
 });
 
@@ -210,7 +225,7 @@ npm install
 
 ```bash
 npx tsc --noEmit        # Zero type errors expected
-npx vitest run           # 104 tests pass
+npx vitest run           # 227 tests pass
 ```
 
 ### 3. Initialize Warden in your project
@@ -392,6 +407,8 @@ policies:
         - "eval\\s*\\("
     action: DENY
 
+> **Note:** The injection scanner uses regex pattern matching, which catches common attack patterns but can be bypassed by obfuscation (e.g., string concatenation, hex encoding, Unicode homoglyphs). For shell command safety, consider combining Warden with AST-level command parsing. Contributions to improve scanner coverage are welcome.
+
   - id: "quarantine-external"
     description: "External content cannot flow into destructive operations"
     match:
@@ -409,7 +426,7 @@ policies:
 ```
 
 **Trust levels:** `3` = SYSTEM, `2` = AGENT, `1` = TOOL, `0` = EXTERNAL  
-**Actions:** `ALLOW`, `DENY`, `CONFIRM` (ask human, 60s timeout), `QUARANTINE` (strip context, log event)  
+**Actions:** `ALLOW`, `DENY`, `CONFIRM` (ask human, 60s timeout), `QUARANTINE` (replaces output with `[QUARANTINED: ...]` sentinel, preserves original in ledger, forces EXTERNAL trust)
 **Precedence:** DENY > QUARANTINE > CONFIRM > ALLOW. Unmatched = DENY.
 
 ---
@@ -437,7 +454,7 @@ Every value in the agent's context carries a trust tag:
 | Unknown tool is called | DENY (default deny). |
 | Agent tries `rm -rf /` | DENY (shell injection pattern). |
 | Agent tries `delete_file` | CONFIRM (approval channel). 60s timeout → DENY. |
-| External content flows to `write_file` | QUARANTINE. Context stripped, security event logged. |
+| External content flows to `write_file` | QUARANTINE. Output replaced with `[QUARANTINED: ...]` sentinel, original preserved in ledger for audit, trust forced to EXTERNAL (0). |
 | Someone edits `warden.config.yml` mid-session | BLOCKED by ConfigChange hook. |
 | Ledger entry is tampered with | Chain breaks → ledger verify fails → security event. |
 | Token expires mid-session | DENY on next tool call. |
@@ -455,6 +472,8 @@ warden/
 │   │   ├── ledger.ts         Hash-chained append-only ledger (tamper-evident)
 │   │   ├── vault.ts          Ephemeral scoped token vault (no static secrets)
 │   │   ├── context.ts        Per-task context isolation (no cross-task bleed)
+│   │   ├── config-source.ts  Config hashing + change detection
+│   │   ├── trust-registry.ts Agent/platform trust level registry
 │   │   ├── scanner.ts        Injection pattern scanner (pattern matching, not LLM)
 │   │   ├── pins.ts           Tool description pinning (rug pull detection)
 │   │   ├── redact.ts         Secret redaction before ledger writes
@@ -463,7 +482,7 @@ warden/
 │   ├── hook-server/       # HTTP hook server (Hono, localhost:7429)
 │   │   ├── middleware/       auth (token verification), fail-closed (errors → DENY)
 │   │   ├── handlers/         SessionStart/End, PreToolUse, PostToolUse, PromptSubmit, ConfigChange
-│   │   └── approvals/        stdout, telegram, slack approval channels
+│   │   └── approvals/        ApprovalChannel interface (stdout, telegram, slack)
 │   │
 │   ├── mcp-gateway/       # Programmatic MCP wrapper
 │   │   ├── registry.ts       Server allowlist (unknown server = DENY)
@@ -498,12 +517,12 @@ warden/
 
 ```typescript
 import { WardenGateway, MCPRegistry } from "@wardenlabs/mcp-gateway";
-import { MemoryLedgerStore, ContextManager, TrustLevel } from "@wardenlabs/core";
+import { MemoryLedgerStore, ContextStore, TrustLevel } from "@wardenlabs/core";
 
 const gateway = new WardenGateway({
   config: myConfig,
   ledger: new MemoryLedgerStore(),
-  contextManager: new ContextManager(),
+  contextManager: new ContextStore(),
   registry: new MCPRegistry([...]),
 });
 
@@ -524,12 +543,13 @@ const decision = await safeFs.onToolCall("read_file", { path: "/tmp/test.txt" },
 
 ```bash
 npx tsc --noEmit        # TypeScript strict mode — no `any`, no implicit returns
-npx vitest run           # 104 tests across 11 test files
+npx vitest run           # 227 tests across 17 test files
 
 # Specific packages
-npx vitest run packages/core/tests/          # 84 unit tests
-npx vitest run packages/hook-server/tests/   # 15 integration tests (mock LLM corpus)
-npx vitest run packages/mcp-gateway/tests/   # 8 gateway tests
+npx vitest run packages/core/tests/          # Unit + trust/ledger/policy/vault/scanner/pins/supply-chain/config-source/trust-registry
+npx vitest run packages/hook-server/tests/   # Approvals, integration, e2e (mock LLM corpus)
+npx vitest run packages/mcp-gateway/tests/   # Gateway + registry + OAuth + lateral
+npx vitest run packages/opencode-plugin/tests/  # Plugin lifecycle tests
 ```
 
 ---
@@ -542,7 +562,7 @@ npx vitest run packages/mcp-gateway/tests/   # 8 gateway tests
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Developer deployment: hook server, MCP gateway, daemon configs, production checklist |
 | [`docs/TESTING.md`](docs/TESTING.md) | Full test strategy: unit, integration (mock corpus), live Claude Code session, CI |
 | [`docs/NPM_PUBLISHING.md`](docs/NPM_PUBLISHING.md) | Build configs, publish order, GitHub Packages auth, CI/CD workflow |
-| [`planV2.md`](planV2.md) | Authoritative implementation spec — architecture, data structures, hook contracts |
+| [`docs/planV2.md`](docs/planV2.md) | Authoritative implementation spec — architecture, data structures, hook contracts |
 | [`AGENTS.md`](AGENTS.md) | Multi-agent workflow for building Warden (architect → coder → reviewer → ops) |
 
 ---
@@ -562,6 +582,16 @@ npx vitest run packages/mcp-gateway/tests/   # 8 gateway tests
 | Telegram bot | grammy 1 |
 | CLI | citty 0.1 |
 | Test | Vitest 2 |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and pull request guidelines.
+
+## Security
+
+See [SECURITY.md](.github/SECURITY.md) for reporting vulnerabilities.
 
 ---
 
