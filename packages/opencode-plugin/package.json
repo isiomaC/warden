@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./warden-plugin.ts",
-  "description": "Warden security plugin for OpenCode — policy enforcement, injection scanning, permission control"
+  "main": "warden-plugin.ts",
+  "description": "Warden policy enforcement plugin for OpenCode",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isiomaC/warden.git",
+    "directory": "packages/opencode-plugin"
+  },
+  "peerDependencies": {
+    "@wardenlabs/core": "^0.1.0"
+  }
 }

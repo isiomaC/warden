@@ -14,10 +14,13 @@ declare module "@opencode-ai/plugin" {
   export type Plugin = (ctx: PluginContext) => Promise<PluginHooks>;
 
   export interface PluginHooks {
-    event?: (input: { event: { type: string } }) => void;
-    "tool.execute.before"?: (input: { tool: string; args: Record<string, unknown> }) => void;
-    "tool.execute.after"?: (input: { tool: string; result: unknown }) => void;
-    "tui.prompt.append"?: (input: { text: string }) => void;
-    "permission.asked"?: (input: { tool: string; args: Record<string, unknown> }) => { allowed: boolean; reason?: string } | void;
+    event?: (input: { event: { type: string } }) => Promise<void> | void;
+    "tool.execute.before"?: (input: { tool: string; args: Record<string, unknown> }) => Promise<void> | void;
+    "tool.execute.after"?: (input: { tool: string; result: unknown }) => Promise<void> | void;
+    "tui.prompt.append"?: (input: { text: string }) => Promise<void> | void;
+    "permission.asked"?: (input: { tool: string; args: Record<string, unknown> }) =>
+      | { allowed: boolean; reason?: string }
+      | void
+      | Promise<{ allowed: boolean; reason?: string } | void>;
   }
 }
