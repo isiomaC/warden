@@ -1,8 +1,11 @@
+import { createRequire } from "node:module";
 import { sha256 } from "./hash";
 import { generateId } from "./id";
 import { redactSecrets } from "./redact";
 import type { TrustLevel } from "./trust";
 import type { PolicyDecision } from "./policy";
+
+const require = createRequire(import.meta.url);
 
 function getDb(dbPath: string) {
   const Database = require("better-sqlite3");
