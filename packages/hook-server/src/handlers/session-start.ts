@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { readFileSync } from "node:fs";
 import {
   sha256,
   checkSupplyChain,
@@ -18,7 +19,7 @@ const VALID_ENVIRONMENTS = ["development", "staging", "production"];
 
 function loadPins(pinsPath: string): Record<string, PackagePin> {
   try {
-    const raw = require("node:fs").readFileSync(pinsPath, "utf-8");
+    const raw = readFileSync(pinsPath, "utf-8");
     return JSON.parse(raw) as Record<string, PackagePin>;
   } catch {
     return {};
@@ -28,7 +29,7 @@ function loadPins(pinsPath: string): Record<string, PackagePin> {
 function readLockDeps() {
   const lockPath = `${process.cwd()}/package-lock.json`;
   try {
-    const raw = require("node:fs").readFileSync(lockPath, "utf-8");
+    const raw = readFileSync(lockPath, "utf-8");
     const lockJson = JSON.parse(raw) as Record<
       string,
       Record<string, { version?: string; integrity?: string }>
