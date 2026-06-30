@@ -43,4 +43,33 @@ describe("TrustRegistry", () => {
     reg.register("shared value", TrustLevel.SYSTEM, "source-b");
     expect(reg.lookup("shared value")).toBe(TrustLevel.EXTERNAL);
   });
+
+  it("should log a warning when a re-registration attempts a different trust level", () => {
+    const warnings: Array<[string, Record<string, unknown> | undefined]> = [];
+    const logger = { warn: (msg: string, ctx?: Record<string, unknown>) => warnings.push([msg, ctx]) };
+    const reg = new TrustRegistry(logger as never);
+
+    reg.register("shared value", TrustLevel.EXTERNAL, "source-a");
+    reg.register("shared value", TrustLevel.SYSTEM, "source-b");
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]![0]).toContain("re-registration conflict");
+    expect(warnings[0]![1]).toMatchObject({
+      existingTrust: TrustLevel.EXTERNAL,
+      existingSource: "source-a",
+      attemptedTrust: TrustLevel.SYSTEM,
+      attemptedSource: "source-b",
+    });
+  });
+
+  it("should not log when re-registering the same value with identical trust and source", () => {
+    const warnings: Array<unknown> = [];
+    const logger = { warn: (...args: unknown[]) => warnings.push(args) };
+    const reg = new TrustRegistry(logger as never);
+
+    reg.register("shared value", TrustLevel.TOOL, "source-a");
+    reg.register("shared value", TrustLevel.TOOL, "source-a");
+
+    expect(warnings).toHaveLength(0);
+  });
 });

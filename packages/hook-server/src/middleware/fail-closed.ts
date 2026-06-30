@@ -1,31 +1,44 @@
-import type { Context, Next } from "hono";
+import type { Context } from "hono";
 import type { WardenLogger } from "@warden/core";
 
-export function failClosedMiddleware(logger?: WardenLogger) {
-  return async (_c: Context, next: Next) => {
-    try {
-      return await next();
-    } catch (err) {
-      if (logger) {
-        logger.error("Hook handler threw unhandled error — failing closed.", {
-          error: err instanceof Error ? err.message : String(err),
-          path: _c.req.path,
-          method: _c.req.method,
-        });
-      }
+const HOOK_EVENT_NAMES_BY_PATH: Record<string, string> = {
+  "/hooks/session-start": "SessionStart",
+  "/hooks/session-end": "SessionEnd",
+  "/hooks/pre-tool-use": "PreToolUse",
+  "/hooks/post-tool-use": "PostToolUse",
+  "/hooks/prompt-submit": "UserPromptSubmit",
+  "/hooks/config-change": "ConfigChange",
+};
 
-      return _c.json(
-        {
-          hookSpecificOutput: {
-            hookEventName: _c.req.path.includes("pre-tool-use")
-              ? "PreToolUse"
-              : "PostToolUse",
-            permissionDecision: "deny",
-            permissionDecisionReason: "Warden internal error. Failing closed.",
-          },
-        },
-        500,
-      );
+function resolveHookEventName(path: string): string {
+  return HOOK_EVENT_NAMES_BY_PATH[path] ?? "Unknown";
+}
+
+/**
+ * Registered via `app.onError()`, not `app.use()` — Hono's compose() converts
+ * a handler's thrown error to a response at the dispatch layer closest to the
+ * throw, using the app's errorHandler, so a `try/catch` around `next()` in
+ * regular middleware never observes downstream handler errors.
+ */
+export function failClosedHandler(logger?: WardenLogger) {
+  return (err: Error, c: Context) => {
+    if (logger) {
+      logger.error("Hook handler threw unhandled error — failing closed.", {
+        error: err.message,
+        path: c.req.path,
+        method: c.req.method,
+      });
     }
+
+    return c.json(
+      {
+        hookSpecificOutput: {
+          hookEventName: resolveHookEventName(c.req.path),
+          permissionDecision: "deny",
+          permissionDecisionReason: "Warden internal error. Failing closed.",
+        },
+      },
+      500,
+    );
   };
 }

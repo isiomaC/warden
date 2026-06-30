@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+#### CLI
+- `init` now actually writes `warden.config.yml` and `.warden/` instead of only printing a fake hash
+- `supply-chain` now reads the project's real `package.json`/`package-lock.json` instead of checking three hardcoded fake dependencies
+- Added `packages/cli/tests/` with unit tests asserting `init`'s and `supply-chain`'s actual file-system side effects, not just spawned-binary stdout matching
+
+#### Hook Server
+- Fail-closed handling now registered via Hono's `app.onError()` instead of a `try/catch`-around-`next()` middleware — under Hono 4.x's `compose()`, that middleware pattern never observed downstream handler errors, so an unhandled exception previously returned a plain-text "Internal Server Error" instead of the documented structured Warden DENY response; this is now covered by both a unit test and a real-server regression test
+- `hookEventName` in fail-closed responses is now resolved via an exact path→name lookup table instead of substring-matching the URL, fixing mislabeling on some routes
+- `session-start` now validates `environment` against an explicit enum and rejects empty/non-array `allowedTools` instead of silently defaulting
+- `.warden/pins.json` path is now configurable (`pinsPath` option / `warden start --pins`) instead of hardcoded relative to `process.cwd()`
+- Slack approval channel relabeled and documented as notify-only (it cannot receive the approval click back) instead of silently always denying while appearing interactive; Telegram approval channel is now the real interactive implementation
+
+#### MCP Gateway
+- `OAuthManager` is now actually enforced in `onToolCall` — calls to an `authRequired` server with no stored token are DENYed instead of the OAuth check being dead code
+
+#### Core
+- Config-source YAML parser rewritten to fail loudly on unsupported/malformed syntax instead of silently mis-parsing it (block-sequence-of-mappings in particular)
+- All ledger and security-event IDs now generated via a shared `generateId()` (ULID-backed) helper instead of `Date.now()`-based string concatenation, removing a collision risk under high throughput
+- `TrustRegistry` now logs a warning when a re-registration attempts a different trust level or source for an already-registered value, instead of silently discarding the conflicting attempt
+
+#### Docs
+- README/TESTING.md test-count and file-count claims re-synced to the actual suite (307 passed, 3 skipped, 310 total, 23 files)
+
 ### Added
 
 #### Core
@@ -24,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - QUARANTINE content stripping in pre-tool-use handler
 
 #### Approval Channels
-- ApprovalChannel interface with real Slack and Telegram implementations
+- ApprovalChannel interface with a real (interactive) Telegram implementation and a notify-only Slack webhook implementation
 
 #### MCP Gateway
 - `onToolCall` ALLOW/DENY/CONFIRM paths

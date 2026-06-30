@@ -8,6 +8,7 @@ import {
   SlidingWindowRateLimiter,
   WardenLogger,
   parseLogLevel,
+  generateId,
 } from "@warden/core";
 import type {
   PolicyConfig,
@@ -94,6 +95,18 @@ export class WardenGateway {
           };
         }
 
+        const serverEntry = self.registry.getAllowed(serverName);
+        if (serverEntry?.authRequired && !self.oauth.hasValidToken(serverName)) {
+          self.logger.warn("Tool call denied — no valid OAuth token for server.", {
+            serverName,
+            toolName,
+          });
+          return {
+            action: "DENY" as const,
+            reason: `Server "${serverName}" requires OAuth authorization, but no valid token is present. Call oauth.storeToken("${serverName}", ...) first.`,
+          };
+        }
+
         // Sliding-window rate-limit check (before policy evaluation).
         // Per-tool limits are resolved from the gateway config.
         const rateKey = `tool:${toolName}`;
@@ -128,7 +141,7 @@ export class WardenGateway {
 
         if (lateralResult.shouldBlock) {
           self.ledger.writeSecurityEvent({
-            id: `lateral_${Date.now()}`,
+            id: generateId("lateral"),
             timestamp: new Date().toISOString(),
             eventType: "LATERAL_MOVEMENT",
             details: {
@@ -163,7 +176,7 @@ export class WardenGateway {
         self.contextManager.recordToolCall(currentTaskId, serverName);
 
         self.ledger.write({
-          id: `gw_${Date.now()}`,
+          id: generateId("gw"),
           previousHash: self.ledger.lastHash(),
           timestamp: new Date().toISOString(),
           sessionId,

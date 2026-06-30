@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createHookServer } from "../src/server";
 import type { PolicyConfig } from "@warden/core";
 import { TrustLevel } from "@warden/core";
@@ -973,5 +976,184 @@ describe("Hook Server — Mock LLM Integration", () => {
       const result = server.ledger.verifyChain();
       expect(result.valid).toBe(true);
     });
+  });
+});
+
+describe("Hook Server — session-start input validation", () => {
+  function freshServer() {
+    return createHookServer({ config: testConfig });
+  }
+
+  it("should DENY when environment is not a recognized value", async () => {
+    const srv = freshServer();
+    const res = await srv.fetch(
+      new Request("http://localhost:7429/hooks/session-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: "bad-env",
+          allowedTools: ["read_file"],
+          environment: "not-a-real-environment",
+        }),
+      }),
+    );
+
+    const data = await res.json() as Record<string, unknown>;
+    const output = data.hookSpecificOutput as Record<string, string>;
+    expect(output.permissionDecision).toBe("deny");
+    expect(output.permissionDecisionReason).toContain("invalid environment");
+  });
+
+  it("should DENY when allowedTools is an empty array", async () => {
+    const srv = freshServer();
+    const res = await srv.fetch(
+      new Request("http://localhost:7429/hooks/session-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: "empty-tools",
+          allowedTools: [],
+          environment: "development",
+        }),
+      }),
+    );
+
+    const data = await res.json() as Record<string, unknown>;
+    const output = data.hookSpecificOutput as Record<string, string>;
+    expect(output.permissionDecision).toBe("deny");
+    expect(output.permissionDecisionReason).toContain("allowedTools must be a non-empty array");
+  });
+
+  it("should DENY when allowedTools is not an array", async () => {
+    const srv = freshServer();
+    const res = await srv.fetch(
+      new Request("http://localhost:7429/hooks/session-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: "bad-tools",
+          allowedTools: "read_file",
+          environment: "development",
+        }),
+      }),
+    );
+
+    const data = await res.json() as Record<string, unknown>;
+    const output = data.hookSpecificOutput as Record<string, string>;
+    expect(output.permissionDecision).toBe("deny");
+  });
+
+  it("should ALLOW for staging and production, the other two recognized environments", async () => {
+    const srv = freshServer();
+    for (const environment of ["staging", "production"]) {
+      const res = await srv.fetch(
+        new Request("http://localhost:7429/hooks/session-start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: `env-${environment}`,
+            allowedTools: ["read_file"],
+            environment,
+          }),
+        }),
+      );
+
+      const data = await res.json() as Record<string, unknown>;
+      const output = data.hookSpecificOutput as Record<string, string>;
+      expect(output.permissionDecision).toBe("allow");
+    }
+  });
+});
+
+describe("Hook Server — configurable pins path", () => {
+  it("should read pins from a custom pinsPath rather than always .warden/pins.json under cwd", async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "warden-pins-test-"));
+    const pinsPath = join(tmpDir, "custom-pins.json");
+
+    try {
+      // Pin a real dependency from this repo's package-lock.json to a
+      // deliberately wrong version, forcing a VERSION_DRIFT violation.
+      writeFileSync(
+        pinsPath,
+        JSON.stringify({
+          "node_modules/hono": {
+            name: "node_modules/hono",
+            version: "0.0.0-does-not-match",
+            integrity: "sha512-fake",
+            approvedAt: new Date().toISOString(),
+            approvedBy: "test",
+          },
+        }),
+      );
+
+      const srv = createHookServer({ config: testConfig, pinsPath });
+      const res = await srv.fetch(
+        new Request("http://localhost:7429/hooks/session-start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: "custom-pins",
+            allowedTools: ["read_file"],
+            environment: "development",
+          }),
+        }),
+      );
+
+      const data = await res.json() as Record<string, unknown>;
+      const output = data.hookSpecificOutput as Record<string, string>;
+      expect(output.permissionDecision).toBe("deny");
+      expect(output.permissionDecisionReason).toContain("Supply chain violations");
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("should ALLOW when the custom pinsPath does not exist (no pins configured)", async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "warden-pins-test-"));
+    const pinsPath = join(tmpDir, "nonexistent", "pins.json");
+
+    try {
+      const srv = createHookServer({ config: testConfig, pinsPath });
+      const res = await srv.fetch(
+        new Request("http://localhost:7429/hooks/session-start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: "no-pins",
+            allowedTools: ["read_file"],
+            environment: "development",
+          }),
+        }),
+      );
+
+      const data = await res.json() as Record<string, unknown>;
+      const output = data.hookSpecificOutput as Record<string, string>;
+      expect(output.permissionDecision).toBe("allow");
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("Hook Server — fail-closed on unhandled handler errors", () => {
+  it("should return a structured Warden deny response, not a plain-text 500, when a handler throws", async () => {
+    const server = createTestServer();
+    const { token } = await createAuthSession(server, "fail-closed-session");
+
+    server.ledger.write = () => {
+      throw new Error("simulated ledger failure");
+    };
+
+    const res = await authRequest(server, token, "/hooks/pre-tool-use", {
+      tool_name: "read_file",
+      tool_input: { path: "/tmp/test.txt" },
+      session_id: "fail-closed-session",
+    });
+
+    expect(res.status).toBe(500);
+    const data = await res.json() as Record<string, unknown>;
+    const output = data.hookSpecificOutput as Record<string, string>;
+    expect(output.hookEventName).toBe("PreToolUse");
+    expect(output.permissionDecision).toBe("deny");
   });
 });

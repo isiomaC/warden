@@ -12,6 +12,7 @@ import {
   redactSecrets,
   scanForInjection,
   TrustLevel,
+  generateId,
 } from "@warden/core";
 import type { PolicyConfig, PolicyDecision, LedgerStore } from "@warden/core";
 
@@ -110,7 +111,7 @@ export const WardenPlugin: Plugin = async () => {
       contextManager.recordToolCall(taskId, input.tool);
 
       ledger.write({
-        id: `opencode_${Date.now()}`,
+        id: generateId("opencode"),
         previousHash: ledger.lastHash(),
         timestamp: new Date().toISOString(),
         sessionId,

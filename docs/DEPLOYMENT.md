@@ -209,8 +209,8 @@ When a policy rule returns CONFIRM, the decision goes to an approval channel:
 | Channel | Class | When to Use |
 |---|---|---|
 | `stdout` | `StdoutApprovalChannel` | Development / local testing |
-| `telegram` | `TelegramApprovalChannel` | Production — async human approval via bot |
-| `slack` | `SlackApprovalChannel` | Production — team approval via webhook |
+| `telegram` | `TelegramApprovalChannel` | Production — async human approval via bot (real interactivity, polls for button clicks) |
+| `slack` | `SlackApprovalChannel` | **Notify-only.** Posts to a webhook but cannot receive the click response — always auto-denies after timeout. Use for visibility, not as your only CONFIRM path |
 | `timeout` | `TimeoutApprovalChannel` | Testing — auto-denies after configured delay |
 
 All channels respect a **60-second hard cap**. After timeout, the decision is auto-DENY.
@@ -431,7 +431,7 @@ watch -n 2 'curl -s http://localhost:7429/health | jq'
 - [ ] **Full test suite passes:** `npx vitest run` exits 0, no failures
 - [ ] **Config environment:** `warden.config.yml` `meta.environment` set to `"production"`
 - [ ] **All remote MCP servers** have `authRequired: true`
-- [ ] **No CONFIRM rules** use `channel: "stdout"` — use `telegram` or `slack`
+- [ ] **No CONFIRM rules** use `channel: "stdout"` — use `telegram` for real interactive approval (`slack` is notify-only and always auto-denies, see § Approval Channels)
 - [ ] **Config hash verification:** `warden config-validate` confirms config integrity (SHA-256 hash recorded in first ledger entry of every session)
 - [ ] **Supply chain clean:** `warden supply-chain` exits 0 — no version drift or integrity mismatches
 - [ ] **Ledger backup:** SQLite `.warden/ledger.db` is backed up (see § Ledger Backup below). Path is outside git (`.gitignore`d)

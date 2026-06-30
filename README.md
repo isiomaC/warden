@@ -225,7 +225,7 @@ npm install
 
 ```bash
 npx tsc --noEmit        # Zero type errors expected
-npx vitest run           # 227 tests pass
+npx vitest run           # 307 tests pass (3 skipped)
 ```
 
 ### 3. Initialize Warden in your project
@@ -543,7 +543,7 @@ const decision = await safeFs.onToolCall("read_file", { path: "/tmp/test.txt" },
 
 ```bash
 npx tsc --noEmit        # TypeScript strict mode — no `any`, no implicit returns
-npx vitest run           # 227 tests across 17 test files
+npx vitest run           # 307 tests across 23 test files (3 skipped)
 
 # Specific packages
 npx vitest run packages/core/tests/          # Unit + trust/ledger/policy/vault/scanner/pins/supply-chain/config-source/trust-registry

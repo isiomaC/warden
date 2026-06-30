@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { scanForInjection, TrustLevel } from "@warden/core";
+import { scanForInjection, TrustLevel, generateId } from "@warden/core";
 import type { LedgerStore } from "@warden/core";
 
 export function handlePromptSubmit(ledger: LedgerStore) {
@@ -11,7 +11,7 @@ export function handlePromptSubmit(ledger: LedgerStore) {
 
     if (!result.clean) {
       ledger.writeSecurityEvent({
-        id: `injection_${Date.now()}`,
+        id: generateId("injection"),
         timestamp: new Date().toISOString(),
         eventType: "INJECTION_DETECTED",
         details: {

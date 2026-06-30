@@ -1,5 +1,6 @@
 import { sha256 } from "./hash";
 import { TrustLevel } from "./trust";
+import type { WardenLogger } from "./logger";
 
 export interface TrustedOutput {
   hash: string;
@@ -17,17 +18,31 @@ export interface TrustRegistryStore {
 export class TrustRegistry implements TrustRegistryStore {
   private registry = new Map<string, TrustedOutput>();
 
+  constructor(private logger?: WardenLogger) {}
+
   register(output: unknown, trust: TrustLevel, source: string): string {
     const serialized = typeof output === "string" ? output : JSON.stringify(output);
     const hash = sha256(serialized);
 
-    if (!this.registry.has(hash)) {
+    const existing = this.registry.get(hash);
+    if (!existing) {
       this.registry.set(hash, {
         hash,
         trust,
         source,
         timestamp: new Date().toISOString(),
       });
+    } else if (existing.trust !== trust || existing.source !== source) {
+      this.logger?.warn(
+        "Trust registry re-registration conflict — keeping original trust level.",
+        {
+          hash,
+          existingTrust: existing.trust,
+          existingSource: existing.source,
+          attemptedTrust: trust,
+          attemptedSource: source,
+        },
+      );
     }
 
     return hash;

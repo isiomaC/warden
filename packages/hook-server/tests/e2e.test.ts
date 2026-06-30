@@ -5,7 +5,8 @@ import { TrustLevel } from "@warden/core";
 import type { ApprovalChannel, ApprovalRequest } from "../src/approvals/index";
 import { MemoryLedgerStore } from "@warden/core";
 import { spawnSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 const e2eConfig: PolicyConfig = {
@@ -586,17 +587,28 @@ describe("CLI Commands", () => {
   // Spawned tests — only when a CLI runner is available
   describe("CLI spawned smoke tests", () => {
     it("warden init (spawned)", () => {
-      const cmd = getRunCommand(["packages/cli/src/bin.ts", "init", "--environment", "staging"]);
+      const binPath = resolve(process.cwd(), "packages/cli/src/bin.ts");
+      const cmd = getRunCommand([binPath, "init", "--environment", "staging"]);
       if (!cmd) return;
 
-      const result = spawnSync(cmd.cmd, [...cmd.args], {
-        encoding: "utf-8",
-        timeout: 10_000,
-      });
+      // Run in an isolated tmp dir so this test doesn't write into the repo
+      // root and isn't broken by a config left behind from a prior run.
+      const tmpCwd = mkdtempSync(resolve(tmpdir(), "warden-e2e-init-"));
+      try {
+        const result = spawnSync(cmd.cmd, [...cmd.args], {
+          encoding: "utf-8",
+          timeout: 10_000,
+          cwd: tmpCwd,
+        });
 
-      if (result.status === null) return; // timed out or killed, skip
-      expect(result.stdout).toContain("Warden initialized");
-      expect(result.status).toBe(0);
+        if (result.status === null) return; // timed out or killed, skip
+        expect(result.stdout).toContain("Warden initialized");
+        expect(result.status).toBe(0);
+        expect(existsSync(resolve(tmpCwd, "warden.config.yml"))).toBe(true);
+        expect(existsSync(resolve(tmpCwd, ".warden"))).toBe(true);
+      } finally {
+        rmSync(tmpCwd, { recursive: true, force: true });
+      }
     });
 
     it("warden audit (spawned)", () => {
