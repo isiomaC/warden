@@ -84,7 +84,8 @@ describe("MemoryLedgerStore", () => {
       store.write(makeEntry({ id: "e2" }));
       store.write(makeEntry({ id: "e3" }));
       const entries = store.getEntries();
-      entries[1].previousHash = entries[1].previousHash.replace("a", "b");
+      const original = entries[1].previousHash;
+      entries[1].previousHash = (original[0] === "0" ? "f" : "0") + original.slice(1);
       const result = store.verifyChain();
       expect(result.valid).toBe(false);
       expect(result.brokenAt).toBe(1);
