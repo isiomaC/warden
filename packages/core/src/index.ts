@@ -2,6 +2,7 @@ export { SecurityError, QuarantineError, ApprovalTimeoutError, VaultError, Ledge
 export { TrustLevel, tagValue, canPromote, lowestTrust } from "./trust";
 export type { TrustedValue } from "./trust";
 export { sha256 } from "./hash";
+export { generateId } from "./id";
 export { redactSecrets, hasSecrets } from "./redact";
 export { MemoryLedgerStore, SqliteLedgerStore } from "./ledger";
 export type { LedgerEntry, LedgerStore, SecurityEvent } from "./ledger";

@@ -1,4 +1,7 @@
+import { createRequire } from "node:module";
+
 const encoder = new TextEncoder();
+const require = createRequire(import.meta.url);
 
 export function sha256(input: string): string {
   const data = encoder.encode(input);

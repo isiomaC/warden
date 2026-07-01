@@ -272,6 +272,14 @@ describe("SlackApprovalChannel", () => {
     vi.restoreAllMocks();
   });
 
+  it("should warn at construction time that it is notify-only", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    new SlackApprovalChannel("https://hooks.slack.com/test");
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("notify-only"));
+  });
+
   it("should deny after timeout (webhooks cannot receive callbacks)", async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

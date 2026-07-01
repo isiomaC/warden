@@ -16,7 +16,7 @@ import type {
   ContextStore,
 } from "@warden/core";
 import { authMiddleware } from "./middleware/auth";
-import { failClosedMiddleware } from "./middleware/fail-closed";
+import { failClosedHandler } from "./middleware/fail-closed";
 import { handleSessionStart } from "./handlers/session-start";
 import { handleSessionEnd } from "./handlers/session-end";
 import { handlePreToolUse } from "./handlers/pre-tool-use";
@@ -36,6 +36,7 @@ export interface HookServerOptions {
   dbPath?: string;
   tokenTTLSeconds?: number;
   logLevel?: LogLevel;
+  pinsPath?: string;
 }
 
 export function createHookServer(options: HookServerOptions) {
@@ -46,12 +47,12 @@ export function createHookServer(options: HookServerOptions) {
   const contextManager = options.contextManager ?? new ContextManager();
   const approvalChannel =
     options.approvalChannel ?? new StdoutApprovalChannel();
-  const trustRegistry = new TrustRegistry();
   const ttlSeconds = options.tokenTTLSeconds ?? 3600;
   const startTime = Date.now();
 
   const logLevel = options.logLevel ?? parseLogLevel(process.env.LOG_LEVEL);
   const logger = new WardenLogger("hook-server", logLevel);
+  const trustRegistry = new TrustRegistry(logger);
 
   logger.info("Warden hook server initializing.", {
     port: options.port ?? 7429,
@@ -103,9 +104,19 @@ export function createHookServer(options: HookServerOptions) {
     });
   });
 
-  app.use("*", failClosedMiddleware(logger));
+  app.onError(failClosedHandler(logger));
 
-  app.post("/hooks/session-start", handleSessionStart(options.config, vault, ledger, contextManager, ttlSeconds));
+  app.post(
+    "/hooks/session-start",
+    handleSessionStart(
+      options.config,
+      vault,
+      ledger,
+      contextManager,
+      ttlSeconds,
+      options.pinsPath ?? `${process.cwd()}/.warden/pins.json`,
+    ),
+  );
 
   const authed = new Hono();
   authed.use("*", authMiddleware(vault));

@@ -103,8 +103,9 @@ jobs:
           EOF
 
           mkdir -p /tmp/warden-persist
+          chmod 777 /tmp/warden-persist
 
-          docker run --rm -d \
+          docker run -d \
             --name warden-test \
             -v /tmp/warden-ci-config.yml:/app/warden.config.yml:ro \
             -v /tmp/warden-persist:/app/.warden \
@@ -116,7 +117,9 @@ jobs:
             if curl -sf http://localhost:7429/health > /dev/null 2>&1; then
               echo "Health check passed"
               curl -s http://localhost:7429/health | tee /dev/stderr
-              docker stop warden-test
+              echo "Container logs:"
+              docker logs warden-test
+              docker rm -f warden-test
               exit 0
             fi
             echo "Waiting for server... ($i/15)"
@@ -125,5 +128,5 @@ jobs:
 
           echo "Server failed to start. Logs:"
           docker logs warden-test
-          docker stop warden-test
+          docker rm -f warden-test
           exit 1

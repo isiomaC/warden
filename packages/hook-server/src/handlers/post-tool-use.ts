@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { tagValue, hasSecrets, TrustLevel } from "@warden/core";
+import { tagValue, hasSecrets, TrustLevel, generateId } from "@warden/core";
 import type { LedgerStore, ContextStore, TrustRegistry } from "@warden/core";
 
 export function handlePostToolUse(
@@ -34,7 +34,7 @@ export function handlePostToolUse(
     const outputStr = typeof tool_output === "string" ? tool_output : JSON.stringify(tool_output);
     if (hasSecrets(outputStr)) {
       ledger.writeSecurityEvent({
-        id: `secrets_${Date.now()}`,
+        id: generateId("secrets"),
         timestamp: new Date().toISOString(),
         eventType: "SECRETS_IN_OUTPUT",
         details: {

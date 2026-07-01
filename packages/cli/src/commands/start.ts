@@ -25,6 +25,11 @@ export const startCommand = defineCommand({
       description: "Path to SQLite ledger database",
       default: ".warden/ledger.db",
     },
+    pins: {
+      type: "string",
+      description: "Path to the supply-chain pins file",
+      default: ".warden/pins.json",
+    },
   },
   async run({ args }) {
     const configPath = resolve(args.config);
@@ -50,6 +55,7 @@ export const startCommand = defineCommand({
       config,
       port,
       dbPath: resolve(args.db),
+      pinsPath: resolve(args.pins),
     });
 
     const bun = (globalThis as unknown as { Bun?: { serve: (opts: { port: number; fetch: typeof fetch }) => { port: number } } }).Bun;

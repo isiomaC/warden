@@ -52,7 +52,7 @@ npx vitest run
 npm run test
 ```
 
-**Pass criteria:** All 227 tests pass across 17 test files, 0 fail.
+**Pass criteria:** All 307 tests pass across 23 test files (3 skipped), 0 fail.
 
 ### Watch mode (development)
 
@@ -108,18 +108,18 @@ npm run typecheck
 
 ## Pre-Deployment Testing
 
-### Layer 1: Unit Tests (105 tests, 12 files)
+### Layer 1: Unit Tests (152 tests, 15 files)
 
 **Command:** `npx vitest run packages/core/tests/`
 
-**Pass criteria:** All 105 core tests pass, 0 fail.
+**Pass criteria:** All 152 core tests pass, 0 fail.
 
 #### What's tested
 
 | Module | File | Tests | Key scenarios |
 |---|---|---|---|
 | `trust.ts` | `trust.test.ts` | 11 | TrustLevel assignment, SYSTEM/TOOL/EXTERNAL tagging, upward promotion blocked, lowestTrust() aggregation |
-| `trust-registry.ts` | `trust-registry.test.ts` | 6 | Register/lookup values, undefined lookup, per-value registration, clear, object values, no-overwrite guarantee |
+| `trust-registry.ts` | `trust-registry.test.ts` | 8 | Register/lookup values, undefined lookup, per-value registration, clear, object values, no-overwrite guarantee, audit-log warning on trust/source conflict, no warning on identical re-registration |
 | `redact.ts` | `redact.test.ts` | 10 | OpenAI keys, GitHub PATs, JWTs, Slack tokens, AWS keys, nested objects, arrays, non-string passthrough |
 | `ledger.ts` | `ledger.test.ts` | 7 | Entry write, hash generation, chain integrity, tamper detection at specific index, secret redaction on write, close-after-write |
 | `sqlite-ledger.ts` | `sqlite-ledger.test.ts` | 6 | Persist entries across instances, hash chain across restarts, empty-db zero-hash start, broken chain detection, security events, close-after-write |
@@ -130,22 +130,19 @@ npm run typecheck
 | `scanner.ts` | `scanner.test.ts` | 12 | Direct injection patterns (ignore instructions, you are now, disregard prompt, [system], override safety, act as if, do not follow rules, pretend), indirect patterns ([INST], `<|system|>`), benign prompts pass, BLOCK recommendation for EXTERNAL, CONFIRM for non-EXTERNAL, skip scan for SYSTEM-level |
 | `supply-chain.ts` | `supply-chain.test.ts` | 6 | Unpinned package detection, version drift, integrity mismatch, clean report, multiple violations per package, lock file parsing |
 | `pins.ts` | `pins.test.ts` | 6 | New tool pinning, re-verification with same hash (no-op), rug pull detection (changed description → SecurityError), new tool addition to existing server, verifyToolPin with no pin, verifyToolPin with mismatched hash |
+| `id.ts` | `id.test.ts` | 3 | Prefix applied to generated id, 26-char ULID suffix, no collisions across 1000 rapid successive calls |
 
 ---
 
-### Layer 2: Integration Tests (122 tests, 4 files)
+### Layer 2: Integration Tests (149 tests, 6 files)
 
 **Command:** `npx vitest run packages/hook-server/tests/ packages/mcp-gateway/tests/ packages/opencode-plugin/tests/`
 
-**Pass criteria:** All 122 integration tests pass (78 hook-server + 23 gateway + 17 opencode-plugin), 0 fail (3 skipped in approvals/session tests).
+**Pass criteria:** All 149 integration tests pass (107 hook-server + 25 gateway + 17 opencode-plugin), 0 fail (3 skipped in e2e tests).
 
-#### Hook Server Integration (`integration.test.ts`, 48 tests)
+#### Hook Server Integration (`integration.test.ts`, 56 tests)
 
-Each test fires a real HTTP request against the Hono server with a payload matching the Claude Code hook contract:
-
-| Hook Event | Scenarios | Key tests |
-|---|---|---|
-#### Hook Server Integration (`integration.test.ts`, 49 tests)
+Each test fires a real HTTP request against the Hono server with a payload matching the Claude Code hook contract, including session-start input validation, configurable supply-chain pins path, and fail-closed behavior on unhandled handler errors:
 
 | Hook Event | Scenarios | Key tests |
 |---|---|---|
@@ -162,8 +159,17 @@ Each test fires a real HTTP request against the Hono server with a payload match
 | **Ledger** | Traceability | Entries exist after tool calls, valid hash chain, first entry has 64-zero previousHash |
 | **Fail-closed edges** | Graceful degradation | DENY with malformed body, handle empty/null tool input |
 | **CONFIRM** | Approval timeout | DENY when approval channel returns false |
+| **Session-start validation** | Input hardening | DENY on invalid environment, DENY on empty/non-array allowedTools, ALLOW for staging/production |
+| **Configurable pins path** | Supply-chain | DENY when custom pinsPath flags a version mismatch, ALLOW when custom pinsPath doesn't exist |
+| **Fail-closed (real handler error)** | Structural correctness | Structured Warden deny JSON (not plain-text 500) when a handler throws, via `app.onError()` |
 
-#### Hook Server Approvals (`approvals.test.ts`, 15 tests)
+#### Fail-Closed Middleware (`fail-closed.test.ts`, 7 tests)
+
+| Area | Tests |
+|---|---|
+| **hookEventName resolution** | Correct event name per route for all 6 hook paths, fallback to "Unknown" for unrecognized routes — verified via `app.onError()`, not a `try/catch`-around-`next()` middleware (which Hono 4.x's `compose()` never lets observe downstream handler errors) |
+
+#### Hook Server Approvals (`approvals.test.ts`, 23 tests)
 
 | Channel | Tests |
 |---|---|
@@ -172,7 +178,7 @@ Each test fires a real HTTP request against the Hono server with a payload match
 | **TelegramApprovalChannel** | Approve on `warden_approve` callback, deny on `warden_deny`, deny on timeout (no callback), ignore callbacks for other messages, lazy-bot creation |
 | **SlackApprovalChannel** | Deny after timeout (webhooks can't receive callbacks), deny when webhook fetch fails (fail-closed), respect 60s timeout cap |
 
-#### Hook Server E2E (`e2e.test.ts`, 18 tests + 3 skipped)
+#### Hook Server E2E (`e2e.test.ts`, 21 tests + 3 skipped)
 
 | Area | Tests |
 |---|---|
@@ -190,13 +196,14 @@ Each test fires a real HTTP request against the Hono server with a payload match
 | **tui.prompt.append** | Block injection patterns (ignore instructions, you are now, [INST], `<\|system\|>`), allow clean prompts |
 | **Session lifecycle** | Mint token on session.created, handle session.deleted without error, allow multiple sequential sessions, handle session created/deleted without tool calls |
 
-#### MCP Gateway (`gateway.test.ts`, 23 tests)
+#### MCP Gateway (`gateway.test.ts`, 25 tests)
 
 | Area | Tests |
 |---|---|
 | **MCPRegistry** | Allow listed servers, deny unlisted servers, throw SecurityError on assert for unlisted |
 | **OAuthManager** | Store/retrieve valid tokens, return null for expired, revoke tokens |
 | **WardenGateway** | Wrap allowed server, DENY for unlisted servers, ALLOW for allowed tool with matching policy, DENY for tool not in allowlist, write ledger entry, CONFIRM on rate limit exceeded |
+| **OAuth enforcement in onToolCall** | DENY for authRequired server with no stored token, fall through to policy evaluation once a valid token is stored |
 | **Rate limiting** | True when under limit, false when over limit, separate counters per tool |
 | **getRegistry/getOAuth** | Return registry instance, return OAuth manager instance |
 | **Lateral movement detection** | Detect when exceeding max servers, don't block under max, don't block when disabled, use DENY alert action from config, safe result for unknown task |
@@ -725,7 +732,7 @@ console.log("E2E test passed: all assertions verified");
 | Check | Command | Requirement |
 |---|---|---|
 | TypeScript typecheck | `npx tsc --noEmit` | Exit 0, no errors |
-| Unit tests | `npx vitest run` | 227 tests pass, 0 fail |
+| Unit tests | `npx vitest run` | 307 tests pass (3 skipped), 0 fail |
 | Coverage (recommended) | `npx vitest run --coverage` | ≥ 80% line coverage on core |
 | Supply chain check | `npx tsx packages/cli/src/index.ts supply-chain` | Clean report (no violations) |
 

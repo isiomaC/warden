@@ -1,10 +1,11 @@
 import type { Context } from "hono";
+import { generateId } from "@warden/core";
 import type { LedgerStore } from "@warden/core";
 
 export function handleConfigChange(ledger: LedgerStore) {
   return async (c: Context) => {
     ledger.writeSecurityEvent({
-      id: `config_${Date.now()}`,
+      id: generateId("config"),
       timestamp: new Date().toISOString(),
       eventType: "CONFIG_CHANGE_BLOCKED",
       details: { reason: "Runtime config mutation blocked" },

@@ -419,6 +419,77 @@ describe("MCP Gateway", () => {
         expect(gateway.getOAuth().hasValidToken("github")).toBe(true);
       });
     });
+
+    describe("OAuth enforcement in onToolCall", () => {
+      it("should DENY onToolCall for authRequired server with no stored token", async () => {
+        const ctx = new ContextManager();
+        const task = ctx.createTask("gw-session");
+        const registry = new Registry([
+          { name: "github", type: "remote", transport: "http", allowedTools: ["get_file"], authRequired: true },
+        ]);
+        const gateway = new WardenGateway({
+          config: gatewayConfigWithRules,
+          ledger: new MemoryLedgerStore(),
+          contextManager: ctx,
+          registry,
+        });
+
+        const wrapped = gateway.wrapMCP("github", {
+          allowedTools: ["get_file"],
+          trustLevel: TrustLevel.TOOL,
+          maxCallsPerMinute: 60,
+          serverName: "github",
+        });
+
+        const decision = await wrapped.onToolCall(
+          "get_file",
+          { path: "README.md" },
+          "gw-session",
+          task.taskId,
+        );
+
+        expect(decision.action).toBe("DENY");
+        expect(decision.reason).toContain("OAuth");
+      });
+
+      it("should fall through to policy evaluation once a valid token is stored", async () => {
+        const ctx = new ContextManager();
+        const task = ctx.createTask("gw-session");
+        const registry = new Registry([
+          { name: "github", type: "remote", transport: "http", allowedTools: ["get_file"], authRequired: true },
+        ]);
+        const oauth = new OAuth();
+        oauth.storeToken("github", {
+          accessToken: "gh_token",
+          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          scope: "repo",
+        });
+
+        const gateway = new WardenGateway({
+          config: gatewayConfigWithRules,
+          ledger: new MemoryLedgerStore(),
+          contextManager: ctx,
+          registry,
+          oauth,
+        });
+
+        const wrapped = gateway.wrapMCP("github", {
+          allowedTools: ["get_file"],
+          trustLevel: TrustLevel.TOOL,
+          maxCallsPerMinute: 60,
+          serverName: "github",
+        });
+
+        const decision = await wrapped.onToolCall(
+          "get_file",
+          { path: "README.md" },
+          "gw-session",
+          task.taskId,
+        );
+
+        expect(decision.reason).not.toContain("OAuth");
+      });
+    });
   });
 
   describe("Lateral movement detection", () => {

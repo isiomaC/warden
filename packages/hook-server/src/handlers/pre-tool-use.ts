@@ -4,6 +4,7 @@ import {
   tagValue,
   redactSecrets,
   sanitizeExternalValues,
+  generateId,
 } from "@warden/core";
 import type { PolicyConfig, LedgerStore, ContextStore } from "@warden/core";
 import type { TrustRegistry } from "@warden/core";
@@ -54,7 +55,7 @@ export function handlePreToolUse(
     contextManager.recordToolCall(taskId, tool_name);
 
     ledger.write({
-      id: `ledger_${Date.now()}`,
+      id: generateId("ledger"),
       previousHash: ledger.lastHash(),
       timestamp: new Date().toISOString(),
       sessionId: session_id,
@@ -126,7 +127,7 @@ export function handlePreToolUse(
           "Warden: Quarantined external content was removed. Approve via Telegram to include external content.";
 
         ledger.writeSecurityEvent({
-          id: `quarantine_${Date.now()}`,
+          id: generateId("quarantine"),
           timestamp: new Date().toISOString(),
           eventType: "EXTERNAL_CONTENT_STRIPPED",
           details: {

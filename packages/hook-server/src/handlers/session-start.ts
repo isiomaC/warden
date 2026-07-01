@@ -1,9 +1,11 @@
 import type { Context } from "hono";
+import { readFileSync } from "node:fs";
 import {
   sha256,
   checkSupplyChain,
   parseLockDeps,
   TrustLevel,
+  generateId,
 } from "@warden/core";
 import type {
   PolicyConfig,
@@ -13,10 +15,11 @@ import type {
   PackagePin,
 } from "@warden/core";
 
-function loadPins(): Record<string, PackagePin> {
-  const pinsPath = `${process.cwd()}/.warden/pins.json`;
+const VALID_ENVIRONMENTS = ["development", "staging", "production"];
+
+function loadPins(pinsPath: string): Record<string, PackagePin> {
   try {
-    const raw = require("node:fs").readFileSync(pinsPath, "utf-8");
+    const raw = readFileSync(pinsPath, "utf-8");
     return JSON.parse(raw) as Record<string, PackagePin>;
   } catch {
     return {};
@@ -26,7 +29,7 @@ function loadPins(): Record<string, PackagePin> {
 function readLockDeps() {
   const lockPath = `${process.cwd()}/package-lock.json`;
   try {
-    const raw = require("node:fs").readFileSync(lockPath, "utf-8");
+    const raw = readFileSync(lockPath, "utf-8");
     const lockJson = JSON.parse(raw) as Record<
       string,
       Record<string, { version?: string; integrity?: string }>
@@ -53,6 +56,7 @@ export function handleSessionStart(
   ledger: LedgerStore,
   contextManager: ContextStore,
   ttlSeconds: number,
+  pinsPath: string = `${process.cwd()}/.warden/pins.json`,
 ) {
   return async (c: Context) => {
     const body = await c.req.json().catch(() => ({}));
@@ -60,8 +64,28 @@ export function handleSessionStart(
     const allowedTools: string[] = body.allowedTools ?? ["*"];
     const environment: string = body.environment ?? "development";
 
+    if (!Array.isArray(allowedTools) || allowedTools.length === 0) {
+      return c.json({
+        hookSpecificOutput: {
+          hookEventName: "SessionStart",
+          permissionDecision: "deny",
+          permissionDecisionReason: "Warden: allowedTools must be a non-empty array.",
+        },
+      });
+    }
+
+    if (!VALID_ENVIRONMENTS.includes(environment)) {
+      return c.json({
+        hookSpecificOutput: {
+          hookEventName: "SessionStart",
+          permissionDecision: "deny",
+          permissionDecisionReason: `Warden: invalid environment "${environment}". Must be one of: ${VALID_ENVIRONMENTS.join(", ")}.`,
+        },
+      });
+    }
+
     // Supply-chain check — only if pins are configured
-    const pinned = loadPins();
+    const pinned = loadPins(pinsPath);
     if (Object.keys(pinned).length > 0) {
       const deps = readLockDeps();
       const report = checkSupplyChain(deps, pinned);
@@ -92,7 +116,7 @@ export function handleSessionStart(
     const configHash = sha256(JSON.stringify(config));
 
     ledger.write({
-      id: `ledger_${Date.now()}`,
+      id: generateId("ledger"),
       previousHash: ledger.lastHash(),
       timestamp: new Date().toISOString(),
       sessionId,

@@ -1,4 +1,5 @@
 import { sha256 } from "./hash";
+import { generateId } from "./id";
 import type { LedgerStore } from "./ledger";
 import { SecurityError } from "./errors";
 
@@ -35,7 +36,7 @@ export async function pinToolDescriptions(
       if (oldHash !== descHash) {
         if (ledger) {
           ledger.writeSecurityEvent({
-            id: `rugpull_${Date.now()}`,
+            id: generateId("rugpull"),
             timestamp: new Date().toISOString(),
             eventType: "RUG_PULL_DETECTED",
             details: {
