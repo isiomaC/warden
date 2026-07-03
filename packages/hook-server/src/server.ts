@@ -115,6 +115,7 @@ export function createHookServer(options: HookServerOptions) {
       contextManager,
       ttlSeconds,
       options.pinsPath ?? `${process.cwd()}/.warden/pins.json`,
+      approvalChannel,
     ),
   );
 

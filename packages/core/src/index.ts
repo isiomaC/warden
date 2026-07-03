@@ -26,3 +26,4 @@ export { WardenLogger, LogLevel, parseLogLevel } from "./logger";
 export type { LogEntry } from "./logger";
 export { SlidingWindowRateLimiter } from "./rate-limiter";
 export type { RateLimiterConfig, RateLimitResult } from "./rate-limiter";
+export { extractPaths, isPathAllowed } from "./paths";

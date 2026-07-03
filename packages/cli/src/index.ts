@@ -8,6 +8,7 @@ import { supplyChainCommand } from "./commands/supply-chain";
 import { startCommand } from "./commands/start";
 import { configValidateCommand } from "./commands/config-validate";
 import { resetCommand } from "./commands/reset";
+import { proxyCommand } from "./commands/proxy";
 
 const main = defineCommand({
   meta: {
@@ -23,6 +24,7 @@ const main = defineCommand({
     "supply-chain": supplyChainCommand,
     "config-validate": configValidateCommand,
     reset: resetCommand,
+    proxy: proxyCommand,
   },
 });
 

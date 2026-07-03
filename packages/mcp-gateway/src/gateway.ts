@@ -1,10 +1,14 @@
 import { MCPRegistry } from "./registry";
+export { MCPRegistry } from "./registry";
+export { OAuthManager } from "./oauth";
 import { OAuthManager } from "./oauth";
 import { checkLateralMovement } from "./lateral";
 import {
   evaluate,
   tagValue,
   redactSecrets,
+  extractPaths,
+  isPathAllowed,
   SlidingWindowRateLimiter,
   WardenLogger,
   parseLogLevel,
@@ -96,6 +100,19 @@ export class WardenGateway {
         }
 
         const serverEntry = self.registry.getAllowed(serverName);
+
+        // Path allowlist enforcement — reject if tool input references a path outside allowedPaths
+        if (serverEntry?.allowedPaths && serverEntry.allowedPaths.length > 0) {
+          const paths = extractPaths(toolInput);
+          const denied = paths.filter((p) => !isPathAllowed(p, serverEntry.allowedPaths!));
+          if (denied.length > 0) {
+            return {
+              action: "DENY" as const,
+              reason: `Path not in allowedPaths for "${serverName}": ${denied.join(", ")}`,
+            };
+          }
+        }
+
         if (serverEntry?.authRequired && !self.oauth.hasValidToken(serverName)) {
           self.logger.warn("Tool call denied — no valid OAuth token for server.", {
             serverName,
