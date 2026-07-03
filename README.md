@@ -90,10 +90,10 @@ Add Warden to your Copilot extension's `agent.json`:
 Hook handler (`warden-copilot.js`):
 
 ```javascript
-import { evaluate, MemoryLedgerStore, ContextStore } from "@warden/core";
+import { evaluate, MemoryLedgerStore, ContextManager } from "@warden/core";
 
 const ledger = new MemoryLedgerStore();
-const ctx = new ContextStore();
+const ctx = new ContextManager();
 
 export async function onPreToolUse(event) {
   const decision = evaluate(config, {
@@ -174,17 +174,22 @@ Agent Tool Call → Warden Proxy (warden.wrapMCP) → Real MCP Server
 ```typescript
 // warden-mcp-proxy.ts
 import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
-import { MemoryLedgerStore, ContextStore } from "@warden/core";
+import { MemoryLedgerStore, ContextManager } from "@warden/core";
 
 const gateway = new WardenGateway({
   config,
   ledger: new MemoryLedgerStore(),
-  contextManager: new ContextStore(),
+  contextManager: new ContextManager(),
   registry: new MCPRegistry([ /* your allowed servers */ ]),
 });
 
-// Export as MCP server — expose wrapped tools only
-export const tools = gateway.listWrappedTools();
+// Wrap a specific MCP server — all calls go through Warden's policy engine
+const safeServer = gateway.wrapMCP("filesystem", {
+  allowedTools: ["read_file", "list_directory"],
+  trustLevel: 1, // TrustLevel.TOOL
+  maxCallsPerMinute: 60,
+  serverName: "filesystem",
+});
 ```
 
 2. Register Warden as the **only** MCP server in your tool config. Warden proxies to the real servers internally.
@@ -335,7 +340,7 @@ npx tsx packages/cli/src/index.ts audit
 | `warden init` | Initialize Warden in the current project. Creates `warden.config.yml` and `.warden/`. |
 | `warden start` | Start the hook server on `localhost:7429`. Required for Claude Code integration. |
 | `warden audit` | View the hash-chained ledger. Shows every tool call, decision, and chain integrity. |
-| `warden policy test <tool> --trust <level> --environment <env>` | Dry-run policy evaluation. See what decision a tool call would get. |
+| `warden policy --tool <tool> --trust <level> --environment <env>` | Dry-run policy evaluation. See what decision a tool call would get. |
 | `warden scan --prompt "<text>"` | Scan a prompt for injection patterns. Returns clean/detected + recommendation. |
 | `warden supply-chain` | Check package integrity against pinned hashes. Detects version drift and tampering. |
 
@@ -343,7 +348,7 @@ npx tsx packages/cli/src/index.ts audit
 
 ```bash
 # Would writing to a file in production be allowed?
-warden policy test write_file --trust SYSTEM --environment production
+warden policy --tool write_file --trust SYSTEM --environment production
 # → DENY
 
 # Is this prompt dangerous?
@@ -429,6 +434,8 @@ policies:
 **Actions:** `ALLOW`, `DENY`, `CONFIRM` (ask human, 60s timeout), `QUARANTINE` (replaces output with `[QUARANTINED: ...]` sentinel, preserves original in ledger, forces EXTERNAL trust)
 **Precedence:** DENY > QUARANTINE > CONFIRM > ALLOW. Unmatched = DENY.
 
+> **Note on YAML config:** Only `version`, `meta`, and `policies` are loaded from `warden.config.yml`. The following blocks are parsed but **silently ignored** — they must be wired programmatically when starting the server: `approvalChannels`, `ledger`, `threatDetection`, `rateLimits`, `vault`. If you configure these in YAML you will get no error and no effect.
+
 ---
 
 ## Trust Model
@@ -482,7 +489,11 @@ warden/
 │   ├── hook-server/       # HTTP hook server (Hono, localhost:7429)
 │   │   ├── middleware/       auth (token verification), fail-closed (errors → DENY)
 │   │   ├── handlers/         SessionStart/End, PreToolUse, PostToolUse, PromptSubmit, ConfigChange
-│   │   └── approvals/        ApprovalChannel interface (stdout, telegram, slack)
+│   │   └── approvals/        ApprovalChannel interface (stdout, telegram, slack*)
+│   │                         * SlackApprovalChannel is notify-only: it posts a message but
+│   │                           cannot receive button clicks. Every CONFIRM auto-denies after
+│   │                           60 s. Use StdoutApprovalChannel or TelegramApprovalChannel
+│   │                           for real interactive approvals.
 │   │
 │   ├── mcp-gateway/       # Programmatic MCP wrapper
 │   │   ├── registry.ts       Server allowlist (unknown server = DENY)
@@ -517,12 +528,12 @@ warden/
 
 ```typescript
 import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
-import { MemoryLedgerStore, ContextStore, TrustLevel } from "@warden/core";
+import { MemoryLedgerStore, ContextManager, TrustLevel } from "@warden/core";
 
 const gateway = new WardenGateway({
   config: myConfig,
   ledger: new MemoryLedgerStore(),
-  contextManager: new ContextStore(),
+  contextManager: new ContextManager(),
   registry: new MCPRegistry([...]),
 });
 
@@ -576,7 +587,6 @@ npx vitest run packages/opencode-plugin/tests/  # Plugin lifecycle tests
 | Policy schema | Zod 3 |
 | Tokens | jose 5 |
 | SQLite | better-sqlite3 9 |
-| MCP SDK | @modelcontextprotocol/sdk |
 | IDs | ulid 2 |
 | Crypto | Built-in (no dep for SHA-256) |
 | Telegram bot | grammy 1 |

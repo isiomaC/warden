@@ -104,7 +104,7 @@ export function handleSessionStart(
             hookEventName: "SessionStart",
             permissionDecision: "deny",
             permissionDecisionReason:
-              `Warden: Supply chain violations detected. ${details}. Run 'warden supply-chain approve'.`,
+              `Warden: Supply chain violations detected. ${details}. Run 'warden supply-chain --baseline'.`,
           },
         });
       }
