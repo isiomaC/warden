@@ -14,6 +14,7 @@ import type {
   ContextStore,
   PackagePin,
 } from "@warden/core";
+import type { ApprovalChannel } from "../approvals/types";
 
 const VALID_ENVIRONMENTS = ["development", "staging", "production"];
 
@@ -57,11 +58,15 @@ export function handleSessionStart(
   contextManager: ContextStore,
   ttlSeconds: number,
   pinsPath: string = `${process.cwd()}/.warden/pins.json`,
+  approvalChannel?: ApprovalChannel,
 ) {
   return async (c: Context) => {
     const body = await c.req.json().catch(() => ({}));
     const sessionId: string = body.session_id ?? "default";
     const allowedTools: string[] = body.allowedTools ?? ["*"];
+    const allowedPaths: string[] | undefined = Array.isArray(body.allowedPaths)
+      ? (body.allowedPaths as string[])
+      : undefined;
     const environment: string = body.environment ?? "development";
 
     if (!Array.isArray(allowedTools) || allowedTools.length === 0) {
@@ -104,7 +109,26 @@ export function handleSessionStart(
             hookEventName: "SessionStart",
             permissionDecision: "deny",
             permissionDecisionReason:
-              `Warden: Supply chain violations detected. ${details}. Run 'warden supply-chain approve'.`,
+              `Warden: Supply chain violations detected. ${details}. Run 'warden supply-chain --baseline'.`,
+          },
+        });
+      }
+    }
+
+    // Session approval gate — if config requires it and a channel is configured
+    if (config.meta.sessionApprovalRequired && approvalChannel) {
+      const approved = await approvalChannel.request({
+        tool: "session-start",
+        input: { sessionId, allowedTools, environment },
+        reason: "Session approval required by warden.config.yml (meta.sessionApprovalRequired: true)",
+        timeoutMs: 60_000,
+      });
+      if (!approved) {
+        return c.json({
+          hookSpecificOutput: {
+            hookEventName: "SessionStart",
+            permissionDecision: "deny",
+            permissionDecisionReason: "Warden: Session denied by approval channel.",
           },
         });
       }
@@ -136,6 +160,7 @@ export function handleSessionStart(
       taskId,
       sessionId,
       allowedTools,
+      ...(allowedPaths !== undefined ? { allowedPaths } : {}),
       environment,
       ttlSeconds,
     });

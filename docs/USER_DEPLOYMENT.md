@@ -75,7 +75,7 @@ If you need the latest unreleased changes or want to contribute:
 
 ```bash
 # Clone the repo
-git clone https://github.com/wardenlabs/warden.git
+git clone https://github.com/isiomaC/warden.git
 cd warden
 
 # Install dependencies
@@ -437,7 +437,7 @@ Create `~/.config/systemd/user/warden-hook.service`:
 ```ini
 [Unit]
 Description=Warden Hook Server
-Documentation=https://github.com/wardenlabs/warden
+Documentation=https://github.com/isiomaC/warden
 After=network.target
 
 [Service]

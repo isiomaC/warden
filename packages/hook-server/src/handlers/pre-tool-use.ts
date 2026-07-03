@@ -5,8 +5,10 @@ import {
   redactSecrets,
   sanitizeExternalValues,
   generateId,
+  extractPaths,
+  isPathAllowed,
 } from "@warden/core";
-import type { PolicyConfig, LedgerStore, ContextStore } from "@warden/core";
+import type { PolicyConfig, LedgerStore, ContextStore, TaskToken } from "@warden/core";
 import type { TrustRegistry } from "@warden/core";
 import type { ApprovalChannel } from "../approvals/types";
 
@@ -32,6 +34,22 @@ export function handlePreToolUse(
           errorCode: "WARDEN_TASK_EXPIRED",
         },
       }, 403);
+    }
+
+    // Path allowlist enforcement — check tool input against token's allowedPaths
+    const token = c.get("token") as TaskToken | undefined;
+    if (token?.allowedPaths && token.allowedPaths.length > 0) {
+      const paths = extractPaths(tool_input);
+      const denied = paths.filter((p) => !isPathAllowed(p, token.allowedPaths!));
+      if (denied.length > 0) {
+        return c.json({
+          hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: `Warden: Path not in session allowedPaths: ${denied.join(", ")}`,
+          },
+        });
+      }
     }
 
     const trustedInput = tagValue(tool_input, `mcp__${tool_name}`, taskId);

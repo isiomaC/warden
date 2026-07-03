@@ -3,12 +3,22 @@
   "version": "0.1.0",
   "description": "MCP proxy gateway with policy enforcement, server allowlist, and lateral movement detection",
   "type": "module",
-  "main": "./src/gateway.ts",
-  "types": "./src/gateway.ts",
+  "main": "./dist/src/gateway.js",
+  "types": "./dist/src/gateway.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/gateway.js",
+      "types": "./dist/src/gateway.d.ts"
+    }
+  },
   "files": [
     "dist",
     "LICENSE"
   ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -29,10 +39,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@warden/core": "*",
-    "@modelcontextprotocol/sdk": "^1.0.0"
-  },
-  "peerDependencies": {
     "@warden/core": "^0.1.0"
   }
 }

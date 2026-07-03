@@ -16,6 +16,7 @@ import type {
   ContextStore,
 } from "@warden/core";
 import { authMiddleware } from "./middleware/auth";
+import { sharedSecretMiddleware } from "./middleware/shared-secret";
 import { failClosedHandler } from "./middleware/fail-closed";
 import { handleSessionStart } from "./handlers/session-start";
 import { handleSessionEnd } from "./handlers/session-end";
@@ -37,6 +38,8 @@ export interface HookServerOptions {
   tokenTTLSeconds?: number;
   logLevel?: LogLevel;
   pinsPath?: string;
+  /** Shared secret required in the X-Warden-Auth header on all /hooks/* routes. Defaults to WARDEN_AUTH_TOKEN env var; unset disables the check. */
+  authToken?: string;
 }
 
 export function createHookServer(options: HookServerOptions) {
@@ -53,12 +56,14 @@ export function createHookServer(options: HookServerOptions) {
   const logLevel = options.logLevel ?? parseLogLevel(process.env.LOG_LEVEL);
   const logger = new WardenLogger("hook-server", logLevel);
   const trustRegistry = new TrustRegistry(logger);
+  const authToken = options.authToken ?? process.env.WARDEN_AUTH_TOKEN;
 
   logger.info("Warden hook server initializing.", {
     port: options.port ?? 7429,
     logLevel: LogLevel[logLevel],
     dbPath: options.dbPath ?? "memory",
     approvalChannel: approvalChannel.constructor.name,
+    sharedSecretAuth: authToken ? "enabled" : "disabled",
   });
 
   const app = new Hono();
@@ -106,6 +111,8 @@ export function createHookServer(options: HookServerOptions) {
 
   app.onError(failClosedHandler(logger));
 
+  app.use("/hooks/*", sharedSecretMiddleware(authToken));
+
   app.post(
     "/hooks/session-start",
     handleSessionStart(
@@ -115,6 +122,7 @@ export function createHookServer(options: HookServerOptions) {
       contextManager,
       ttlSeconds,
       options.pinsPath ?? `${process.cwd()}/.warden/pins.json`,
+      approvalChannel,
     ),
   );
 

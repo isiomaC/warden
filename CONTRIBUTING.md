@@ -6,7 +6,7 @@ Thanks for your interest in contributing. Warden is a security layer for AI agen
 
 ```bash
 # Clone and enter the repo
-git clone https://github.com/wardenlabs/warden.git
+git clone https://github.com/isiomaC/warden.git
 cd warden
 
 # Install dependencies
@@ -127,4 +127,4 @@ Violations may result in temporary or permanent removal from the project at main
 
 ## Questions?
 
-Open a [GitHub Discussion](https://github.com/wardenlabs/warden/discussions) for general questions. For bugs or feature requests, use [Issues](https://github.com/wardenlabs/warden/issues).
+Open a [GitHub Discussion](https://github.com/isiomaC/warden/discussions) for general questions. For bugs or feature requests, use [Issues](https://github.com/isiomaC/warden/issues).

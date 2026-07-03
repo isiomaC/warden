@@ -28,9 +28,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config-source YAML parser rewritten to fail loudly on unsupported/malformed syntax instead of silently mis-parsing it (block-sequence-of-mappings in particular)
 - All ledger and security-event IDs now generated via a shared `generateId()` (ULID-backed) helper instead of `Date.now()`-based string concatenation, removing a collision risk under high throughput
 - `TrustRegistry` now logs a warning when a re-registration attempts a different trust level or source for an already-registered value, instead of silently discarding the conflicting attempt
+- `isPathAllowed` now resolves both the candidate path and each allowlist entry (defeating unresolved `../` traversal) and requires an exact match or a separator-boundary match, closing a bypass where `/allowed-evil/x` matched an allowlist entry for `/allowed`
+
+#### Hook Server
+- Added opt-in shared-secret auth (`WARDEN_AUTH_TOKEN` env var / `authToken` option): when set, every `/hooks/*` request — including `session-start`, which mints session tokens — must carry a matching `X-Warden-Auth` header (timing-safe comparison), closing a gap where any local process could talk to the hook server unauthenticated. `/health` and `/metrics` remain open
 
 #### Docs
 - README/TESTING.md test-count and file-count claims re-synced to the actual suite (307 passed, 3 skipped, 310 total, 23 files)
+- Fixed stale `wardenlabs` org references in CONTRIBUTING.md and docs/USER_DEPLOYMENT.md (now `isiomaC`)
+- docs/NPM_PUBLISHING.md corrected to reflect the actual release process (public npmjs.org via `publish.yml` provenance, not private GitHub Packages)
+- docs/DEPLOYMENT.md's Docker section replaced a fictional Bun-based Dockerfile/compose example with the facts of the actual Node 22 + tsx image; supply-chain pins filename references corrected to the real default (`.warden/pins.json`); `threatDetection.toolDescriptionPinning`/`rugPullDetection` config examples now flagged as not yet implemented
+
+### Added
+
+#### Distribution
+- GHCR Docker image publish job in `.github/workflows/publish.yml`, triggered alongside npm publish on GitHub release
+- Root-level `build` script that builds all four public packages in dependency order
+
+#### Community
+- `CODE_OF_CONDUCT.md` (Contributor Covenant), issue templates (bug report, feature request), pull request template, `.github/FUNDING.yml`
+- `ROADMAP.md` documenting near-term and mid-term plans (transparent `warden proxy` forwarding, wiring the currently-ignored YAML config blocks, persistent vault, policy packs) and explicit non-goals
 
 ### Added
 

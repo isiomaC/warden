@@ -90,10 +90,10 @@ Add Warden to your Copilot extension's `agent.json`:
 Hook handler (`warden-copilot.js`):
 
 ```javascript
-import { evaluate, MemoryLedgerStore, ContextStore } from "@warden/core";
+import { evaluate, MemoryLedgerStore, ContextManager } from "@warden/core";
 
 const ledger = new MemoryLedgerStore();
-const ctx = new ContextStore();
+const ctx = new ContextManager();
 
 export async function onPreToolUse(event) {
   const decision = evaluate(config, {
@@ -157,45 +157,68 @@ console.log(JSON.stringify({
 
 ### Tier 2 Tools: MCP Proxy (Cursor, Windsurf, Continue.dev, Cody, Amazon Q)
 
-For tools that support MCP but lack hook middleware, run Warden as a **transparent MCP proxy**:
+For tools that support MCP but lack hook middleware, run Warden as a **policy-gating MCP server** using the `warden proxy` CLI command:
 
 ```
-Agent Tool Call → Warden Proxy (warden.wrapMCP) → Real MCP Server
+Agent Tool Call → warden proxy (stdio MCP server) → ALLOW / DENY
                        │
-                       ├─ Policy evaluation
-                       ├─ Ledger entry
-                       └─ ALLOW/DENY decision
+                       ├─ Policy evaluation (warden.config.yml)
+                       ├─ allowedPaths enforcement
+                       ├─ Rate limiting
+                       └─ Ledger entry
 ```
 
 **Setup:**
 
-1. Start Warden as a local MCP server that wraps your real servers:
+1. Make sure `warden.config.yml` exists in your project root (`warden init` creates it).
 
-```typescript
-// warden-mcp-proxy.ts
-import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
-import { MemoryLedgerStore, ContextStore } from "@warden/core";
+2. Register `warden proxy` as an MCP server in your agent's config — it speaks the MCP stdio protocol:
 
-const gateway = new WardenGateway({
-  config,
-  ledger: new MemoryLedgerStore(),
-  contextManager: new ContextStore(),
-  registry: new MCPRegistry([ /* your allowed servers */ ]),
-});
-
-// Export as MCP server — expose wrapped tools only
-export const tools = gateway.listWrappedTools();
+```json
+// Cursor: ~/.cursor/mcp.json  |  Windsurf: mcp_config.json
+{
+  "mcpServers": {
+    "warden": {
+      "command": "warden",
+      "args": ["proxy"]
+    }
+  }
+}
 ```
 
-2. Register Warden as the **only** MCP server in your tool config. Warden proxies to the real servers internally.
+3. `warden proxy` reads `mcpServers.allowed` from your config and exposes those tools under namespaced names (`filesystem__read_file`, `github__search_code`, etc.). Any call Warden ALLOWs returns a confirmation; any DENY returns an error the agent sees immediately.
 
-3. Any tool not registered in Warden's allowlist is **denied by default**.
+> **Note on forwarding:** `warden proxy` is a **policy gate**, not a transparent forwarder. It enforces allow/deny decisions but does not relay the call to a backing MCP server — the agent receives Warden's decision and must connect to its real MCP servers separately. For a fully forwarding proxy in TypeScript, use `@warden/mcp-gateway` directly (see [Programmatic Usage](#programmatic-usage)).
 
-| Tool | Registration | What you get |
+| Tool | Where to add the MCP config | What you get |
 |---|---|---|
-| Cursor | Register Warden as MCP in Cursor → Settings → MCP | Tool-level allow/deny, rate limiting |
-| Windsurf | MCP config in `mcp_config.json` or Admin panel | Same as above |
-| Amazon Q | `.amazonq/default.json` with `deny` per tool (best built-in policy of this tier) | Can supplement with Warden for audit trail |
+| Cursor | Settings → MCP → Add server | Tool-level allow/deny, allowedPaths, rate limiting |
+| Windsurf | `mcp_config.json` in Windsurf config dir | Same as above |
+| Continue.dev | `.continue/config.json` → `mcpServers` | Same as above |
+| Amazon Q | `.amazonq/default.json` | Can supplement Q's own `deny` rules with Warden audit trail |
+
+#### Testing `warden proxy` manually
+
+After building the CLI (`npm run build -w packages/cli`), you can drive it over stdin just like any MCP client would:
+
+```bash
+# List all tools exposed through your warden.config.yml
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | warden proxy
+
+# Try a tool call that should be ALLOWed
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"filesystem__read_file","arguments":{"path":"/tmp/test.txt"}}}' | warden proxy
+# → {"result":{"content":[{"type":"text","text":"Warden ALLOW: ..."}]}}
+
+# Try a tool call that should be DENYed (tool not in allowedTools)
+echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"filesystem__drop_table","arguments":{}}}' | warden proxy
+# → {"result":{"content":[{"type":"text","text":"Warden DENY: Tool \"drop_table\" not in allowed list..."}],"isError":true}}
+
+# Try a tool call with a path outside allowedPaths (if configured)
+echo '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"filesystem__read_file","arguments":{"path":"/etc/passwd"}}}' | warden proxy
+# → {"result":{"content":[{"type":"text","text":"Warden DENY: Path not in allowedPaths..."}],"isError":true}}
+```
+
+The proxy exits after stdin closes, so each one-liner above gives you one complete exchange.
 
 ### Tier 3: Aider
 
@@ -308,6 +331,12 @@ Warden hook server running on http://localhost:7429
 Press Ctrl+C to stop.
 ```
 
+> **Recommended: set `WARDEN_AUTH_TOKEN`.** Without it, any local process can talk to the
+> hook server on `localhost:7429` — including `/hooks/session-start`, which mints session
+> tokens. Set the env var before starting (`export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)`)
+> and every `/hooks/*` request must then carry the same value in the `X-Warden-Auth` header.
+> `/health` and `/metrics` stay open.
+
 ### 6. Start coding
 
 **Claude Code:**
@@ -334,8 +363,9 @@ npx tsx packages/cli/src/index.ts audit
 |---|---|
 | `warden init` | Initialize Warden in the current project. Creates `warden.config.yml` and `.warden/`. |
 | `warden start` | Start the hook server on `localhost:7429`. Required for Claude Code integration. |
+| `warden proxy` | Start Warden as a stdio MCP server — enforces policy for Cursor, Windsurf, and other MCP-only agents. |
 | `warden audit` | View the hash-chained ledger. Shows every tool call, decision, and chain integrity. |
-| `warden policy test <tool> --trust <level> --environment <env>` | Dry-run policy evaluation. See what decision a tool call would get. |
+| `warden policy --tool <tool> --trust <level> --environment <env>` | Dry-run policy evaluation. See what decision a tool call would get. |
 | `warden scan --prompt "<text>"` | Scan a prompt for injection patterns. Returns clean/detected + recommendation. |
 | `warden supply-chain` | Check package integrity against pinned hashes. Detects version drift and tampering. |
 
@@ -343,7 +373,7 @@ npx tsx packages/cli/src/index.ts audit
 
 ```bash
 # Would writing to a file in production be allowed?
-warden policy test write_file --trust SYSTEM --environment production
+warden policy --tool write_file --trust SYSTEM --environment production
 # → DENY
 
 # Is this prompt dangerous?
@@ -429,6 +459,8 @@ policies:
 **Actions:** `ALLOW`, `DENY`, `CONFIRM` (ask human, 60s timeout), `QUARANTINE` (replaces output with `[QUARANTINED: ...]` sentinel, preserves original in ledger, forces EXTERNAL trust)
 **Precedence:** DENY > QUARANTINE > CONFIRM > ALLOW. Unmatched = DENY.
 
+> **Note on YAML config:** Only `version`, `meta`, and `policies` are loaded from `warden.config.yml`. The following blocks are parsed but **silently ignored** — they must be wired programmatically when starting the server: `approvalChannels`, `ledger`, `threatDetection`, `rateLimits`, `vault`. If you configure these in YAML you will get no error and no effect.
+
 ---
 
 ## Trust Model
@@ -482,7 +514,11 @@ warden/
 │   ├── hook-server/       # HTTP hook server (Hono, localhost:7429)
 │   │   ├── middleware/       auth (token verification), fail-closed (errors → DENY)
 │   │   ├── handlers/         SessionStart/End, PreToolUse, PostToolUse, PromptSubmit, ConfigChange
-│   │   └── approvals/        ApprovalChannel interface (stdout, telegram, slack)
+│   │   └── approvals/        ApprovalChannel interface (stdout, telegram, slack*)
+│   │                         * SlackApprovalChannel is notify-only: it posts a message but
+│   │                           cannot receive button clicks. Every CONFIRM auto-denies after
+│   │                           60 s. Use StdoutApprovalChannel or TelegramApprovalChannel
+│   │                           for real interactive approvals.
 │   │
 │   ├── mcp-gateway/       # Programmatic MCP wrapper
 │   │   ├── registry.ts       Server allowlist (unknown server = DENY)
@@ -497,6 +533,27 @@ warden/
 ├── .claude/settings.json  # Hook registrations (Claude Code integration)
 └── .warden/               # Ledger DB + tool pins (gitignore ledger.db)
 ```
+
+## Integration Modes Compared
+
+Three ways to put Warden in the path of tool calls — choose based on your agent:
+
+| | `warden start` (hook server) | `warden proxy` (MCP stdio) | `@warden/mcp-gateway` (library) |
+|---|---|---|---|
+| **What it is** | HTTP server on `localhost:7429` | CLI command — stdio MCP server process | TypeScript library, no transport |
+| **Who uses it** | Claude Code | Cursor, Windsurf, Continue.dev | Custom agent integrations |
+| **How it intercepts** | Claude Code calls the HTTP server before/after each tool | Agent registers `warden` as its MCP server | Your code calls `wrapMCP().onToolCall()` |
+| **Protocol** | HTTP + JSON hook events | MCP stdio (JSON-RPC over stdin/stdout) | Direct function calls |
+| **Config** | `warden.config.yml` | `warden.config.yml` | Passed programmatically |
+| **Forwarding** | N/A — sits between Claude and the OS | Policy gate only — agent calls real servers separately | Your code decides what to do after ALLOW |
+| **Test it with** | `curl localhost:7429/hook/PreToolUse` | `echo '{"jsonrpc":"2.0",...}' \| warden proxy` | Call `onToolCall()` in unit tests |
+
+**Rule of thumb:**
+- Using Claude Code → `warden start`
+- Using Cursor / Windsurf / any MCP-only agent → `warden proxy`
+- Building a custom agent in TypeScript → `@warden/mcp-gateway`
+
+---
 
 ## Architectural Invariants
 
@@ -517,12 +574,12 @@ warden/
 
 ```typescript
 import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
-import { MemoryLedgerStore, ContextStore, TrustLevel } from "@warden/core";
+import { MemoryLedgerStore, ContextManager, TrustLevel } from "@warden/core";
 
 const gateway = new WardenGateway({
   config: myConfig,
   ledger: new MemoryLedgerStore(),
-  contextManager: new ContextStore(),
+  contextManager: new ContextManager(),
   registry: new MCPRegistry([...]),
 });
 
@@ -576,7 +633,6 @@ npx vitest run packages/opencode-plugin/tests/  # Plugin lifecycle tests
 | Policy schema | Zod 3 |
 | Tokens | jose 5 |
 | SQLite | better-sqlite3 9 |
-| MCP SDK | @modelcontextprotocol/sdk |
 | IDs | ulid 2 |
 | Crypto | Built-in (no dep for SHA-256) |
 | Telegram bot | grammy 1 |

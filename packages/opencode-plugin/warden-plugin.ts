@@ -3,10 +3,12 @@
 // TypeScript checking is skipped for this file (excluded from tsconfig).
 // @ts-ignore — @opencode-ai/plugin is a runtime dependency provided by OpenCode
 import type { Plugin } from "@opencode-ai/plugin";
+import { join } from "node:path";
 import {
   MemoryLedgerStore,
   ContextManager,
   LocalVault,
+  FileConfigSource,
   evaluate,
   tagValue,
   redactSecrets,
@@ -15,6 +17,25 @@ import {
   generateId,
 } from "@warden/core";
 import type { PolicyConfig, PolicyDecision, LedgerStore } from "@warden/core";
+
+const DEFAULT_CONFIG: PolicyConfig = {
+  version: "2",
+  meta: { environment: "development", sessionApprovalRequired: false },
+  policies: [
+    {
+      id: "allow-read-dev",
+      description: "Allow read operations in development",
+      match: { tools: ["read", "list_directory"], environment: ["development"] },
+      action: "ALLOW",
+    },
+    {
+      id: "block-injection",
+      description: "Block injection patterns on bash",
+      match: { tool: "bash", inputPatterns: ["rm\\s+-rf", "curl.*\\|.*sh"] },
+      action: "DENY",
+    },
+  ],
+};
 
 let ledger: LedgerStore;
 let contextManager: ContextManager;
@@ -28,48 +49,18 @@ export const WardenPlugin: Plugin = async () => {
   ledger = new MemoryLedgerStore();
   contextManager = new ContextManager();
 
-  config = {
-    version: "2",
-    meta: { environment: "development", sessionApprovalRequired: false },
-    policies: [
-      {
-        id: "block-prod-writes",
-        description: "No writes to production",
-        match: { tools: ["write_file", "db_write"], environment: ["production"] },
-        action: "DENY",
-      },
-      {
-        id: "confirm-destructive",
-        description: "Confirm destructive ops",
-        match: { tools: ["delete_file", "git_push", "send_email"] },
-        action: "CONFIRM",
-        channel: "stdout",
-      },
-      {
-        id: "block-injection",
-        description: "Block shell injection",
-        match: {
-          tool: "bash",
-          inputPatterns: ["rm\\s+-rf", "curl.*\\|.*sh", "eval\\s*\\(", "wget.*\\|.*sh"],
-        },
-        action: "DENY",
-      },
-      {
-        id: "allow-read-dev",
-        description: "Allow reads in dev",
-        match: {
-          tools: ["read", "list_directory", "grep", "glob"],
-          trustSource: [TrustLevel.SYSTEM, TrustLevel.AGENT, TrustLevel.TOOL],
-          environment: ["staging", "development"],
-        },
-        action: "ALLOW",
-      },
-    ],
-  };
-
   return {
     event: async ({ event }: any) => {
       if (event.type === "session.created") {
+        // Load config from warden.config.yml in the project root; fall back to safe defaults
+        try {
+          const configPath = join(process.cwd(), "warden.config.yml");
+          const source = new FileConfigSource(configPath);
+          config = await source.load();
+        } catch {
+          config = DEFAULT_CONFIG;
+        }
+
         sessionId = `session_${Date.now()}`;
         const ctx = contextManager.createTask(sessionId);
         taskId = ctx.taskId;

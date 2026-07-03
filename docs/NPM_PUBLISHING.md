@@ -1,6 +1,15 @@
 # Warden — NPM Publishing Guide
 
-How to build and publish all five `@warden/*` packages to a private npm registry (GitHub Packages).
+> **Current release process:** the four public packages (`core`, `hook-server`,
+> `mcp-gateway`, `cli`) are published to the **public npmjs.org registry** with
+> provenance by `.github/workflows/publish.yml`, triggered on GitHub release.
+> They already have `"publishConfig": { "access": "public" }` and are no longer
+> `"private": true` — only `opencode-plugin` remains private. The GitHub Packages
+> instructions below are kept as an **alternative** for teams that want a private
+> registry instead.
+
+How to build and publish all five `@warden/*` packages — either to public npmjs.org
+(the default release workflow) or to a private registry (GitHub Packages).
 
 ---
 
@@ -25,14 +34,14 @@ Before publishing any package, verify these pass:
 ```bash
 # From repo root
 npx tsc --noEmit        # Zero type errors
-npx vitest run           # 104 tests pass
+npx vitest run           # Full test suite passes
 ```
 
 ---
 
 ## 2. Prepare Packages for Publishing
 
-Each package.json needs these publish-ready fields. Currently they have `"private": true` to prevent accidental publish. Update each before publishing:
+Each package.json needs these publish-ready fields. The four public packages already have them (see the note at the top of this doc); the examples below show the private-registry variants with `npm.pkg.github.com` publishConfig:
 
 ### packages/core/package.json
 

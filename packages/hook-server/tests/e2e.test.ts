@@ -98,7 +98,12 @@ if (!CLI_RUNNER) {
 
 function getRunCommand(args: string[]): { cmd: string; args: string[] } | null {
   if (CLI_RUNNER === "bun") return { cmd: "bun", args: ["run", ...args] };
-  if (CLI_RUNNER === "npx") return { cmd: "npx", args: ["tsx", ...args] };
+  if (CLI_RUNNER === "npx") {
+    // Pass --tsconfig explicitly so tsx finds the workspace path aliases even when
+    // spawned from a tmpdir outside the workspace tree (e.g. cwd: mkdtempSync(...)).
+    const tsconfigPath = resolve(process.cwd(), "tsconfig.json");
+    return { cmd: "npx", args: ["tsx", "--tsconfig", tsconfigPath, ...args] };
+  }
   return null;
 }
 
