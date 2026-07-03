@@ -13,8 +13,10 @@ services:
       - ./.warden:/app/.warden
     environment:
       - NODE_ENV=development
+      # Recommended: require a shared secret on /hooks/* (see .env.example)
+      # - WARDEN_AUTH_TOKEN=${WARDEN_AUTH_TOKEN}
     healthcheck:
-      test: ["CMD", "bun", "-e", "try{const r=await fetch('http://localhost:7429/health');process.exit(r.ok?0:1)}catch(_){process.exit(1)}"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:7429/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3

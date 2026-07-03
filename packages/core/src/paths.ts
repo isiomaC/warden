@@ -1,3 +1,5 @@
+import { resolve, sep } from "node:path";
+
 const PATH_KEYS = new Set([
   "path", "file_path", "filepath", "filename",
   "dir", "directory", "base_dir",
@@ -15,11 +17,24 @@ export function extractPaths(toolInput: unknown): string[] {
   return paths;
 }
 
+function expandHome(p: string): string {
+  const home = process.env["HOME"] ?? process.env["USERPROFILE"] ?? "";
+  return p.startsWith("~/") && home.length > 0 ? home + p.slice(1) : p;
+}
+
+/**
+ * Both sides are fully resolved (~ expansion, `..`/`.` segments, relative →
+ * absolute against cwd) before comparison, and a match requires either exact
+ * equality or a separator boundary — so `/allowed/../etc/passwd` cannot escape
+ * via unresolved traversal and `/allowed-evil` cannot match allowlist entry
+ * `/allowed` as a bare string prefix.
+ */
 export function isPathAllowed(filePath: string, allowedPaths: string[]): boolean {
   if (allowedPaths.length === 0) return true;
-  const home = process.env["HOME"] ?? process.env["USERPROFILE"] ?? "";
-  const normalize = (p: string): string =>
-    p.startsWith("~/") && home.length > 0 ? home + p.slice(1) : p;
-  const normalized = normalize(filePath);
-  return allowedPaths.some((allowed) => normalized.startsWith(normalize(allowed)));
+  const resolved = resolve(expandHome(filePath));
+  return allowedPaths.some((allowed) => {
+    const allowedResolved = resolve(expandHome(allowed));
+    if (allowedResolved === sep) return true;
+    return resolved === allowedResolved || resolved.startsWith(allowedResolved + sep);
+  });
 }

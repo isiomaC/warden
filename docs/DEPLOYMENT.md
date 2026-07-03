@@ -435,8 +435,7 @@ watch -n 2 'curl -s http://localhost:7429/health | jq'
 - [ ] **Config hash verification:** `warden config-validate` confirms config integrity (SHA-256 hash recorded in first ledger entry of every session)
 - [ ] **Supply chain clean:** `warden supply-chain` exits 0 — no version drift or integrity mismatches
 - [ ] **Ledger backup:** SQLite `.warden/ledger.db` is backed up (see § Ledger Backup below). Path is outside git (`.gitignore`d)
-- [ ] **Tool description pins committed:** `.warden/tool-pins.json` is committed and reviewed. Any mismatch at runtime triggers rug pull detection
-- [ ] **Package pins committed:** `.warden/package-pins.json` is committed and reviewed
+- [ ] **Supply-chain pins committed:** `.warden/pins.json` (written by `warden supply-chain --baseline`, path configurable via `--pins`) is committed and reviewed. Any version/integrity mismatch at session start blocks the session
 - [ ] **Token TTL appropriate:** Session tokens expire within acceptable window (default 300s in production, set via `tokenTTLSeconds` option)
 - [ ] **Token rotation:** Vault tokens are automatically revoked at SessionEnd. Verify with `warden audit` — no orphaned tokens
 - [ ] **Hook server runs as daemon:** systemd, pm2, or Docker (see § 8). Must restart on crash.
@@ -486,76 +485,19 @@ curl -s http://localhost:7429/metrics | jq '.vault'
 
 ## 7. Docker Deployment
 
-### Multi-stage Dockerfile (production)
+The repo ships a working `Dockerfile` and `docker-compose.yml` at the root — use those
+rather than writing your own. Key facts about the real image:
 
-```dockerfile
-# Stage 1: Build
-FROM oven/bun:latest AS build
-WORKDIR /app
-COPY package.json bun.lockb ./
-COPY packages/core/package.json packages/core/
-COPY packages/hook-server/package.json packages/hook-server/
-COPY packages/mcp-gateway/package.json packages/mcp-gateway/
-COPY packages/cli/package.json packages/cli/
-RUN bun install --frozen-lockfile
+- **Runtime: Node 22 (`node:22-slim`) + tsx**, not Bun. The build stage runs `npm ci` and
+  `npx tsc --noEmit`; the runtime stage copies `node_modules` and each package's TypeScript
+  source and runs it directly via tsx (no compiled `dist/`).
+- Runs as the non-root `node` user, exposes port `7429`.
+- Healthcheck uses `node -e "fetch('http://localhost:7429/health')..."` (no curl or bun in
+  the slim image).
+- CMD: `npx tsx packages/cli/src/bin.ts start --config warden.config.yml --db .warden/ledger.db --port 7429`
 
-COPY . .
-RUN bun run typecheck
-RUN bun run vitest run
-
-# Stage 2: Production runtime
-FROM oven/bun:latest AS runtime
-WORKDIR /app
-
-# Copy only production deps and built source
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/packages ./packages
-COPY --from=build /app/package.json .
-COPY --from=build /app/tsconfig.json .
-
-# Create non-root user
-RUN useradd -m -s /bin/bash warden
-RUN mkdir -p /app/.warden && chown -R warden:warden /app
-USER warden
-
-EXPOSE 7429
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:7429/health || exit 1
-
-CMD ["bun", "run", "packages/cli/src/index.ts", "start"]
-```
-
-### Docker Compose
-
-```yaml
-# docker-compose.yml
-version: "3.8"
-services:
-  warden-hook:
-    build: .
-    ports:
-      - "7429:7429"
-    volumes:
-      # Persist ledger and pins across container restarts
-      - warden_data:/app/.warden
-      # Mount config from host (edit without rebuild)
-      - ./warden.config.yml:/app/warden.config.yml:ro
-    environment:
-      - NODE_ENV=production
-      - WARDEN_TELEGRAM_TOKEN=${WARDEN_TELEGRAM_TOKEN}
-      - WARDEN_TELEGRAM_CHAT_ID=${WARDEN_TELEGRAM_CHAT_ID}
-      - WARDEN_SLACK_WEBHOOK=${WARDEN_SLACK_WEBHOOK}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7429/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-volumes:
-  warden_data:
-    driver: local
-```
+The root `docker-compose.yml` mounts `./warden.config.yml` read-only, persists `./.warden`
+(ledger + pins) as a bind mount, and wires the same node-based healthcheck.
 
 ### Run with Docker
 
@@ -568,9 +510,8 @@ docker run -d \
   --name warden \
   -p 7429:7429 \
   -v $(pwd)/warden.config.yml:/app/warden.config.yml:ro \
-  -v warden_data:/app/.warden \
-  -e WARDEN_TELEGRAM_TOKEN="$WARDEN_TELEGRAM_TOKEN" \
-  -e WARDEN_TELEGRAM_CHAT_ID="$WARDEN_TELEGRAM_CHAT_ID" \
+  -v $(pwd)/.warden:/app/.warden \
+  -e WARDEN_AUTH_TOKEN="$WARDEN_AUTH_TOKEN" \
   warden-hook
 
 # Check health
@@ -1004,8 +945,7 @@ your-project/
 │   └── settings.json          # Hook registrations (see §13)
 ├── .warden/
 │   ├── ledger.db              # SQLite ledger (gitignored)
-│   ├── tool-pins.json         # Tool description hashes (commit this)
-│   └── package-pins.json      # Package integrity pins (commit this)
+│   └── pins.json              # Supply-chain package pins (commit this)
 ├── warden.config.yml          # Policy configuration (commit this)
 └── package.json               # Should include @warden/* as deps
 ```

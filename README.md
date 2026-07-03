@@ -331,6 +331,12 @@ Warden hook server running on http://localhost:7429
 Press Ctrl+C to stop.
 ```
 
+> **Recommended: set `WARDEN_AUTH_TOKEN`.** Without it, any local process can talk to the
+> hook server on `localhost:7429` — including `/hooks/session-start`, which mints session
+> tokens. Set the env var before starting (`export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)`)
+> and every `/hooks/*` request must then carry the same value in the `X-Warden-Auth` header.
+> `/health` and `/metrics` stay open.
+
 ### 6. Start coding
 
 **Claude Code:**
