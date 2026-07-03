@@ -394,6 +394,10 @@ ledger:
   path: ".warden/ledger.db"
   retentionDays: 7                 # Shorter retention for dev
 
+# NOTE: the threatDetection block below is parsed but not currently wired into
+# `warden start` — lateralMovement is enforced by @warden/mcp-gateway when used
+# programmatically, but toolDescriptionPinning/rugPullDetection have no implementation
+# yet (see ROADMAP.md). Included here to show the intended shape, not a working example.
 threatDetection:
   lateralMovement:
     enabled: true
@@ -655,6 +659,8 @@ ledger:
   path: ".warden/ledger.db"
   retentionDays: 90
 
+# NOTE: same caveat as §5 — this block is not wired into `warden start` today;
+# toolDescriptionPinning/rugPullDetection have no implementation yet (see ROADMAP.md).
 threatDetection:
   lateralMovement:
     enabled: true
