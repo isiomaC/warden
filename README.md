@@ -618,9 +618,8 @@ npx vitest run packages/opencode-plugin/tests/  # Plugin lifecycle tests
 | [`docs/USER_DEPLOYMENT.md`](docs/USER_DEPLOYMENT.md) | Install, configure, run, verify, background daemons, troubleshooting |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Developer deployment: hook server, MCP gateway, daemon configs, production checklist |
 | [`docs/TESTING.md`](docs/TESTING.md) | Full test strategy: unit, integration (mock corpus), live Claude Code session, CI |
-| [`docs/NPM_PUBLISHING.md`](docs/NPM_PUBLISHING.md) | Build configs, publish order, GitHub Packages auth, CI/CD workflow |
-| [`docs/internal/docs/internal/planV2.md`](docs/internal/docs/internal/planV2.md) | Authoritative implementation spec — architecture, data structures, hook contracts |
-| [`AGENTS.md`](AGENTS.md) | Multi-agent workflow for building Warden (architect → coder → reviewer → ops) |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Local deployment architecture and the interfaces that make backends swappable |
+| [`ROADMAP.md`](ROADMAP.md) | Planned work and explicit non-goals |
 
 ---
 

@@ -56,7 +56,7 @@ How to deploy every package and service for Warden on an MCP-connected agent set
 
 ### Build Order
 
-Build packages in dependency order.  The authoritative sequence from `docs/internal/docs/internal/planV2.md`:
+Build packages in dependency order (matches the root `npm run build` script):
 
 ```
 1. packages/core/         # Zero internal deps — build first
@@ -548,7 +548,10 @@ docker compose down
 | Claude Code | latest | `claude --version` |
 | Git | any | `git --version` |
 
-Bun is the target runtime (per `docs/internal/docs/internal/planV2.md`). If Bun is unavailable, Node.js works for all packages except the live hook server (`startHookServer()`).
+Bun is the preferred runtime for local development, but Node.js is fully supported —
+`warden start` (`packages/cli/src/commands/start.ts`) detects Bun at runtime and falls back
+to Node's built-in `http.createServer` when it's absent, which is what the Docker image uses
+(see §7).
 
 ---
 

@@ -21,9 +21,6 @@ dist/
 
 # Documentation (not needed in image)
 docs/
-AGENTS.md
-agents/
-dispatch/
 CHECKLIST.md
 README.md
 *.md
