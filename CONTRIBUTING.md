@@ -47,11 +47,15 @@ These are **hard requirements**. PRs that violate them will not be merged.
 ### File Naming
 
 - All files use **kebab-case**: `hook-server.ts`, `supply-chain.test.ts`, `pre-tool-use.ts`.
-- Exceptions: `index.ts` entry points, `AGENTS.md`, and config files at the root.
+- Exceptions: `index.ts` entry points and config files at the root.
 
 ### Dependencies
 
-- **Do not add new dependencies without prior discussion.** The tech stack is locked (see `AGENTS.md`). If you need a library not already in `package.json`, open an issue first explaining why the existing stack cannot solve the problem.
+- **Do not add new dependencies without prior discussion.** The tech stack is locked: Hono
+  (hook server), Zod (schema validation), jose (JWT/tokens), better-sqlite3 (ledger),
+  `@modelcontextprotocol/sdk` (MCP), ulid (IDs), grammy (Telegram bot), citty (CLI), Vitest
+  (tests). If you need a library not already in `package.json`, open an issue first
+  explaining why the existing stack cannot solve the problem.
 - All dependencies are workspace-level. Do not add package-specific `package.json` dependencies unless approved.
 
 ### Testing
@@ -63,7 +67,9 @@ These are **hard requirements**. PRs that violate them will not be merged.
 
 ### Architecture
 
-- Follow the implementation order in `docs/internal/planV2.md`. Do not introduce forward dependencies.
+- Respect the package dependency direction: `packages/core` has zero internal deps;
+  `packages/hook-server` and `packages/mcp-gateway` depend only on `core`; `packages/cli`
+  depends on `core` + `hook-server`. Do not introduce forward/circular dependencies.
 - Respect the 10 architectural invariants (see `README.md`). DENY is always the default.
 - Policy engine and hook handlers are **pure deterministic code** — no LLM calls in the security path.
 
@@ -91,8 +97,8 @@ These are **hard requirements**. PRs that violate them will not be merged.
 5. **Open the PR** against `main`. The CI will run typecheck and tests automatically.
 
 6. **One approval required.** A maintainer must review and approve before merge. The reviewer follows a two-stage process:
-   - Stage 1: spec compliance (does it match `docs/internal/planV2.md`?)
-   - Stage 2: code quality (standards, tests, architecture)
+   - Stage 1: does it respect the architectural invariants (fail-closed, DENY-by-default, no LLM in the security path, trust flows downward only)?
+   - Stage 2: code quality (standards, tests, existing patterns)
 
 7. **Merge.** Once approved and CI is green, a maintainer will merge.
 
