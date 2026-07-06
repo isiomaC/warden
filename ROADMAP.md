@@ -31,6 +31,18 @@ for the larger ones so we can align on design.
   built on the hash-chained ledger.
 - **Windows support validation.** Path handling and CI coverage for win32.
 
+## Distribution (ongoing)
+
+- **npm** is the primary channel — `publish.yml` already publishes the 4 public packages
+  with provenance on GitHub release.
+- **Docker image on GHCR** — done, publishes alongside npm on release.
+- **Agent marketplace listings** — submit to the Claude Code plugin/skill marketplace,
+  OpenCode's plugin registry, and any MCP server registries, so Warden is discoverable
+  where its target users already look.
+- **Homebrew tap** — `brew install warden` for users who don't want to go through npm.
+- **Changesets** for version/changelog management across the 4 published packages, once
+  release cadence picks up beyond manual version bumps.
+
 ## Test hardening (ongoing)
 
 - Real TCP smoke test (bind port, curl `/health`) — current server tests are in-process.
