@@ -50,7 +50,7 @@ npx vitest run
 npm run test
 ```
 
-**Pass criteria:** All 307 tests pass across 23 test files (3 skipped), 0 fail.
+**Pass criteria:** All 359 tests pass across 30 test files, 0 fail.
 
 ### Watch mode (development)
 
@@ -136,7 +136,7 @@ npm run typecheck
 
 **Command:** `npx vitest run packages/hook-server/tests/ packages/mcp-gateway/tests/ packages/opencode-plugin/tests/`
 
-**Pass criteria:** All 149 integration tests pass (107 hook-server + 25 gateway + 17 opencode-plugin), 0 fail (3 skipped in e2e tests).
+**Pass criteria:** All 158 integration tests pass (116 hook-server + 25 gateway + 17 opencode-plugin), 0 fail.
 
 #### Hook Server Integration (`integration.test.ts`, 56 tests)
 
@@ -176,7 +176,7 @@ Each test fires a real HTTP request against the Hono server with a payload match
 | **TelegramApprovalChannel** | Approve on `warden_approve` callback, deny on `warden_deny`, deny on timeout (no callback), ignore callbacks for other messages, lazy-bot creation |
 | **SlackApprovalChannel** | Deny after timeout (webhooks can't receive callbacks), deny when webhook fetch fails (fail-closed), respect 60s timeout cap |
 
-#### Hook Server E2E (`e2e.test.ts`, 21 tests + 3 skipped)
+#### Hook Server E2E (`e2e.test.ts`, 24 tests)
 
 | Area | Tests |
 |---|---|
@@ -730,8 +730,8 @@ console.log("E2E test passed: all assertions verified");
 | Check | Command | Requirement |
 |---|---|---|
 | TypeScript typecheck | `npx tsc --noEmit` | Exit 0, no errors |
-| Unit tests | `npx vitest run` | 307 tests pass (3 skipped), 0 fail |
-| Coverage (recommended) | `npx vitest run --coverage` | ≥ 80% line coverage on core |
+| Unit tests | `npx vitest run` | 359 tests pass, 0 fail |
+| Coverage (enforced) | `npx vitest run --coverage` | ≥ 85% on `packages/core`, ≥ 78% elsewhere (see `vitest.config.ts`) |
 | Supply chain check | `npx tsx packages/cli/src/index.ts supply-chain` | Clean report (no violations) |
 
 ### GitHub Actions (recommended workflow)

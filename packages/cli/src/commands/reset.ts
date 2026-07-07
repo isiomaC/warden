@@ -2,10 +2,19 @@ import { defineCommand } from "citty";
 import { existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 
+function resetFile(path: string, label: string): void {
+  if (existsSync(path)) {
+    unlinkSync(path);
+    process.stdout.write(`${label} reset: ${path} deleted.\n`);
+  } else {
+    process.stdout.write(`${label} not found: ${path} (nothing to reset)\n`);
+  }
+}
+
 export const resetCommand = defineCommand({
   meta: {
     name: "reset",
-    description: "Reset Warden state — clear ledger and/or config",
+    description: "Reset Warden state — clear the ledger and/or supply-chain/tool pins",
   },
   args: {
     ledger: {
@@ -15,7 +24,7 @@ export const resetCommand = defineCommand({
     },
     all: {
       type: "boolean",
-      description: "Reset all Warden state (ledger + config)",
+      description: "Reset all Warden state (ledger + pins). Does not touch warden.config.yml.",
       default: false,
     },
     db: {
@@ -25,21 +34,18 @@ export const resetCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const dbPath = resolve(args.db);
-    let didSomething = false;
+    const requested = args.ledger || args.all;
 
-    if (args.ledger || args.all) {
-      if (existsSync(dbPath)) {
-        unlinkSync(dbPath);
-        process.stdout.write(`Ledger reset: ${dbPath} deleted.\n`);
-        didSomething = true;
-      } else {
-        process.stdout.write(`Ledger not found: ${dbPath} (nothing to reset)\n`);
-      }
+    if (!requested) {
+      process.stdout.write(`Usage: warden reset --ledger [--db <path>] | warden reset --all\n`);
+      return;
     }
 
-    if (!didSomething) {
-      process.stdout.write(`Usage: warden reset --ledger [--db <path>] | warden reset --all\n`);
+    resetFile(resolve(args.db), "Ledger");
+
+    if (args.all) {
+      resetFile(resolve(".warden/pins.json"), "Tool pins");
+      resetFile(resolve(".warden/supply-chain-pins.json"), "Supply-chain pins");
     }
   },
 });

@@ -85,10 +85,50 @@ users, since we can't ask every Warden consumer to carry that override indefinit
 
 ## Test hardening (ongoing)
 
-- Real TCP smoke test (bind port, curl `/health`) — current server tests are in-process.
-- Tests for `start`, `scan`, `reset`, `policy`, `config-validate` CLI commands.
-- Trust-propagation e2e: EXTERNAL-tagged tool output triggering QUARANTINE on the next write.
-- Coverage thresholds in `vitest.config.ts` so regressions fail CI.
+Done: a real TCP smoke test for `warden start` (binds an actual port, curls `/health`
+over real HTTP, not just `server.fetch()` in-process); test coverage for `policy`, `scan`,
+`reset`, `start`, and `proxy`; a trust-propagation e2e test; and coverage thresholds in
+`vitest.config.ts` (85% on `packages/core`, 78% floor elsewhere), enforced in CI.
+
+Along the way, writing those tests surfaced real bugs and gaps, now fixed or tracked below:
+
+- **Fixed:** `policy`/`scan` silently fell back to `TrustLevel.TOOL`/`EXTERNAL` on an
+  invalid `--trust` value instead of rejecting it — a bad flag silently changed the
+  enforcement outcome instead of erroring.
+- **Fixed:** `config-validate`'s hash-verification branch was dead code — it called
+  `source.verify(config)` on the exact object `source.load()` had just returned, which
+  can never fail. The only real check was always duplicate-rule-ID detection.
+- **Fixed:** `reset --all` only ever deleted the ledger — identical to `--ledger` — despite
+  being documented as resetting "ledger + config". Now also clears `.warden/pins.json` and
+  `.warden/supply-chain-pins.json` (still leaves `warden.config.yml` alone; deleting a
+  hand-authored policy file on `--all` seemed like the wrong default to guess at).
+  `reset`'s usage line also no longer prints after a real `--ledger`/`--all` run.
+- **New, higher priority than "add a test":** `better-sqlite3` does not load under Bun's
+  runtime (a native-binding limitation — see
+  [oven-sh/bun#4290](https://github.com/oven-sh/bun/issues/4290)). Any spawned `warden`
+  command that opens the SQLite ledger (`audit --db`, `start`) crashes if actually
+  executed via `bun run`, which is how this repo's own test harness invokes the CLI
+  when Bun is present — and Bun is the README's stated primary runtime. Needs either an
+  upstream Bun fix, a pure-JS/WASM SQLite fallback, or a documented "run `warden start`
+  under Node" caveat so this isn't discovered in production.
+- **New:** nothing in the real request-handling path ever registers a value as EXTERNAL
+  trust. `PostToolUse` always tags tool output via `tagValue(output, \`mcp__${tool}\`, ...)`,
+  and `inferTrust()` returns `TOOL` for any `mcp__`-prefixed source unconditionally —
+  `trustRegistry.register()` has exactly one call site in the whole codebase, and it's
+  that one, always with `TOOL`. The QUARANTINE-on-EXTERNAL story only exists in tests that
+  seed the registry directly; there's no code path that would ever do this from a real
+  tool call today. Needs a real external-content classifier (e.g. tools that fetch URLs or
+  read arbitrary paths marked as EXTERNAL-sourcing) before this protection is real.
+- **New:** `TrustRegistry.register()` is first-write-wins (a second registration for an
+  already-seen value just logs a conflict warning and keeps the original trust). This means
+  even a future external-content classifier could not retroactively correct a value's trust
+  after `PostToolUse` has already registered it as `TOOL` — it would have to run first.
+- **New:** the QUARANTINE policy match and the actual sanitization step check the trust
+  registry at different granularities. `quarantine-external` fires off a whole-object
+  `trustRegistry.lookup(tool_input)` hit, but `sanitizeExternalValues` only strips fields
+  whose *individual* values are separately registered as EXTERNAL. Registering only the
+  whole input object triggers QUARANTINE but leaves the output completely unsanitized —
+  confirmed by running the new e2e test with just the whole-object registration.
 
 ## Explicit non-goals
 

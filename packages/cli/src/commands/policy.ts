@@ -80,7 +80,14 @@ export const policyCommand = defineCommand({
       EXTERNAL: TrustLevel.EXTERNAL,
     };
 
-    const trust = trustMap[args.trust.toUpperCase()] ?? TrustLevel.TOOL;
+    const normalizedTrust = args.trust.toUpperCase();
+    if (!(normalizedTrust in trustMap)) {
+      process.stderr.write(
+        `Warden: invalid --trust "${args.trust}". Expected one of: ${Object.keys(trustMap).join(", ")}\n`,
+      );
+      process.exit(1);
+    }
+    const trust = trustMap[normalizedTrust];
 
     const result = evaluate(config, {
       toolName: args.tool,
