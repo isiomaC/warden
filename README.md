@@ -254,7 +254,7 @@ npx vitest run           # 359 tests pass
 ### 3. Initialize Warden in your project
 
 ```bash
-npx tsx packages/cli/src/index.ts init --environment development
+npx tsx packages/cli/src/bin.ts init --environment development
 ```
 
 This creates `warden.config.yml` and `.warden/` in your project.
@@ -321,7 +321,7 @@ Register Warden as your MCP server. All tool calls go through `warden.wrapMCP()`
 **Claude Code** — start the hook server:
 
 ```bash
-npx tsx packages/cli/src/index.ts start
+npx tsx packages/cli/src/bin.ts start
 ```
 
 You should see:
@@ -352,7 +352,7 @@ opencode
 Every tool call now flows through Warden. Verify with:
 
 ```bash
-npx tsx packages/cli/src/index.ts audit
+npx tsx packages/cli/src/bin.ts audit
 ```
 
 ---

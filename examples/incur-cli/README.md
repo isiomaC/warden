@@ -40,10 +40,11 @@ value — a bad flag becomes a different trust level instead of an error, which 
 because trust level changes the ALLOW/DENY outcome.
 
 ```bash
-# citty CLI: --trust BOGUS silently becomes TrustLevel.TOOL, decision proceeds
-npx tsx packages/cli/src/index.ts policy --tool write_file --trust BOGUS --environment production
+# citty CLI: now rejects invalid --trust with exit 1 (fixed after this spike —
+# it used to silently fall back to TrustLevel.TOOL; see packages/cli/src/commands/policy.ts)
+npx tsx packages/cli/src/bin.ts policy --tool write_file --trust BOGUS --environment production
 
-# incur prototype: rejected before run() executes
+# incur prototype: rejected before run() executes, via Zod schema validation instead
 npx tsx examples/incur-cli/warden-incur.ts policy --tool write_file --trust BOGUS --environment production
 # → code: VALIDATION_ERROR
 # → message: "Invalid option: expected one of \"SYSTEM\"|\"AGENT\"|\"TOOL\"|\"EXTERNAL\""
