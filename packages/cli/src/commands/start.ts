@@ -33,11 +33,7 @@ function resolveApprovalChannel(config: PolicyConfig, autoApprove: boolean): { c
   }
 
   const ac = config.approvalChannels;
-  if (!ac) return {};
-
-  if (Object.keys(ac.stdout ?? {}).length >= 0 && !ac.telegram) {
-    return {}; // explicit stdout — use default (StdoutApprovalChannel in createHookServer)
-  }
+  if (!ac?.telegram) return {}; // no telegram configured — use the default (StdoutApprovalChannel in createHookServer)
 
   const channel = createChannelFromConfig(ac);
   return channel ? { channel } : {};

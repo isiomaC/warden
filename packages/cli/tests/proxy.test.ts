@@ -130,12 +130,15 @@ describe("proxyCommand (spawned)", () => {
   });
 
   it("exits 1 when the config has no mcpServers.allowed entries", async () => {
+    const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
+    if (!cmd) return;
+
     await withTmpCwd((dir) => {
       writeFileSync(
         join(dir, "warden.config.yml"),
         'version: "2"\nmeta:\n  environment: "development"\n  sessionApprovalRequired: false\npolicies: []\n',
       );
-      const result = spawnSync("npx", ["tsx", "--tsconfig", resolve(process.cwd(), "tsconfig.json"), BIN_PATH, "proxy"], {
+      const result = spawnSync(cmd.cmd, cmd.args, {
         encoding: "utf-8",
         timeout: 10_000,
         cwd: dir,
@@ -143,17 +146,21 @@ describe("proxyCommand (spawned)", () => {
 
       if (result.status === null) return;
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain("No mcpServers.allowed entries");
+      const output = (result.stderr ?? "") + (result.stdout ?? "");
+      expect(output).toContain("No mcpServers.allowed entries");
     });
   });
 
   it("lists tools with real per-tool JSON Schema, allows a policy-matched call, and denies an unmatched one", async () => {
+    const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
+    if (!cmd) return;
+
     await withTmpCwd(async (dir) => {
       writeFileSync(join(dir, "warden.config.yml"), CONFIG_WITH_SERVER);
 
       const child = spawn(
-        "npx",
-        ["tsx", "--tsconfig", resolve(process.cwd(), "tsconfig.json"), BIN_PATH, "proxy"],
+        cmd.cmd,
+        cmd.args,
         { cwd: dir, stdio: ["pipe", "pipe", "pipe"], detached: true },
       ) as ChildProcessWithoutNullStreams;
 

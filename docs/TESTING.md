@@ -170,14 +170,18 @@ Each test fires a real HTTP request against the Hono server with a payload match
 |---|---|
 | **hookEventName resolution** | Correct event name per route for all 6 hook paths, fallback to "Unknown" for unrecognized routes — verified via `app.onError()`, not a `try/catch`-around-`next()` middleware (which Hono 4.x's `compose()` never lets observe downstream handler errors) |
 
-#### Hook Server Approvals (`approvals.test.ts`, 23 tests)
+#### Hook Server Approvals (`approvals.test.ts`, 19 tests)
 
 | Channel | Tests |
 |---|---|
 | **TimeoutApprovalChannel** | Deny after timeout (100ms test timeout), cap at 60 seconds |
 | **StdoutApprovalChannel** | Approve on "y"/"yes", deny on "n"/anything else/empty input |
 | **TelegramApprovalChannel** | Approve on `warden_approve` callback, deny on `warden_deny`, deny on timeout (no callback), ignore callbacks for other messages, lazy-bot creation |
-| **SlackApprovalChannel** | Deny after timeout (webhooks can't receive callbacks), deny when webhook fetch fails (fail-closed), respect 60s timeout cap |
+
+`SlackApprovalChannel` was removed (notify-only, could never receive a real
+callback) — `AutoApproveApprovalChannel` and YAML-configured
+`approvalChannels` (`telegram`, `stdout`) are the current options; see
+`packages/cli/src/commands/start.ts`.
 
 #### Hook Server E2E (`e2e.test.ts`, 24 tests)
 
@@ -244,7 +248,7 @@ The integration test suite uses a **mock LLM corpus** — pre-defined HTTP paylo
 - All 6 hook event types (SessionStart, PreToolUse, PostToolUse, UserPromptSubmit, ConfigChange, SessionEnd)
 - All 4 policy decisions (ALLOW, DENY, CONFIRM, QUARANTINE)
 - 10+ injection patterns (direct and indirect)
-- 3 approval channels (stdout, telegram, slack)
+- Approval channels (stdout, telegram)
 - Token lifecycle (mint, verify, scope enforcement, revocation, expiry)
 
 ### How to extend the corpus

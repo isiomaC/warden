@@ -22,26 +22,8 @@ export function handlePreToolUse(
   return async (c: Context) => {
     const body = await c.req.json();
     const { tool_name, tool_input, session_id } = body;
-    let taskId = c.get("taskId") as string | undefined;
+    const taskId = c.get("taskId") as string;
     const token = c.get("token") as TaskToken | undefined;
-
-    if (!taskId && session_id) {
-      const autoTask = contextManager.createTask(session_id);
-      taskId = autoTask.taskId;
-      c.set("taskId", taskId);
-      c.set("sessionId", session_id);
-    }
-
-    if (!taskId) {
-      return c.json({
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          permissionDecision: "deny",
-          permissionDecisionReason: "Warden: No session established. Run SessionStart first or provide a session_id.",
-          errorCode: "WARDEN_NO_SESSION",
-        },
-      }, 401);
-    }
 
     const task = contextManager.getTask(taskId);
     if (!task) {

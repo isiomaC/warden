@@ -53,7 +53,7 @@ export interface VaultAdapter {
 export interface ApprovalChannel {
   request(req: ApprovalRequest): Promise<boolean>;
 }
-// Shipped implementations: StdoutApprovalChannel, TelegramApprovalChannel, SlackApprovalChannel
+// Shipped implementations: StdoutApprovalChannel, TelegramApprovalChannel, AutoApproveApprovalChannel
 
 // packages/core/src/context.ts
 export interface ContextStore {
@@ -89,7 +89,7 @@ invariant, not just an implementation detail of the current release.
 
 What's swappable via the interfaces above:
 - Where the audit record lands (local file today; other backends possible via `LedgerStore`)
-- Where the approval request goes (stdout, Telegram, Slack today via `ApprovalChannel`)
+- Where the approval request goes (stdout or Telegram today via `ApprovalChannel`)
 - How tokens are verified (`VaultAdapter`)
 - How task context is tracked (`ContextStore`)
 

@@ -305,7 +305,16 @@ describe("Hook Server — Mock LLM Integration", () => {
   });
 
   describe("Fail-closed behavior", () => {
-    it("should auto-create session and ALLOW when session_id is provided without auth header (headless Claude Code compat)", async () => {
+    it("should DENY when no Authorization header is present, even with a real, previously-authenticated session_id", async () => {
+      // "test-session" was legitimately established via a real SessionStart
+      // call in beforeAll (sessionToken is minted for it) — this asserts
+      // that recognizing a *real* session_id is not enough on its own to
+      // bypass the Bearer token check. A prior version of this middleware
+      // fell through to next() on a missing header and let PreToolUse
+      // auto-create a task from any caller-supplied session_id via
+      // contextManager.createTask(), with no verification against the vault
+      // at all — exploitable with a session_id that was never authenticated
+      // in the first place, not just a real one missing its header.
       const res = await server.fetch(
         new Request("http://localhost:7429/hooks/pre-tool-use", {
           method: "POST",
@@ -318,8 +327,45 @@ describe("Hook Server — Mock LLM Integration", () => {
         }),
       );
 
+      expect(res.status).toBe(401);
       const data = await res.json() as Record<string, unknown>;
-      expect(getDecision(data)).toBe("allow");
+      expect(getDecision(data)).toBe("deny");
+      const output = data.hookSpecificOutput as Record<string, string>;
+      expect(output.errorCode).toBe("WARDEN_MISSING_TOKEN");
+    });
+
+    it("should DENY when no Authorization header is present and session_id was never authenticated at all", async () => {
+      const res = await server.fetch(
+        new Request("http://localhost:7429/hooks/pre-tool-use", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tool_name: "write_file",
+            tool_input: { path: "/tmp/pwned.txt" },
+            session_id: "attacker-chosen-session-id-never-authenticated",
+          }),
+        }),
+      );
+
+      expect(res.status).toBe(401);
+      const data = await res.json() as Record<string, unknown>;
+      expect(getDecision(data)).toBe("deny");
+    });
+
+    it("should DENY PostToolUse when no Authorization header is present", async () => {
+      const res = await server.fetch(
+        new Request("http://localhost:7429/hooks/post-tool-use", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tool_name: "read_file",
+            tool_output: "file contents",
+            session_id: "test-session",
+          }),
+        }),
+      );
+
+      expect(res.status).toBe(401);
     });
 
     it("should DENY with invalid token", async () => {

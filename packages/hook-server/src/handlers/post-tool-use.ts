@@ -35,25 +35,8 @@ export function handlePostToolUse(
 ) {
   return async (c: Context) => {
     const body = await c.req.json();
-    const { tool_name, tool_output, session_id } = body;
-    let taskId = c.get("taskId") as string | undefined;
-
-    if (!taskId && session_id) {
-      const autoTask = contextManager.createTask(session_id);
-      taskId = autoTask.taskId;
-      c.set("taskId", taskId);
-      c.set("sessionId", session_id);
-    }
-
-    if (!taskId) {
-      return c.json({
-        hookSpecificOutput: {
-          hookEventName: "PostToolUse",
-          permissionDecision: "allow",
-          permissionDecisionReason: "Warden: No session — output tagged without task context.",
-        },
-      });
-    }
+    const { tool_name, tool_output } = body;
+    const taskId = c.get("taskId") as string;
 
     const trustedOutput = tagValue(
       tool_output,
