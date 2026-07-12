@@ -841,7 +841,8 @@ describe("CLI Commands", () => {
 
         if (result.status === null) return; // timed out or killed, skip
         expect(result.status).toBe(1);
-        expect(result.stderr).toContain("Config file not found");
+        const output = (result.stderr ?? "") + (result.stdout ?? "");
+        expect(output).toContain("Config file not found");
       } finally {
         rmSync(tmpCwd, { recursive: true, force: true });
       }

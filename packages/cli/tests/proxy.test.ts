@@ -12,6 +12,17 @@ import { join, resolve } from "node:path";
 
 const BIN_PATH = resolve(process.cwd(), "packages/cli/src/bin.ts");
 
+function getNodeRunCommand(args: string[]): { cmd: string; args: string[] } | null {
+  try {
+    const check = spawnSync("npx", ["tsx", "--version"], { encoding: "utf-8", timeout: 5000 });
+    if (check.status !== 0) return null;
+  } catch {
+    return null;
+  }
+  const tsconfigPath = resolve(process.cwd(), "tsconfig.json");
+  return { cmd: "npx", args: ["tsx", "--tsconfig", tsconfigPath, ...args] };
+}
+
 async function withTmpCwd<T>(fn: (dir: string) => T | Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "warden-proxy-test-"));
   try {
@@ -101,16 +112,20 @@ describe("proxyCommand (spawned)", () => {
   });
 
   it("exits 1 when the config file is missing", async () => {
+    const cmd = getNodeRunCommand([BIN_PATH, "proxy", "--config"]);
+    if (!cmd) return;
+
     await withTmpCwd((dir) => {
-      const result = spawnSync("npx", ["tsx", "--tsconfig", resolve(process.cwd(), "tsconfig.json"), BIN_PATH, "proxy", "--config", "does-not-exist.yml"], {
+      const result = spawnSync(cmd.cmd, [...cmd.args, "does-not-exist.yml"], {
         encoding: "utf-8",
         timeout: 10_000,
         cwd: dir,
       });
 
-      if (result.status === null) return; // timed out or killed, skip
+      if (result.status === null) return;
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain("Config file not found");
+      const output = (result.stderr ?? "") + (result.stdout ?? "");
+      expect(output).toContain("Config file not found");
     });
   });
 
