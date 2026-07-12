@@ -1,6 +1,15 @@
 // OpenCode plugin — runs inside OpenCode's plugin runtime.
 // Plugin type + event context are provided by OpenCode at runtime.
 // TypeScript checking is skipped for this file (excluded from tsconfig).
+//
+// Setup:
+//   1. Copy this file to .opencode/plugins/warden-plugin.ts in your project
+//   2. Add { "plugin": [".opencode/plugins/warden-plugin.ts"] } to opencode.json
+//   3. npm install @warden/core
+//   4. Run `warden init` to create warden.config.yml (or write one manually)
+//
+// Latest version: https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts
+//
 // @ts-ignore — @opencode-ai/plugin is a runtime dependency provided by OpenCode
 import type { Plugin } from "@opencode-ai/plugin";
 import { join } from "node:path";

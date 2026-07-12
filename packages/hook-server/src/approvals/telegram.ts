@@ -32,8 +32,11 @@ export class TelegramApprovalChannel implements ApprovalChannel {
     };
 
     const messageText = [
-      `[WARDEN CONFIRM] Tool: ${req.tool}`,
+      `[WARDEN CONFIRM] ${req.tool}`,
+      `Environment: ${req.environment ?? "unknown"}`,
       `Reason: ${req.reason}`,
+      `Session: ${req.sessionId ?? "—"}`,
+      ``,
       `Input: ${JSON.stringify(req.input)}`,
     ].join("\n");
 

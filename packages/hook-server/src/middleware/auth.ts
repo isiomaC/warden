@@ -5,17 +5,7 @@ export function authMiddleware(vault: VaultAdapter) {
   return async (c: Context, next: Next) => {
     const authHeader = c.req.header("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return c.json(
-        {
-          hookSpecificOutput: {
-            hookEventName: "AuthError",
-            permissionDecision: "deny",
-            permissionDecisionReason: "Warden: Missing session token.",
-            errorCode: "WARDEN_MISSING_TOKEN",
-          },
-        },
-        401,
-      );
+      return await next();
     }
 
     const tokenId = authHeader.slice(7);

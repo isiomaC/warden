@@ -305,7 +305,7 @@ describe("Hook Server — Mock LLM Integration", () => {
   });
 
   describe("Fail-closed behavior", () => {
-    it("should DENY when missing auth header", async () => {
+    it("should auto-create session and ALLOW when session_id is provided without auth header (headless Claude Code compat)", async () => {
       const res = await server.fetch(
         new Request("http://localhost:7429/hooks/pre-tool-use", {
           method: "POST",
@@ -319,7 +319,7 @@ describe("Hook Server — Mock LLM Integration", () => {
       );
 
       const data = await res.json() as Record<string, unknown>;
-      expect(getDecision(data)).toBe("deny");
+      expect(getDecision(data)).toBe("allow");
     });
 
     it("should DENY with invalid token", async () => {

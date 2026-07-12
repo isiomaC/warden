@@ -3,7 +3,6 @@ import {
   StdoutApprovalChannel,
   TimeoutApprovalChannel,
   TelegramApprovalChannel,
-  SlackApprovalChannel,
 } from "../src/approvals/index";
 import { WebhookApprovalChannel } from "../src/approvals/index";
 import type { ApprovalRequest } from "../src/approvals/index";
@@ -253,80 +252,6 @@ describe("TelegramApprovalChannel", () => {
     const { Bot: MockBot } = await import("grammy");
     expect(MockBot).toHaveBeenCalledTimes(1);
     expect(MockBot).toHaveBeenCalledWith("lazy-token");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// SlackApprovalChannel
-// ---------------------------------------------------------------------------
-
-describe("SlackApprovalChannel", () => {
-  let originalFetch: typeof globalThis.fetch;
-
-  beforeEach(() => {
-    originalFetch = globalThis.fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-    vi.restoreAllMocks();
-  });
-
-  it("should warn at construction time that it is notify-only", () => {
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-
-    new SlackApprovalChannel("https://hooks.slack.com/test");
-
-    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("notify-only"));
-  });
-
-  it("should deny after timeout (webhooks cannot receive callbacks)", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: async () => "ok",
-    });
-    globalThis.fetch = mockFetch;
-
-    const channel = new SlackApprovalChannel("https://hooks.slack.com/test");
-    const started = Date.now();
-    const result = await channel.request(makeReq({ timeoutMs: 100 }));
-
-    expect(result).toBe(false);
-    const elapsed = Date.now() - started;
-    expect(elapsed).toBeGreaterThanOrEqual(90);
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledWith(
-      "https://hooks.slack.com/test",
-      expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-  });
-
-  it("should still deny when webhook fetch fails (fail-closed)", async () => {
-    const mockFetch = vi.fn().mockRejectedValue(new Error("network error"));
-    globalThis.fetch = mockFetch;
-
-    const channel = new SlackApprovalChannel("https://hooks.slack.com/bad");
-    const result = await channel.request(makeReq({ timeoutMs: 50 }));
-
-    expect(result).toBe(false);
-  });
-
-  it("should respect timeoutMs cap of 60s", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
-    globalThis.fetch = mockFetch;
-
-    const channel = new SlackApprovalChannel("https://hooks.slack.com/test");
-    const started = Date.now();
-    const result = await channel.request(makeReq({ timeoutMs: 50 }));
-
-    expect(result).toBe(false);
-    const elapsed = Date.now() - started;
-    expect(elapsed).toBeLessThan(5_000);
   });
 });
 

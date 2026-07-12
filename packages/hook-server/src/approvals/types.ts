@@ -5,6 +5,9 @@ export interface ApprovalRequest {
   input: unknown;
   reason: string;
   timeoutMs: number;
+  sessionId?: string;
+  taskId?: string;
+  environment?: string;
 }
 
 export interface ApprovalChannel {
@@ -51,6 +54,12 @@ export class StdoutApprovalChannel implements ApprovalChannel {
         resolve(normalized === "y" || normalized === "yes");
       });
     });
+  }
+}
+
+export class AutoApproveApprovalChannel implements ApprovalChannel {
+  async request(_req: ApprovalRequest): Promise<boolean> {
+    return true;
   }
 }
 

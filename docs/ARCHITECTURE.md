@@ -18,7 +18,7 @@
 - SQLite ledger, local config file
 - Zero network dependency
 - Developer owns the audit data
-- **This is what ships.** There is no hosted/central mode today — see `ROADMAP.md` for
+- **This is what ships.** There is no hosted/central mode today — see `internal/ROADMAP.md` for
   what's planned next.
 
 ## Extension Points
@@ -93,4 +93,4 @@ What's swappable via the interfaces above:
 - How tokens are verified (`VaultAdapter`)
 - How task context is tracked (`ContextStore`)
 
-See `docs/DEPLOYMENT.md` for how to actually run Warden, and `ROADMAP.md` for planned work.
+See `docs/internal/DEPLOYMENT.md` for how to actually run Warden, and `internal/ROADMAP.md` for planned work.

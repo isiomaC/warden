@@ -7,7 +7,7 @@ export { redactSecrets, hasSecrets } from "./redact";
 export { MemoryLedgerStore, SqliteLedgerStore } from "./ledger";
 export type { LedgerEntry, LedgerStore, SecurityEvent } from "./ledger";
 export { evaluate, evaluatePolicies, resolveConflicts } from "./policy";
-export type { PolicyAction, PolicyConfig, PolicyDecision, PolicyRule, EvaluateInput } from "./policy";
+export type { PolicyAction, PolicyConfig, PolicyDecision, PolicyRule, EvaluateInput, ApprovalChannelConfig } from "./policy";
 export { LocalVault } from "./vault";
 export type { TaskToken, MintTokenParams, VaultAdapter } from "./vault";
 export { ContextManager } from "./context";

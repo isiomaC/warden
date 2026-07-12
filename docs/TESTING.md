@@ -3,7 +3,7 @@
 Testing plan for unit and integration tests (Layers 1–2: pre-commit, CI) plus
 the CI/coverage gate. For Layer 3 — human-fidelity end-to-end tests against
 real processes (a real `claude` CLI session, a real `warden proxy`, the real
-`warden` binary) — see [`docs/e2e-plan.md`](e2e-plan.md).
+`warden` binary) — see [`docs/internal/e2e-plan.md`](internal/e2e-plan.md).
 
 ---
 
@@ -39,7 +39,7 @@ If you add a policy rule, add a test. If you add an injection pattern, add a tes
 └──────────────────────────────────────────────────────┘
 ```
 
-**Run Layer 1+2 before every deploy.** Run Layer 3 once before first production release and after any protocol-level changes. Layer 3's plan lives in [`docs/e2e-plan.md`](e2e-plan.md), not in this file.
+**Run Layer 1+2 before every deploy.** Run Layer 3 once before first production release and after any protocol-level changes. Layer 3's plan lives in [`docs/internal/e2e-plan.md`](internal/e2e-plan.md), not in this file.
 
 ---
 
@@ -481,14 +481,14 @@ Required tests:
 Layer 3 — driving a real `claude` CLI session, a real `warden proxy` MCP
 server, and the real `warden` binary as separate processes, instead of
 in-process/mocked calls — has its own dedicated implementation plan:
-**[`docs/e2e-plan.md`](e2e-plan.md)**. See that file for verified tooling
+**[`docs/internal/e2e-plan.md`](internal/e2e-plan.md)**. See that file for verified tooling
 facts, known gotchas, phased scenarios, and open questions to resolve.
 
 The manual verification script that used to live in this section had drifted
 out of date (it invoked `packages/cli/src/index.ts`, which has no `runMain()`
 call and does nothing when run directly, and a `policy test <tool>` subcommand
 that was never real — the actual flags are `policy --tool <tool> --trust
-<level> --environment <env>`). Don't resurrect it as-is; `docs/e2e-plan.md`
+<level> --environment <env>`). Don't resurrect it as-is; `docs/internal/e2e-plan.md`
 supersedes it with a corrected, actionable plan.
 
 ---
@@ -623,7 +623,7 @@ tests + coverage under both Bun and Node, and a Docker build + `/health`
 smoke test. Treat that file as the source of truth rather than a snippet
 here; a duplicated example in this doc has drifted out of sync with it
 before (it doesn't run `warden start` under Bun, for the same reason
-documented above and in `docs/DEPLOYMENT.md`).
+documented above and in `docs/internal/DEPLOYMENT.md`).
 
 ### Pre-Commit Hook
 

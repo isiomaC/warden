@@ -35,9 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Docs
 - README/TESTING.md test-count and file-count claims re-synced to the actual suite (307 passed, 3 skipped, 310 total, 23 files)
-- Fixed stale `wardenlabs` org references in CONTRIBUTING.md and docs/USER_DEPLOYMENT.md (now `isiomaC`)
+- Fixed stale `wardenlabs` org references in CONTRIBUTING.md and docs/MANUAL.md (now `isiomaC`)
 - docs/NPM_PUBLISHING.md corrected to reflect the actual release process (public npmjs.org via `publish.yml` provenance, not private GitHub Packages)
-- docs/DEPLOYMENT.md's Docker section replaced a fictional Bun-based Dockerfile/compose example with the facts of the actual Node 22 + tsx image; supply-chain pins filename references corrected to the real default (`.warden/pins.json`); `threatDetection.toolDescriptionPinning`/`rugPullDetection` config examples now flagged as not yet implemented
+- docs/internal/DEPLOYMENT.md's Docker section replaced a fictional Bun-based Dockerfile/compose example with the facts of the actual Node 22 + tsx image; supply-chain pins filename references corrected to the real default (`.warden/pins.json`); `threatDetection.toolDescriptionPinning`/`rugPullDetection` config examples now flagged as not yet implemented
 
 ### Added
 
@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Community
 - `CODE_OF_CONDUCT.md` (Contributor Covenant), issue templates (bug report, feature request), pull request template, `.github/FUNDING.yml`
-- `ROADMAP.md` documenting near-term and mid-term plans (transparent `warden proxy` forwarding, wiring the currently-ignored YAML config blocks, persistent vault, policy packs) and explicit non-goals
+- `docs/internal/ROADMAP.md` documenting near-term and mid-term plans (transparent `warden proxy` forwarding, wiring the currently-ignored YAML config blocks, persistent vault, policy packs) and explicit non-goals
 
 ### Added
 

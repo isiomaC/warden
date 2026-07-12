@@ -1,7 +1,7 @@
 # Prototype: Warden CLI on incur
 
 A spike proving out the `citty` → [`incur`](https://github.com/wevm/incur) migration
-tracked in [ROADMAP.md](../../ROADMAP.md). `warden-incur.ts` reimplements three real
+tracked in [ROADMAP.md](../../docs/internal/ROADMAP.md). `warden-incur.ts` reimplements three real
 `packages/cli` commands (`policy`, `scan`, `audit`) against the same `@warden/core`
 primitives (`evaluate`, `scanForInjection`, `MemoryLedgerStore`/`SqliteLedgerStore`) —
 only the CLI framework changes, not the enforcement logic.
@@ -120,7 +120,7 @@ npx tsx examples/incur-cli/warden-incur.ts audit --demo --format json --token-co
   only covers the three commands most illustrative of the four features above.
 - The `.command('proxy')` / real MCP-forwarding path is not reimplemented here — only
   `--mcp`'s tool exposure is demonstrated. Actual policy-gated forwarding to backing
-  MCP servers is tracked separately in ROADMAP.md ("Transparent forwarding proxy").
+  MCP servers is tracked separately in docs/internal/ROADMAP.md ("Transparent forwarding proxy").
 - `warden skills add` was inspected via `--help` but not executed, since it writes
   into `~/.claude/skills` or similar shared agent config — run it manually if you
   want to see the generated skill file.
