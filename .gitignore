@@ -6,3 +6,9 @@ coverage/
 *.log
 docs/internal/
 docs/qa/
+
+# Claude Code's convention for personal, untracked hook config — this is
+# where our own docs tell users to put a literal WARDEN_AUTH_TOKEN value
+# (see README's Quick Start step 4 / docs/MANUAL.md), so keep it out of this
+# repo's own history too.
+.claude/settings.local.json
