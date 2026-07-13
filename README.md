@@ -269,25 +269,34 @@ This creates `warden.config.yml` and `.warden/` in your project.
 
 ### 3. Set up your agent
 
-**Claude Code — add hooks to `.claude/settings.json`:**
+**Claude Code — add hooks to `.claude/settings.local.json`** (Claude Code's convention for
+personal, untracked config — keep this file out of git; put the *shape* of your hooks in the
+committed `.claude/settings.json` without the secret, if you want the URLs/timeouts
+version-controlled):
 
 ```json
 {
   "hooks": {
-    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10 }] }],
-    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5 }] }],
-    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10 }] }],
-    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5, "async": true }] }],
-    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5 }] }],
-    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10, "async": true }] }]
-  },
-  "allowedEnvVars": ["WARDEN_AUTH_TOKEN"]
+    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 10 }] }],
+    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 5 }] }],
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 10 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 5, "async": true }] }],
+    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 5 }] }],
+    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 10, "async": true }] }]
+  }
 }
 ```
 
-`${WARDEN_AUTH_TOKEN}` is interpolated from your shell environment when Claude Code loads
-`settings.json` — export it in the same shell you launch `claude` from, before you launch it.
-`allowedEnvVars` is required or Claude Code won't interpolate the variable at all.
+Put the literal token value directly in the header — generate it once
+(`openssl rand -hex 32`), paste it into `REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN` above, and pass
+the same value as `WARDEN_AUTH_TOKEN` when you start Warden. **`${WARDEN_AUTH_TOKEN}`-style
+env-var interpolation in hook headers did not work in our end-to-end testing against a real
+`claude -p` session** — the CLI has a documented `httpHookAllowedEnvVars` allowlist for this,
+but every configuration we tried (top-level, per-hook, user- and project-scoped settings)
+resulted in an empty header, silently 401ing every hook call. A literal value in
+`.claude/settings.local.json` is the pattern we verified actually works end to end; treat
+env-var interpolation as unconfirmed for now (see `docs/internal/e2e-plan.md` for the full
+investigation) and revisit if a future Claude Code release documents the working incantation.
 
 **OpenCode — copy the plugin into your project:**
 

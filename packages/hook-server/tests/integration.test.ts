@@ -299,8 +299,12 @@ describe("Hook Server — Mock LLM Integration", () => {
         session_id: "test-session",
       });
 
+      // SessionEnd returns {} deliberately — Claude Code's real hook-output
+      // schema has no SessionEnd variant, so any hookSpecificOutput here
+      // fails validation on a real session (see handlers/session-end.ts).
+      expect(res.status).toBe(200);
       const data = await res.json() as Record<string, unknown>;
-      expect(getDecision(data)).toBe("allow");
+      expect(data).toEqual({});
     });
   });
 

@@ -262,10 +262,12 @@ describe("E2E — Full session lifecycle", () => {
       expect(entry.previousHash).toBeTruthy();
     }
 
-    // Phase 12: Session end — should revoke tokens
+    // Phase 12: Session end — should revoke tokens. Response is {} deliberately —
+    // Claude Code's real hook-output schema has no SessionEnd variant.
     const endRes = await call("/hooks/session-end", {});
+    expect(endRes.status).toBe(200);
     const endData = await endRes.json() as Record<string, unknown>;
-    expect(getDecision(endData)).toBe("allow");
+    expect(endData).toEqual({});
 
     // Phase 13: Post-session call — should DENY
     const postSessionRes = await call("/hooks/pre-tool-use", {

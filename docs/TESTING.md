@@ -53,7 +53,7 @@ npx vitest run
 npm run test
 ```
 
-**Pass criteria:** All 359 tests pass across 30 test files, 0 fail.
+**Pass criteria:** All 373 tests pass across 30 test files, 0 fail.
 
 ### Watch mode (development)
 
@@ -615,7 +615,7 @@ console.log("E2E test passed: all assertions verified");
 | Check | Command | Requirement |
 |---|---|---|
 | TypeScript typecheck | `npx tsc --noEmit` | Exit 0, no errors |
-| Unit tests | `npx vitest run` | 359 tests pass, 0 fail |
+| Unit tests | `npx vitest run` | 373 tests pass, 0 fail |
 | Coverage (enforced) | `npx vitest run --coverage` | ≥ 85% on `packages/core`, ≥ 78% elsewhere (see `vitest.config.ts`) |
 | Supply chain check | `npx tsx packages/cli/src/bin.ts supply-chain` | Clean report (no violations) |
 

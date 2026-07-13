@@ -24,7 +24,7 @@ const server = createHookServer({ config });
 await server.fetch(new Request("http://localhost:7429/hooks/pre-tool-use", ...));
 ```
 That calls Warden's own code in-process. It's fast and already has good
-coverage (359 tests, see `docs/TESTING.md`), but it can never catch a bug in
+coverage (373 tests, see `docs/TESTING.md`), but it can never catch a bug in
 the actual integration boundary — the real HTTP hook contract Claude Code
 speaks, the real MCP stdio contract Cursor/Windsurf speak, the real CLI
 argument parsing a human types.
@@ -142,68 +142,113 @@ Code / OpenCode / Codex CLI / Copilot SDK get "Full policy enforcement,
 per-call inspection, CONFIRM, ledger audit"). Nothing currently tests it with
 a real Claude Code process.
 
-### Step 0 — resolve the open unknown first
+### Step 0 — resolved, empirically, against a real `claude` process
 
-Before building all six scenarios, prove the mechanism works at all with one
-trivial case.
+This step is **done**, not just planned — it was actually executed against a
+real, installed `claude` CLI (v2.1.207) in a throwaway tmp directory, with a
+real `warden start` process and a real ledger, not simulated. Both the auth
+design and the headless-hooks-fire-at-all question are now confirmed facts,
+not open questions. What follows is what was actually found, including two
+real bugs it turned up and fixed.
 
-**Auth design (resolved — was an open question in an earlier version of this
-plan, now implemented in `packages/hook-server/src/middleware/auth.ts`):**
-Claude Code's HTTP hooks can only send static, env-var-interpolated headers
-fixed when `settings.json` is loaded — confirmed by reading the real Claude
-Code hook config schema — with no documented mechanism to carry a value
+**Auth design (implemented in `packages/hook-server/src/middleware/auth.ts`):**
+Claude Code's HTTP hooks can only send static headers fixed when
+`settings.json` is loaded, with no documented mechanism to carry a value
 learned from one hook's JSON response (e.g. SessionStart's minted
 `sessionToken`) into a later hook call's headers. So a real vault-scoped
 `Authorization: Bearer <token>` can never arrive at `/hooks/*` from a real
 `claude`/`claude -p` process, headless or interactive — the whole
 per-session-token-relay model doesn't fit this transport. `WARDEN_AUTH_TOKEN`
 is the fix: it's a shared secret Claude Code's hook config *can* send
-(`X-Warden-Auth` header, static, set once), and `authMiddleware` bootstraps a
-session from the request's own `session_id` whenever no `Authorization`
-header is present at all and the shared secret has already been verified
-upstream by `sharedSecretMiddleware`. This means **`WARDEN_AUTH_TOKEN` is now
-required, not optional, for Claude Code integration to work** — without it,
-`/hooks/*` fail-closed denies every request (unchanged default), so headless
-and interactive Claude Code sessions alike get 401s on every hook call. A
+(`X-Warden-Auth` header), and `authMiddleware` bootstraps a session from the
+request's own `session_id` whenever no `Authorization` header is present at
+all and the shared secret has already been verified upstream by
+`sharedSecretMiddleware`. **Confirmed working end to end**: a real `claude -p`
+session, with the correct secret configured, produced a real ledger entry
+(`ALLOW | Read | Policy: allow-reads`) with zero `permission_denials`. A
 bootstrapped request has no vault-issued `allowedTools`/`allowedPaths` scope
-(unlike the real Bearer-token path) — the trust boundary is "knows the shared
-secret," matching the trust already granted at `/hooks/session-start`. An
-explicitly invalid Bearer token still denies even with a valid secret present
-— bootstrap only triggers when `Authorization` is completely absent, never as
-an override for a bad token. See
+— the trust boundary is "knows the shared secret," matching the trust already
+granted at `/hooks/session-start`. See
 `packages/hook-server/tests/shared-secret.test.ts`'s "shared-secret bootstrap"
-describe block for the full behavior matrix (bootstrap ALLOW, bootstrap real
-DENY policy, no-`session_id` denial, no-secret-configured denial, Bearer
-takes precedence over bootstrap, bootstrap request is unscoped).
+describe block for the unit-level behavior matrix.
 
-Steps:
+**Real bug #1 found and fixed — `${VAR}` env-var interpolation into hook
+headers does not work, contradicting what this plan previously assumed.**
+The CLI binary's own strings *do* describe a real feature
+(`httpHookAllowedEnvVars` setting, `${VAR}`/`$VAR` regex interpolation,
+per-hook `allowedEnvVars` intersection) — this isn't a fabricated feature.
+But empirically, `"X-Warden-Auth": "${WARDEN_AUTH_TOKEN}"` combined with
+`"httpHookAllowedEnvVars": ["WARDEN_AUTH_TOKEN"]` (tried at the settings.json
+top level, in both the project directory and `~/.claude/settings.json`, and
+with `--debug hooks` turned on) consistently produced an **empty** header
+value, not the resolved secret and not the literal placeholder string —
+confirmed via a raw HTTP echo server capturing the exact header Claude Code
+sent, and via `--debug hooks` logging `Hooks: env var $WARDEN_AUTH_TOKEN not
+in allowedEnvVars, skipping interpolation` even with the setting present.
+Root cause not fully isolated (possibly gated to enterprise/managed settings
+only, possibly a bug in this CLI build) — **treat env-var interpolation as
+unverified, not recommended**, until a future investigation finds the actual
+working incantation. **What does work, confirmed**: a literal (hardcoded)
+secret value written directly into the header in `.claude/settings.local.json`
+— real header arrived intact, real `ALLOW` ledger entry recorded. This is now
+the documented recommendation in the main README and `docs/MANUAL.md`.
+`.claude/settings.local.json` is Claude Code's own convention for untracked,
+personal config, so this doesn't put the secret in committed files as long as
+that file is gitignored (verify this for your project — it is not
+automatically implied by using the filename).
+
+**Real bug #2 found and fixed — `SessionEnd`'s hook response shape was
+invalid.** `handleSessionEnd` used to return
+`{hookSpecificOutput: {hookEventName: "SessionEnd", permissionDecision:
+"allow", ...}}`, matching every other handler's shape. Against a real
+session, this failed Claude Code's own hook-output schema validation on
+**every single session end** (`Hook JSON output validation failed — (root):
+Invalid input`) — confirmed by testing multiple response shapes against a raw
+echo server: `{}` passes, `{hookSpecificOutput: {hookEventName:
+"SessionEnd"}}` (with no other fields) still fails. Claude Code's schema has
+no `SessionEnd` variant for `hookSpecificOutput` at all — any value fails,
+even one that would be legal input for other hook types. Fixed in
+`packages/hook-server/src/handlers/session-end.ts` to just return `{}`;
+`PostToolUse`'s existing shape (`hookSpecificOutput.permissionDecision` etc.)
+was separately confirmed valid via the same echo-server method, so it needed
+no change.
+
+**Known gotcha hit while doing this testing, worth flagging for whoever
+re-runs Step 0 next:** `warden start`, run via `npx tsx packages/cli/src/bin.ts
+start` from a directory **outside** this repo, resolves `@warden/hook-server`
+via that package's `package.json` `exports` field — i.e. its **pre-built
+`dist/`** — not live source, because `tsx` only picks up this repo's root
+`tsconfig.json` `paths` overrides (which point `@warden/hook-server` at
+`src/server.ts`) when a tsconfig.json is discoverable from the current
+working directory. Testing hook-server source changes from a tmp/scratch
+directory will silently run stale `dist/` output unless you `npm run build`
+first after every source edit. This is not a real deployment bug — the
+Dockerfile's runtime image has no `dist/` at all and always runs from `src/`
+with `tsconfig.json` present at `/app`, so the real shipped container is
+unaffected — but it cost real debugging time during this verification and
+will again for the next person who tests from outside the repo root.
+
+Steps to reproduce this verification (all of the above, replicated):
 
 1. In an empty tmp directory, write a minimal `warden.config.yml` (copy
    `examples/claude-code-basic/warden.config.yml` as a starting point) and a
-   `.claude/settings.json` with all six hook types wired to HTTP, matching
-   the shape in the main README's Quick Start section (`SessionStart`,
-   `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `ConfigChange`,
-   `SessionEnd` — note `examples/claude-code-basic/.claude/settings.json`
-   only has four of these; use the README's six-hook version instead). Each
-   hook needs a `headers` block (`{"X-Warden-Auth": "${WARDEN_AUTH_TOKEN}"}`)
-   and the settings file needs a top-level `"allowedEnvVars": ["WARDEN_AUTH_TOKEN"]`
-   — without `allowedEnvVars`, Claude Code sends the literal string
-   `${WARDEN_AUTH_TOKEN}` instead of interpolating it, and every hook 401s.
-2. `export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)` in the shell you'll run
-   both processes from (or two shells sharing the same exported value).
-3. Start `warden start --port <test-port> --db ./.warden/ledger.db` as a real
-   background process from that directory, in the shell with
-   `WARDEN_AUTH_TOKEN` exported.
-4. Run `claude -p "read the file /tmp/<marker>.txt" --settings ./.claude/settings.json --output-format json` from that same directory/shell.
-5. Run `warden audit --db ./.warden/ledger.db` and confirm a `read_file`
-   (or whatever tool Claude actually chose) entry with decision `ALLOW`
-   appears.
-
-If step 5 shows no ledger entry, first check for 401s (mismatched or missing
-`WARDEN_AUTH_TOKEN` between the two shells, or a missing `allowedEnvVars`
-entry) before concluding headless mode doesn't fire the HTTP hooks — that was
-the prior open question here, but the auth mechanism was the likelier failure
-mode all along and is now the first thing to rule out.
+   `.claude/settings.local.json` with all six hook types wired to HTTP,
+   matching the shape in the main README's Quick Start section
+   (`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`,
+   `ConfigChange`, `SessionEnd`). Put a literal secret value (not `${VAR}`) in
+   each hook's `X-Warden-Auth` header.
+2. `export WARDEN_AUTH_TOKEN=<the same literal value>` in the shell you'll
+   start `warden start` from.
+3. From **this repo's root** (or after `npm run build`, if testing from
+   elsewhere — see gotcha above), start `warden start --port <test-port> --db
+   ./.warden/ledger.db` as a real background process from the tmp directory.
+4. Run `claude -p "read the file /tmp/<marker>.txt" --output-format json`
+   from that same tmp directory (no `--settings` flag needed —
+   `.claude/settings.local.json` in the cwd is picked up automatically).
+5. Run `warden audit --db ./.warden/ledger.db` and confirm a `Read` (or
+   whatever tool Claude actually chose) entry with decision `ALLOW` appears,
+   and check stderr from the `claude -p` invocation is clean (no "hook ...
+   failed" lines).
 
 ### Scenarios (once Step 0 passes)
 
