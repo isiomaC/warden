@@ -18,7 +18,7 @@
 - SQLite ledger, local config file
 - Zero network dependency
 - Developer owns the audit data
-- **This is what ships.** There is no hosted/central mode today — see `ROADMAP.md` for
+- **This is what ships.** There is no hosted/central mode today — see `internal/ROADMAP.md` for
   what's planned next.
 
 ## Extension Points
@@ -53,7 +53,7 @@ export interface VaultAdapter {
 export interface ApprovalChannel {
   request(req: ApprovalRequest): Promise<boolean>;
 }
-// Shipped implementations: StdoutApprovalChannel, TelegramApprovalChannel, SlackApprovalChannel
+// Shipped implementations: StdoutApprovalChannel, TelegramApprovalChannel, AutoApproveApprovalChannel
 
 // packages/core/src/context.ts
 export interface ContextStore {
@@ -89,8 +89,8 @@ invariant, not just an implementation detail of the current release.
 
 What's swappable via the interfaces above:
 - Where the audit record lands (local file today; other backends possible via `LedgerStore`)
-- Where the approval request goes (stdout, Telegram, Slack today via `ApprovalChannel`)
+- Where the approval request goes (stdout or Telegram today via `ApprovalChannel`)
 - How tokens are verified (`VaultAdapter`)
 - How task context is tracked (`ContextStore`)
 
-See `docs/DEPLOYMENT.md` for how to actually run Warden, and `ROADMAP.md` for planned work.
+See `docs/internal/DEPLOYMENT.md` for how to actually run Warden, and `internal/ROADMAP.md` for planned work.

@@ -1,6 +1,32 @@
 import type { Context } from "hono";
-import { tagValue, hasSecrets, TrustLevel, generateId } from "@warden/core";
+import { tagValue, hasSecrets, TrustLevel, generateId, scanForInjection } from "@warden/core";
 import type { LedgerStore, ContextStore, TrustRegistry } from "@warden/core";
+
+function registerExternalValues(
+  value: unknown,
+  registry: TrustRegistry,
+  taskId: string,
+): void {
+  if (value === null || value === undefined) return;
+
+  if (typeof value === "string") {
+    registry.register(value, TrustLevel.EXTERNAL, `mcp__scanner__${taskId}`);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      registerExternalValues(item, registry, taskId);
+    }
+    return;
+  }
+
+  if (typeof value === "object") {
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      registerExternalValues(v, registry, taskId);
+    }
+  }
+}
 
 export function handlePostToolUse(
   ledger: LedgerStore,
@@ -24,14 +50,27 @@ export function handlePostToolUse(
 
     let warning: string | undefined;
 
-    // External destination check: flag low-trust outputs for downstream handlers
-    if (trustedOutput.trust === TrustLevel.EXTERNAL || trustedOutput.trust === TrustLevel.TOOL) {
-      // trustLevel is included in the hook response so downstream handlers
-      // can evaluate whether low-trust output is being routed to external tools.
+    const outputStr = typeof tool_output === "string" ? tool_output : JSON.stringify(tool_output);
+
+    const scanResult = scanForInjection(outputStr, TrustLevel.EXTERNAL);
+    if (!scanResult.clean) {
+      trustRegistry.register(tool_output, TrustLevel.EXTERNAL, `mcp__${tool_name}__scanner`);
+      registerExternalValues(tool_output, trustRegistry, taskId);
+
+      ledger.writeSecurityEvent({
+        id: generateId("injection"),
+        timestamp: new Date().toISOString(),
+        eventType: "INJECTION_DETECTED_IN_OUTPUT",
+        details: {
+          tool: tool_name,
+          taskId,
+          patterns: scanResult.patterns,
+          summary: `Injection patterns detected in tool output from ${tool_name}. Output classified as EXTERNAL trust.`,
+        },
+      });
+      warning = `Warden: Injection patterns detected (${scanResult.patterns?.join(", ")}). Output classified as EXTERNAL trust.`;
     }
 
-    // Check for secrets in tool output
-    const outputStr = typeof tool_output === "string" ? tool_output : JSON.stringify(tool_output);
     if (hasSecrets(outputStr)) {
       ledger.writeSecurityEvent({
         id: generateId("secrets"),
@@ -43,7 +82,9 @@ export function handlePostToolUse(
           summary: "Secrets detected in tool output. Output registered with trust tagging.",
         },
       });
-      warning = "Warden: Secrets detected in tool output. Output has been trust-tagged but secrets were found.";
+      if (!warning) {
+        warning = "Warden: Secrets detected in tool output. Output has been trust-tagged but secrets were found.";
+      }
     }
 
     return c.json({

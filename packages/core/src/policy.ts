@@ -5,7 +5,7 @@ export type PolicyAction = "ALLOW" | "DENY" | "CONFIRM" | "QUARANTINE";
 export type PolicyDecision =
   | { action: "ALLOW"; reason: string }
   | { action: "DENY"; reason: string }
-  | { action: "CONFIRM"; reason: string; channel: "telegram" | "slack" | "stdout" | "webhook" }
+  | { action: "CONFIRM"; reason: string; channel: "telegram" | "stdout" | "webhook" }
   | { action: "QUARANTINE"; reason: string; strippedContext: string[]; updatedInput?: Record<string, unknown>; additionalContext?: string };
 
 export interface PolicyRule {
@@ -22,10 +22,15 @@ export interface PolicyRule {
     tool?: string;
   };
   action: PolicyAction;
-  channel?: "telegram" | "slack" | "stdout" | "webhook";
+  channel?: "telegram" | "stdout" | "webhook";
   webhookUrl?: string;
   pollUrl?: string;
   timeoutSeconds?: number;
+}
+
+export interface ApprovalChannelConfig {
+  stdout?: Record<string, never>;
+  telegram?: { botToken?: string; chatId?: string };
 }
 
 export interface PolicyConfig {
@@ -35,6 +40,7 @@ export interface PolicyConfig {
     sessionApprovalRequired: boolean;
   };
   policies: PolicyRule[];
+  approvalChannels?: ApprovalChannelConfig;
 }
 
 export interface EvaluateInput {
@@ -90,21 +96,22 @@ function matchRule(rule: PolicyRule, input: EvaluateInput): boolean {
 }
 
 function ruleToDecision(rule: PolicyRule, _input: EvaluateInput): PolicyDecision {
+  const reasonSuffix = rule.description ? ` — ${rule.description}` : "";
   switch (rule.action) {
     case "ALLOW":
-      return { action: "ALLOW", reason: `Policy: ${rule.id} — ${rule.description}` };
+      return { action: "ALLOW", reason: `Policy: ${rule.id}${reasonSuffix}` };
     case "DENY":
-      return { action: "DENY", reason: `Policy: ${rule.id} — ${rule.description}` };
+      return { action: "DENY", reason: `Policy: ${rule.id}${reasonSuffix}` };
     case "CONFIRM":
       return {
         action: "CONFIRM",
-        reason: `Policy: ${rule.id} — ${rule.description}`,
+        reason: `Policy: ${rule.id}${reasonSuffix}`,
         channel: rule.channel ?? "stdout",
       };
     case "QUARANTINE":
       return {
         action: "QUARANTINE",
-        reason: `Policy: ${rule.id} — ${rule.description}`,
+        reason: `Policy: ${rule.id}${reasonSuffix}`,
         strippedContext: [],
       };
   }

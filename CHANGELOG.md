@@ -32,12 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Hook Server
 - Added opt-in shared-secret auth (`WARDEN_AUTH_TOKEN` env var / `authToken` option): when set, every `/hooks/*` request — including `session-start`, which mints session tokens — must carry a matching `X-Warden-Auth` header (timing-safe comparison), closing a gap where any local process could talk to the hook server unauthenticated. `/health` and `/metrics` remain open
+- `authMiddleware` now bootstraps a session from the request's own `session_id` when no `Authorization` header is present but the shared secret has already been verified — Claude Code's HTTP hooks can only send static headers fixed at `.claude/settings.json` load time, with no way to relay a vault-minted Bearer token learned from one hook's response into a later hook call, so the strict Bearer-only path made `WARDEN_AUTH_TOKEN` unusable for real Claude Code integration. `WARDEN_AUTH_TOKEN` is now effectively required (not just recommended) for Claude Code; a bootstrapped request is unscoped (no `allowedTools`/`allowedPaths`) but still subject to real policy evaluation, and a missing/invalid Bearer token still hard-denies whenever no secret is configured or an explicit token is present but wrong. Verified end to end against a real `claude -p` process, which is how the two fixes below were found
+- `session-end`'s hook response no longer includes `hookSpecificOutput` — Claude Code's real hook-output schema has no `SessionEnd` variant at all, so the previous `{hookSpecificOutput: {hookEventName: "SessionEnd", permissionDecision: "allow", ...}}` shape failed validation on every single real session end (logged as a hook failure, though harmless since `SessionEnd` is fire-and-forget). Found by testing against a real `claude` CLI; `{}` is the confirmed-valid response
+
+#### Docs
+- Corrected the documented Claude Code auth setup: `${WARDEN_AUTH_TOKEN}`-style env-var interpolation into HTTP hook headers, previously documented as the recommended approach, did not work in end-to-end testing against a real `claude -p` session (silently sends an empty header, 401ing every hook call) despite being a real, CLI-documented feature (`httpHookAllowedEnvVars`) — root cause not fully isolated. README.md/docs/MANUAL.md now recommend a literal secret value in `.claude/settings.local.json` (confirmed working end to end) instead; `docs/internal/e2e-plan.md` documents the full investigation
 
 #### Docs
 - README/TESTING.md test-count and file-count claims re-synced to the actual suite (307 passed, 3 skipped, 310 total, 23 files)
-- Fixed stale `wardenlabs` org references in CONTRIBUTING.md and docs/USER_DEPLOYMENT.md (now `isiomaC`)
+- Fixed stale `wardenlabs` org references in CONTRIBUTING.md and docs/MANUAL.md (now `isiomaC`)
 - docs/NPM_PUBLISHING.md corrected to reflect the actual release process (public npmjs.org via `publish.yml` provenance, not private GitHub Packages)
-- docs/DEPLOYMENT.md's Docker section replaced a fictional Bun-based Dockerfile/compose example with the facts of the actual Node 22 + tsx image; supply-chain pins filename references corrected to the real default (`.warden/pins.json`); `threatDetection.toolDescriptionPinning`/`rugPullDetection` config examples now flagged as not yet implemented
+- docs/internal/DEPLOYMENT.md's Docker section replaced a fictional Bun-based Dockerfile/compose example with the facts of the actual Node 22 + tsx image; supply-chain pins filename references corrected to the real default (`.warden/pins.json`); `threatDetection.toolDescriptionPinning`/`rugPullDetection` config examples now flagged as not yet implemented
 
 ### Added
 
@@ -47,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Community
 - `CODE_OF_CONDUCT.md` (Contributor Covenant), issue templates (bug report, feature request), pull request template, `.github/FUNDING.yml`
-- `ROADMAP.md` documenting near-term and mid-term plans (transparent `warden proxy` forwarding, wiring the currently-ignored YAML config blocks, persistent vault, policy packs) and explicit non-goals
+- `docs/internal/ROADMAP.md` documenting near-term and mid-term plans (transparent `warden proxy` forwarding, wiring the currently-ignored YAML config blocks, persistent vault, policy packs) and explicit non-goals
 
 ### Added
 

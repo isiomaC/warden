@@ -45,7 +45,6 @@ jobs:
         run: npx vitest run
 
       - name: Run tests with coverage
-        continue-on-error: true
         run: npx vitest run --coverage
 
   test-node:
@@ -68,7 +67,6 @@ jobs:
         run: npx vitest run
 
       - name: Run tests with coverage
-        continue-on-error: true
         run: npx vitest run --coverage
 
   docker-build:

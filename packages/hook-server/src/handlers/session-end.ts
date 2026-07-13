@@ -11,12 +11,11 @@ export function handleSessionEnd(
     vault.revokeAllForSession(sessionId);
     contextManager.expireAllForSession(sessionId);
 
-    return c.json({
-      hookSpecificOutput: {
-        hookEventName: "SessionEnd",
-        permissionDecision: "allow",
-        permissionDecisionReason: "Warden session ended. Tokens revoked.",
-      },
-    });
+    // Claude Code's real hook-output schema has no SessionEnd variant at all —
+    // any hookSpecificOutput here (even just {hookEventName: "SessionEnd"})
+    // fails its validation and gets logged as a hook failure on every real
+    // session, confirmed against the actual CLI. SessionEnd is fire-and-forget
+    // cleanup with nothing left to allow/deny, so an empty body is correct.
+    return c.json({});
   };
 }

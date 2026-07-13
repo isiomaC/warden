@@ -24,8 +24,13 @@ import { handlePreToolUse } from "./handlers/pre-tool-use";
 import { handlePostToolUse } from "./handlers/post-tool-use";
 import { handlePromptSubmit } from "./handlers/prompt-submit";
 import { handleConfigChange } from "./handlers/config-change";
-import { StdoutApprovalChannel } from "./approvals/index";
+import { StdoutApprovalChannel, AutoApproveApprovalChannel } from "./approvals/index";
 import type { ApprovalChannel } from "./approvals/index";
+
+export { AutoApproveApprovalChannel };
+export type { ApprovalChannel } from "./approvals/index";
+export { TelegramApprovalChannel } from "./approvals/index";
+export { WebhookApprovalChannel } from "./approvals/index";
 
 export interface HookServerOptions {
   config: PolicyConfig;
@@ -127,7 +132,7 @@ export function createHookServer(options: HookServerOptions) {
   );
 
   const authed = new Hono();
-  authed.use("*", authMiddleware(vault));
+  authed.use("*", authMiddleware(vault, contextManager, Boolean(authToken)));
 
   authed.post("/hooks/session-end", handleSessionEnd(vault, contextManager, ledger));
   authed.post(

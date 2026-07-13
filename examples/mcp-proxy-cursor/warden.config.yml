@@ -72,8 +72,6 @@ approvalChannels:
   # telegram:                     # Uncomment to enable Telegram approvals
   #   botToken: "${WARDEN_TELEGRAM_TOKEN}"
   #   chatId: "${WARDEN_TELEGRAM_CHAT_ID}"
-  # slack:                        # Uncomment to enable Slack approvals
-  #   webhookUrl: "${WARDEN_SLACK_WEBHOOK}"
 
 # Ledger configuration
 ledger:

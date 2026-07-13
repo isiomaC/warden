@@ -17,12 +17,6 @@ export const configValidateCommand = defineCommand({
     try {
       const source = new FileConfigSource(args.config);
       const config = await source.load();
-      const valid = await source.verify(config);
-
-      if (!valid) {
-        process.stdout.write("Config hash verification failed.\n");
-        process.exit(1);
-      }
 
       const ruleIds = config.policies.map((p) => p.id);
       const duplicates = ruleIds.filter((id, i) => ruleIds.indexOf(id) !== i);

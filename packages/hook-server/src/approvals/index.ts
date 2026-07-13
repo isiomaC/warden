@@ -1,5 +1,6 @@
 export {
   StdoutApprovalChannel,
+  AutoApproveApprovalChannel,
   TimeoutApprovalChannel,
 } from "./types";
 export type {
@@ -9,5 +10,4 @@ export type {
 } from "./types";
 
 export { TelegramApprovalChannel } from "./telegram";
-export { SlackApprovalChannel } from "./slack";
 export { WebhookApprovalChannel } from "./webhook";

@@ -32,9 +32,26 @@ export class TrustRegistry implements TrustRegistryStore {
         source,
         timestamp: new Date().toISOString(),
       });
+    } else if (trust < existing.trust) {
+      this.registry.set(hash, {
+        hash,
+        trust,
+        source,
+        timestamp: new Date().toISOString(),
+      });
+      this.logger?.warn(
+        "Trust level downgraded.",
+        {
+          hash,
+          previousTrust: existing.trust,
+          newTrust: trust,
+          previousSource: existing.source,
+          newSource: source,
+        },
+      );
     } else if (existing.trust !== trust || existing.source !== source) {
       this.logger?.warn(
-        "Trust registry re-registration conflict — keeping original trust level.",
+        "Trust registry re-registration conflict — keeping original trust level (upgrade prevented).",
         {
           hash,
           existingTrust: existing.trust,

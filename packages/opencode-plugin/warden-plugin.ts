@@ -1,7 +1,19 @@
 // OpenCode plugin — runs inside OpenCode's plugin runtime.
-// Plugin type + event context are provided by OpenCode at runtime.
-// TypeScript checking is skipped for this file (excluded from tsconfig).
-// @ts-ignore — @opencode-ai/plugin is a runtime dependency provided by OpenCode
+// Plugin type + event context are provided by OpenCode at runtime;
+// @opencode-ai/plugin is a real devDependency here so this file's hook
+// signatures are type-checked against the actual Hooks interface (a prior
+// @ts-ignore on this import silently made every hook parameter `any`,
+// which is how tool.execute.before/after ended up reading from the wrong
+// parameter for months without tsc ever catching it — see the git history
+// on this file for the fix).
+//
+// Setup:
+//   1. Copy this file to .opencode/plugins/warden-plugin.ts in your project
+//   2. Add { "plugin": [".opencode/plugins/warden-plugin.ts"] } to opencode.json
+//   3. npm install @warden/core
+//   4. Run `warden init` to create warden.config.yml (or write one manually)
+//
+// Latest version: https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts
 import type { Plugin } from "@opencode-ai/plugin";
 import { join } from "node:path";
 import {
@@ -50,7 +62,15 @@ export const WardenPlugin: Plugin = async () => {
   contextManager = new ContextManager();
 
   return {
-    event: async ({ event }: any) => {
+    // NOTE: "tui.prompt.append" is a real OpenCode concept, but it's an
+    // Event.type value dispatched through this generic event hook — not a
+    // standalone top-level hook function. (That distinction is likely the
+    // origin of the old, nonexistent "tui.prompt.append" hook key.) Prompt
+    // injection scanning is done in "chat.message" below instead, since
+    // that hook has confirmed before-the-LLM blocking semantics (mutable
+    // output.parts); a generic event listener has no output to act on and
+    // its ability to actually cancel anything is unconfirmed.
+    event: async ({ event }) => {
       if (event.type === "session.created") {
         // Load config from warden.config.yml in the project root; fall back to safe defaults
         try {
@@ -79,21 +99,36 @@ export const WardenPlugin: Plugin = async () => {
       }
     },
 
-    "tui.prompt.append": async (input: { text: string }) => {
-      const result = scanForInjection(input.text, TrustLevel.EXTERNAL);
-      if (!result.clean) {
-        throw new Error(
-          `Warden: Injection pattern detected — ${result.patterns?.join(", ")}`,
-        );
+    // NOTE: real hook name is "chat.message", not "tui.prompt.append" — the
+    // latter does not exist anywhere in @opencode-ai/plugin's Hooks
+    // interface and has never fired. The user's prompt text lives in
+    // output.parts (an array of Part; text parts have type "text"), not on
+    // input.
+    "chat.message": async (_input, output) => {
+      for (const part of output.parts) {
+        if (part.type !== "text") continue;
+        const result = scanForInjection(part.text, TrustLevel.EXTERNAL);
+        if (!result.clean) {
+          throw new Error(
+            `Warden: Injection pattern detected — ${result.patterns?.join(", ")}`,
+          );
+        }
       }
     },
 
-    "tool.execute.before": async (input: { tool: string; args: Record<string, unknown> }) => {
-      const trustedInput = tagValue(input.args, `mcp__${input.tool}`, taskId);
+    // NOTE: the real Hooks signature is (input: {tool, sessionID, callID},
+    // output: {args}) — the actual tool arguments live on `output.args`,
+    // not `input.args` (input has no `args` field at all). Reading from
+    // input.args meant every inputPatterns-based rule (shell injection,
+    // block-rmrf, etc.) was evaluated against `undefined` and could never
+    // match — the correct DENY only ever happened via default-deny.
+    "tool.execute.before": async (input, output) => {
+      const toolInput = (output.args ?? {}) as Record<string, unknown>;
+      const trustedInput = tagValue(toolInput, `mcp__${input.tool}`, taskId);
 
       const decision: PolicyDecision = evaluate(config, {
         toolName: input.tool,
-        toolInput: input.args,
+        toolInput,
         environment: config.meta.environment,
         trustSources: [{ source: trustedInput.source, trust: trustedInput.trust }],
         serverInAllowlist: true,
@@ -108,7 +143,7 @@ export const WardenPlugin: Plugin = async () => {
         sessionId,
         taskId,
         tool: input.tool,
-        toolInput: redactSecrets(input.args),
+        toolInput: redactSecrets(toolInput),
         trustLevel: trustedInput.trust,
         trustSource: trustedInput.source,
         policyRulesMatched: [],
@@ -127,24 +162,35 @@ export const WardenPlugin: Plugin = async () => {
       }
     },
 
-    "tool.execute.after": async (input: { tool: string; result: unknown }) => {
-      tagValue(input.result, `mcp__${input.tool}`, taskId);
+    // NOTE: real signature is (input: {tool, sessionID, callID, args},
+    // output: {title, output, metadata}) — the tool's actual result string
+    // is output.output, not input.result (input has no `result` field).
+    "tool.execute.after": async (input, output) => {
+      tagValue(output.output, `mcp__${input.tool}`, taskId);
     },
 
-    "permission.asked": async (input: { tool: string; args: Record<string, unknown> }) => {
+    // NOTE: real hook name is "permission.ask", not "permission.asked", and
+    // it does not return a value — it mutates output.status ("ask" | "deny"
+    // | "allow"). The input is a Permission object (id, type, pattern,
+    // sessionID, messageID, metadata), not a {tool, args} tool call. Only
+    // sets output.status on an explicit Warden DENY; otherwise leaves it
+    // untouched so OpenCode's own ask-flow still runs for anything Warden
+    // doesn't have an opinion on (tool.execute.before is the primary,
+    // fully-informed enforcement point — this hook covers permission
+    // prompts that may not correspond 1:1 to a tool call).
+    "permission.ask": async (input, output) => {
+      const pattern = Array.isArray(input.pattern) ? input.pattern.join(" ") : input.pattern;
       const decision = evaluate(config, {
-        toolName: input.tool,
-        toolInput: input.args,
+        toolName: input.type,
+        toolInput: { pattern, ...input.metadata },
         environment: config.meta.environment,
         trustSources: [{ source: "agent", trust: TrustLevel.AGENT }],
         serverInAllowlist: true,
       });
 
       if (decision.action === "DENY") {
-        return { allowed: false as const, reason: `Warden: ${decision.reason}` };
+        output.status = "deny";
       }
-
-      return { allowed: true as const };
     },
   };
 };
