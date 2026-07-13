@@ -153,15 +153,20 @@ Add to `.claude/settings.json` in your project root:
 ```json
 {
   "hooks": {
-    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "timeout": 10 }] }],
-    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "timeout": 5 }] }],
-    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "timeout": 10 }] }],
-    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "timeout": 5, "async": true }] }],
-    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "timeout": 5 }] }],
-    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "timeout": 10, "async": true }] }]
-  }
+    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10 }] }],
+    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5 }] }],
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5, "async": true }] }],
+    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5 }] }],
+    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10, "async": true }] }]
+  },
+  "allowedEnvVars": ["WARDEN_AUTH_TOKEN"]
 }
 ```
+
+`allowedEnvVars` is required for Claude Code to interpolate `${WARDEN_AUTH_TOKEN}` into the
+header at all — without it the literal string `${WARDEN_AUTH_TOKEN}` is sent instead of the
+value, and every hook call gets a 401.
 
 ### OpenCode
 
@@ -212,7 +217,19 @@ Warden hook server running on http://localhost:7429 (Node.js)
 Press Ctrl+C to stop.
 ```
 
-> **Set `WARDEN_AUTH_TOKEN`** for production: `export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)`
+> **Required for Claude Code: set `WARDEN_AUTH_TOKEN`.** Claude Code's HTTP hooks can only
+> send static, env-var-interpolated headers fixed when `settings.json` loads — there's no way
+> for it to carry a value learned from one hook's response into a later hook call's headers,
+> so a vault-scoped Bearer token can never reach `/hooks/*` from a real `claude` process. The
+> hook server instead accepts the shared secret in `X-Warden-Auth` and bootstraps a session
+> from the request's own `session_id`. Without this set, `/hooks/*` denies every request
+> (fail-closed default) and Claude Code integration will not work.
+>
+> `export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)` — same value in the shell running
+> `warden start` and the shell running `claude`. There's no rotation mechanism; to rotate,
+> generate a new value, export it in both shells, and restart both processes. A bootstrapped
+> session has no vault-issued `allowedTools`/`allowedPaths` scoping — see
+> [`docs/internal/e2e-plan.md`](internal/e2e-plan.md) for the e2e verification steps.
 
 ### Run in background
 

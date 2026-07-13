@@ -132,7 +132,7 @@ export function createHookServer(options: HookServerOptions) {
   );
 
   const authed = new Hono();
-  authed.use("*", authMiddleware(vault));
+  authed.use("*", authMiddleware(vault, contextManager, Boolean(authToken)));
 
   authed.post("/hooks/session-end", handleSessionEnd(vault, contextManager, ledger));
   authed.post(

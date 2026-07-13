@@ -274,15 +274,20 @@ This creates `warden.config.yml` and `.warden/` in your project.
 ```json
 {
   "hooks": {
-    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "timeout": 10 }] }],
-    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "timeout": 5 }] }],
-    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "timeout": 10 }] }],
-    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "timeout": 5, "async": true }] }],
-    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "timeout": 5 }] }],
-    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "timeout": 10, "async": true }] }]
-  }
+    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10 }] }],
+    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5 }] }],
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5, "async": true }] }],
+    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 5 }] }],
+    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "headers": { "X-Warden-Auth": "${WARDEN_AUTH_TOKEN}" }, "timeout": 10, "async": true }] }]
+  },
+  "allowedEnvVars": ["WARDEN_AUTH_TOKEN"]
 }
 ```
+
+`${WARDEN_AUTH_TOKEN}` is interpolated from your shell environment when Claude Code loads
+`settings.json` — export it in the same shell you launch `claude` from, before you launch it.
+`allowedEnvVars` is required or Claude Code won't interpolate the variable at all.
 
 **OpenCode — copy the plugin into your project:**
 
@@ -343,11 +348,25 @@ Warden hook server running on http://localhost:7429 (Node.js)
 Press Ctrl+C to stop.
 ```
 
-> **Recommended: set `WARDEN_AUTH_TOKEN`.** Without it, any local process can talk to the
-> hook server on `localhost:7429` — including `/hooks/session-start`, which mints session
-> tokens. Set the env var before starting (`export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)`)
-> and every `/hooks/*` request must then carry the same value in the `X-Warden-Auth` header.
-> `/health` and `/metrics` stay open.
+> **Required for Claude Code: set `WARDEN_AUTH_TOKEN`.** Claude Code's HTTP hooks can only
+> send static, env-var-interpolated headers fixed when `settings.json` loads — there is no
+> mechanism for it to carry a value learned from one hook's response (e.g. SessionStart's
+> minted session token) into a later hook call's headers. So a real vault-scoped Bearer
+> token can never arrive at `/hooks/*` from a real `claude` process, headless or
+> interactive. `WARDEN_AUTH_TOKEN` is the credential shape Claude Code's hook config *can*
+> send, and the hook server uses it to bootstrap a session from the request's own
+> `session_id` in place of a Bearer token. Set the env var before starting Warden
+> (`export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)`) — same value in the shell you run
+> `warden start` from and the shell you run `claude` from. Without it, `/hooks/*` hard-denies
+> every request (fail-closed default), so Claude Code integration will not work at all.
+> There's no rotation mechanism — to rotate, generate a new value and export it in both
+> shells, then restart both processes. `/health` and `/metrics` stay open regardless.
+>
+> A bootstrapped session has no vault-issued scoping (no `allowedTools`/`allowedPaths`
+> restriction) — trust boundary is "knows the shared secret," not per-session scope. This
+> is the same trust level a caller gets by reaching `/hooks/session-start` at all. See
+> [`docs/internal/e2e-plan.md`](docs/internal/e2e-plan.md) for how to verify this end to end
+> with a real `claude -p` session.
 
 ### 5. Start coding
 
