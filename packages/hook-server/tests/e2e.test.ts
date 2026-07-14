@@ -754,7 +754,11 @@ describe("CLI Commands", () => {
         });
 
         if (result.status === null) return; // timed out or killed, skip
-        expect(result.stdout).toContain("Warden initialized");
+        if (!result.stdout.includes("Warden initialized")) {
+          throw new Error(
+            `warden init produced unexpected output.\nstatus: ${result.status}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+          );
+        }
         expect(result.status).toBe(0);
         expect(existsSync(resolve(tmpCwd, "warden.config.yml"))).toBe(true);
         expect(existsSync(resolve(tmpCwd, ".warden"))).toBe(true);
