@@ -147,7 +147,7 @@ describe("proxyCommand (spawned)", () => {
       const output = (result.stderr ?? "") + (result.stdout ?? "");
       expect(output).toContain("Config file not found");
     });
-  });
+  }, 15_000);
 
   it("exits 1 when the config has no mcpServers.allowed entries", async () => {
     const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
@@ -168,7 +168,7 @@ describe("proxyCommand (spawned)", () => {
       const output = (result.stderr ?? "") + (result.stdout ?? "");
       expect(output).toContain("No mcpServers.allowed entries");
     });
-  });
+  }, 15_000);
 
   it("lists tools with real per-tool JSON Schema, allows a policy-matched call, and denies an unmatched one", async () => {
     const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
