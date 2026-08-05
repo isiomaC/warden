@@ -1,6 +1,6 @@
 {
   "name": "@warden/opencode-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "warden-plugin.ts",
@@ -12,6 +12,6 @@
     "directory": "packages/opencode-plugin"
   },
   "peerDependencies": {
-    "@warden/core": "^0.1.0"
+    "@warden/core": "^0.2.0"
   }
 }

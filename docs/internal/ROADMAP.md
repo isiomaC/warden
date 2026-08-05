@@ -17,13 +17,8 @@ end to end, four concrete wins over the current `packages/cli`:
    silently defaults to `TOOL` on an unrecognized value — confirmed live: `--trust
    BOGUS` today prints `Trust: BOGUS` but *enforces* as `TOOL`, with exit code 0 and
    no warning. Zod schemas reject it before `run()` executes.
-2. **MCP auto-registration replaces the hand-rolled server in `proxy.ts`.**
-   `proxy.ts:99-147` hand-wires `@modelcontextprotocol/sdk`'s `Server` +
-   `ListToolsRequestSchema`/`CallToolRequestSchema` and exposes tools with a
-   placeholder `inputSchema: { type: "object" }` — no real input validation.
-   incur's built-in `--mcp` flag generates real per-command JSON Schema (enums,
-   `required`, `outputSchema`) from the same Zod schemas used for arg parsing, with
-   zero SDK plumbing.
+2. **MCP auto-registration can eventually simplify the CLI command surface.**
+   The transparent proxy must remain a dedicated MCP gateway because it discovers and forwards upstream tools. Its `0.2.0` implementation already exposes the upstream JSON Schemas; incur's `--mcp` remains relevant only to making Warden's own CLI commands agent-callable.
 3. **`--llms` manifest + `skills add` for agent discovery.** Lets Claude
    Code/OpenCode/Codex load one command manifest instead of parsing `--help` or
    README prose — the same token-efficiency goal Warden already applies to its own
@@ -47,9 +42,7 @@ users, since we can't ask every Warden consumer to carry that override indefinit
       matching the prototype; then `init`, `start`, `supply-chain`, `config-validate`,
       `reset`), keeping `warden` as the single binary name throughout — no user-facing
       break mid-migration.
-- [ ] Replace `proxy.ts`'s hand-rolled MCP `Server` with incur's `--mcp` once the
-      upstream dependency issue is resolved (or vendored around) for production use;
-      wire real tool-input validation into the forwarding path.
+- [ ] Use incur's `--mcp` for Warden's own CLI commands once the upstream dependency issue is resolved; do not replace the transparent upstream gateway with command auto-registration.
 - [ ] Ship `warden skills add` / `--llms` so Claude Code and OpenCode can discover
       `warden` commands without reading docs — folds into the existing "Claude Code
       skill" item below.
@@ -60,15 +53,12 @@ users, since we can't ask every Warden consumer to carry that override indefinit
 
 ## Near term (0.2.x)
 
-- **Transparent forwarding proxy.** `warden proxy` currently enforces policy (ALLOW/DENY)
-  but does not relay calls to backing MCP servers — agents must connect to their real
-  servers separately. The plan: spawn configured stdio servers as child processes, forward
-  ALLOWed calls via the MCP client SDK, and return real results. This completes the
-  Cursor/Windsurf story.
-- **Wire the ignored YAML config blocks.** `approvalChannels`, `ledger`, `threatDetection`,
-  `rateLimits`, and `vault` are parsed but dropped today (documented in the README).
-  `warden start` should honor them so the config file is the single source of truth it
-  claims to be.
+### Implemented for 0.2
+
+- **Transparent forwarding proxy.** `warden proxy` connects to configured stdio or Streamable HTTP MCP servers, discovers real tool schemas, exposes only the configured allowlist, forwards ALLOWed calls, and returns upstream results. DENYed and unknown calls do not reach the upstream.
+- **Runtime YAML contract.** The CLI validates proxy endpoints and runtime values; `warden start` honors ledger and vault settings; and `warden proxy` applies ledger, rate-limit, lateral-movement, path/tool allowlist, and Telegram approval settings.
+
+### Remaining
 - **Claude Code skill.** A `/warden` skill so agents can invoke `warden audit`, `warden scan`,
   and `warden policy` naturally during a session.
 

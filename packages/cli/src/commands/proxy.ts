@@ -1,10 +1,19 @@
 import { defineCommand } from "citty";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { FileConfigSource, MemoryLedgerStore, ContextManager, TrustLevel } from "@warden/core";
+import { FileConfigSource, MemoryLedgerStore, SqliteLedgerStore, ContextManager, TrustLevel } from "@warden/core";
 import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
+import { TelegramApprovalChannel } from "@warden/hook-server";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config";
+import type { RuntimeConfig } from "../runtime-config";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 interface RawServerEntry {
@@ -14,12 +23,25 @@ interface RawServerEntry {
   allowedTools: string[];
   allowedPaths?: string[];
   authRequired: boolean;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  url?: string;
+  headers?: Record<string, string>;
 }
 
-interface RawConfig {
+interface RawConfig extends RuntimeConfig {
   mcpServers?: {
     allowed?: RawServerEntry[];
   };
+  approvalChannels?: {
+    telegram?: { botToken?: string; chatId?: string };
+  };
+}
+
+function resolveEnv(value: string): string {
+  return value.replace(/\$\{(\w+)\}/g, (_, name) => process.env[name] ?? "");
 }
 
 export const proxyCommand = defineCommand({
@@ -54,6 +76,24 @@ export const proxyCommand = defineCommand({
       process.exit(1);
     }
 
+    const entryErrors = validateProxyEntries(serverEntries);
+    if (entryErrors.length > 0) {
+      throw new Error(entryErrors.join("\n"));
+    }
+
+    const runtime = resolveRuntimeConfig(rawConfig);
+    if (runtime.dbPath) mkdirSync(dirname(resolve(runtime.dbPath)), { recursive: true });
+    const ledger = runtime.dbPath
+      ? new SqliteLedgerStore(resolve(runtime.dbPath))
+      : new MemoryLedgerStore();
+
+    const telegram = rawConfig.approvalChannels?.telegram;
+    const botToken = telegram?.botToken ? resolveEnv(telegram.botToken) : "";
+    const chatId = telegram?.chatId ? resolveEnv(telegram.chatId) : "";
+    const approvalChannel = botToken && chatId
+      ? new TelegramApprovalChannel(botToken, chatId)
+      : undefined;
+
     const registry = new MCPRegistry(
       serverEntries.map((s) => ({
         name: s.name,
@@ -67,17 +107,47 @@ export const proxyCommand = defineCommand({
 
     const gateway = new WardenGateway({
       config,
-      ledger: new MemoryLedgerStore(),
+      ledger,
       contextManager: new ContextManager(),
       registry,
+      ...(approvalChannel ? { approvalChannel } : {}),
     });
 
     // Build per-server wrapped instances and a flat tool → server lookup map
     type ToolEntry = { serverName: string; toolName: string };
     const toolMap = new Map<string, ToolEntry>();
+    const clients = new Map<string, Client>();
     const allTools: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> = [];
 
     for (const entry of serverEntries) {
+      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.0" });
+      if (entry.transport === "stdio") {
+        if (!entry.command) {
+          throw new Error(`MCP server "${entry.name}" uses stdio but has no command.`);
+        }
+        await client.connect(new StdioClientTransport({
+          command: entry.command,
+          ...(entry.args ? { args: entry.args } : {}),
+          ...(entry.env ? { env: entry.env } : {}),
+          ...(entry.cwd ? { cwd: entry.cwd } : {}),
+          stderr: "inherit",
+        }));
+      } else {
+        if (!entry.url) {
+          throw new Error(`MCP server "${entry.name}" uses HTTP but has no url.`);
+        }
+        const httpTransport = new StreamableHTTPClientTransport(
+          new URL(entry.url),
+          entry.headers ? { requestInit: { headers: entry.headers } } : undefined,
+        );
+        // SDK 1.29's StreamableHTTP transport declaration is not exact-optional
+        // compatible with its own shared Transport declaration under this repo's
+        // strict TypeScript settings, although the runtime contract is identical.
+        await client.connect(httpTransport as Transport);
+      }
+      clients.set(entry.name, client);
+
+      const upstreamTools = await client.listTools();
       const wrapped = gateway.wrapMCP(entry.name, {
         serverName: entry.name,
         allowedTools: entry.allowedTools,
@@ -85,19 +155,20 @@ export const proxyCommand = defineCommand({
         maxCallsPerMinute: 300,
       });
 
-      for (const toolName of wrapped.allowedTools) {
+      for (const tool of upstreamTools.tools.filter((candidate) => wrapped.allowedTools.includes(candidate.name))) {
+        const toolName = tool.name;
         const qualifiedName = `${entry.name}__${toolName}`;
         toolMap.set(qualifiedName, { serverName: entry.name, toolName });
         allTools.push({
           name: qualifiedName,
-          description: `[${entry.name}] ${toolName} — enforced by Warden`,
-          inputSchema: { type: "object" },
+          description: `[${entry.name}] ${tool.description ?? toolName} — enforced by Warden`,
+          inputSchema: tool.inputSchema,
         });
       }
     }
 
     const mcpServer = new Server(
-      { name: "warden-proxy", version: "0.1.0" },
+      { name: "warden-proxy", version: "0.2.0" },
       { capabilities: { tools: {} } },
     );
 
@@ -129,12 +200,12 @@ export const proxyCommand = defineCommand({
       );
 
       if (decision.action === "ALLOW") {
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Warden ALLOW: ${decision.reason}. Forward this call to your real MCP server.`,
-          }],
-        };
+        const client = clients.get(entry.serverName);
+        if (!client) throw new Error(`No upstream client for ${entry.serverName}.`);
+        return await client.callTool({
+          name: entry.toolName,
+          arguments: request.params.arguments ?? {},
+        });
       }
 
       return {

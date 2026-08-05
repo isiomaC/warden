@@ -15,6 +15,8 @@ mcpServers:
     - name: "filesystem"
       type: local
       transport: stdio
+      command: npx
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/warden-demo"]
       allowedTools:
         - "read_file"
         - "list_directory"
@@ -68,8 +70,8 @@ policies:
 
 # Approval channels (optional — for CONFIRM decisions)
 approvalChannels:
-  stdout: {}
-  # telegram:                     # Uncomment to enable Telegram approvals
+  # stdout is available to `warden start`; MCP stdio reserves stdout for JSON-RPC.
+  # telegram:                     # Configure to make proxy CONFIRM interactive
   #   botToken: "${WARDEN_TELEGRAM_TOKEN}"
   #   chatId: "${WARDEN_TELEGRAM_CHAT_ID}"
 
@@ -77,12 +79,6 @@ approvalChannels:
 ledger:
   type: "sqlite"
   path: ".warden/ledger.db"
-  retentionDays: 90
-  # Patterns for secret redaction before ledger write
-  redactPatterns:
-    - "sk-[a-zA-Z0-9]{32,}"
-    - "ghp_[a-zA-Z0-9]{36}"
-    - "Bearer\\s+[\\w\\-\\.]+\\.[\\w\\-\\.]+\\.[\\w\\-\\.]*"
 
 # Threat detection
 threatDetection:
@@ -94,3 +90,4 @@ threatDetection:
 # Vault (no static secrets — tokens are ephemeral, scoped, TTL-bounded)
 vault:
   type: "local"
+  tokenTTLSeconds: 3600
