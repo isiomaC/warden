@@ -3,6 +3,7 @@ import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:chil
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // `proxy.ts` calls `mcpServer.connect(new StdioServerTransport())`, which takes
 // over the process's real stdin/stdout — it cannot be exercised by calling
@@ -12,15 +13,12 @@ import { join, resolve } from "node:path";
 
 const BIN_PATH = resolve(process.cwd(), "packages/cli/src/bin.ts");
 
-function getNodeRunCommand(args: string[]): { cmd: string; args: string[] } | null {
-  try {
-    const check = spawnSync("npx", ["tsx", "--version"], { encoding: "utf-8", timeout: 5000 });
-    if (check.status !== 0) return null;
-  } catch {
-    return null;
-  }
+function getNodeRunCommand(args: string[]): { cmd: string; args: string[] } {
   const tsconfigPath = resolve(process.cwd(), "tsconfig.json");
-  return { cmd: "npx", args: ["tsx", "--tsconfig", tsconfigPath, ...args] };
+  return {
+    cmd: resolve(process.cwd(), "node_modules/.bin/tsx"),
+    args: ["--tsconfig", tsconfigPath, ...args],
+  };
 }
 
 async function withTmpCwd<T>(fn: (dir: string) => T | Promise<T>): Promise<T> {
@@ -85,7 +83,8 @@ function killTree(child: ChildProcessWithoutNullStreams): void {
   child.kill("SIGKILL");
 }
 
-const CONFIG_WITH_SERVER = `
+function configWithServer(upstream: string): string {
+  return `
 version: "2"
 meta:
   environment: "development"
@@ -95,6 +94,8 @@ mcpServers:
     - name: "filesystem"
       type: local
       transport: stdio
+      command: ${JSON.stringify(process.execPath)}
+      args: [${JSON.stringify(upstream)}]
       allowedTools: ["read_file", "write_file"]
       authRequired: false
 policies:
@@ -105,6 +106,26 @@ policies:
       environment: ["development"]
     action: ALLOW
 `;
+}
+
+function writeUpstreamServer(dir: string): string {
+  const serverPath = join(dir, "upstream.mjs");
+  const sdkRoot = resolve(process.cwd(), "node_modules/@modelcontextprotocol/sdk/dist/esm");
+  writeFileSync(serverPath, `
+import { Server } from ${JSON.stringify(pathToFileURL(join(sdkRoot, "server/index.js")).href)};
+import { StdioServerTransport } from ${JSON.stringify(pathToFileURL(join(sdkRoot, "server/stdio.js")).href)};
+import { ListToolsRequestSchema, CallToolRequestSchema } from ${JSON.stringify(pathToFileURL(join(sdkRoot, "types.js")).href)};
+const server = new Server({ name: "fixture", version: "1.0.0" }, { capabilities: { tools: {} } });
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [
+  { name: "echo", description: "Echo input", inputSchema: { type: "object", properties: { value: { type: "string" } } } },
+  { name: "read_file", description: "Read a file", inputSchema: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } },
+  { name: "write_file", description: "Write a file", inputSchema: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } }
+] }));
+server.setRequestHandler(CallToolRequestSchema, async (request) => ({ content: [{ type: "text", text: "upstream:" + request.params.name + (request.params.arguments.value ? ":" + request.params.arguments.value : "") }] }));
+await server.connect(new StdioServerTransport());
+`);
+  return serverPath;
+}
 
 describe("proxyCommand (spawned)", () => {
   afterEach(() => {
@@ -113,7 +134,6 @@ describe("proxyCommand (spawned)", () => {
 
   it("exits 1 when the config file is missing", async () => {
     const cmd = getNodeRunCommand([BIN_PATH, "proxy", "--config"]);
-    if (!cmd) return;
 
     await withTmpCwd((dir) => {
       const result = spawnSync(cmd.cmd, [...cmd.args, "does-not-exist.yml"], {
@@ -127,11 +147,10 @@ describe("proxyCommand (spawned)", () => {
       const output = (result.stderr ?? "") + (result.stdout ?? "");
       expect(output).toContain("Config file not found");
     });
-  });
+  }, 15_000);
 
   it("exits 1 when the config has no mcpServers.allowed entries", async () => {
     const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
-    if (!cmd) return;
 
     await withTmpCwd((dir) => {
       writeFileSync(
@@ -149,14 +168,13 @@ describe("proxyCommand (spawned)", () => {
       const output = (result.stderr ?? "") + (result.stdout ?? "");
       expect(output).toContain("No mcpServers.allowed entries");
     });
-  });
+  }, 15_000);
 
   it("lists tools with real per-tool JSON Schema, allows a policy-matched call, and denies an unmatched one", async () => {
     const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
-    if (!cmd) return;
 
     await withTmpCwd(async (dir) => {
-      writeFileSync(join(dir, "warden.config.yml"), CONFIG_WITH_SERVER);
+      writeFileSync(join(dir, "warden.config.yml"), configWithServer(writeUpstreamServer(dir)));
 
       const child = spawn(
         cmd.cmd,
@@ -196,7 +214,7 @@ describe("proxyCommand (spawned)", () => {
 
         // tools/call — ALLOW path (matches the allow-read-dev policy)
         const allowResult = responses.get(2)?.result as { content: Array<{ text: string }> } | undefined;
-        expect(allowResult?.content[0]?.text).toContain("Warden ALLOW");
+        expect(allowResult?.content[0]?.text).toBe("upstream:read_file");
 
         // tools/call — DENY path (in allowedTools, but no matching ALLOW policy — default deny)
         const denyResult = responses.get(3)?.result as { content: Array<{ text: string }>; isError: boolean } | undefined;
@@ -207,6 +225,63 @@ describe("proxyCommand (spawned)", () => {
         const unknownResult = responses.get(4)?.result as { content: Array<{ text: string }>; isError: boolean } | undefined;
         expect(unknownResult?.isError).toBe(true);
         expect(unknownResult?.content[0]?.text).toContain("Unknown tool");
+      } finally {
+        killTree(child);
+      }
+    });
+  }, 15_000);
+
+  it("forwards an allowed call to the configured stdio server and returns its result", async () => {
+    const cmd = getNodeRunCommand([BIN_PATH, "proxy"]);
+
+    await withTmpCwd(async (dir) => {
+      const upstream = writeUpstreamServer(dir);
+      writeFileSync(join(dir, "warden.config.yml"), `
+version: "2"
+meta:
+  environment: "development"
+  sessionApprovalRequired: false
+mcpServers:
+  allowed:
+    - name: "fixture"
+      type: local
+      transport: stdio
+      command: ${JSON.stringify(process.execPath)}
+      args: [${JSON.stringify(upstream)}]
+      allowedTools: ["echo"]
+      authRequired: false
+policies:
+  - id: "allow-echo"
+    description: "Allow fixture echo"
+    match:
+      tools: ["fixture__echo"]
+      environment: ["development"]
+    action: ALLOW
+`);
+
+      const child = spawn(cmd.cmd, cmd.args, {
+        cwd: dir,
+        stdio: ["pipe", "pipe", "pipe"],
+        detached: true,
+      }) as ChildProcessWithoutNullStreams;
+
+      try {
+        const responses = await sendRequests(child, [
+          { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
+          {
+            jsonrpc: "2.0",
+            id: 2,
+            method: "tools/call",
+            params: { name: "fixture__echo", arguments: { value: "hello" } },
+          },
+        ]);
+
+        const list = responses.get(1)?.result as { tools: Array<{ name: string; inputSchema: unknown }> };
+        expect(list.tools).toEqual([
+          expect.objectContaining({ name: "fixture__echo", inputSchema: expect.objectContaining({ type: "object" }) }),
+        ]);
+        const call = responses.get(2)?.result as { content: Array<{ text: string }> };
+        expect(call.content[0]?.text).toBe("upstream:echo:hello");
       } finally {
         killTree(child);
       }

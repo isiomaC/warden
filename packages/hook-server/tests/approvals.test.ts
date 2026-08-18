@@ -34,7 +34,7 @@ vi.mock("grammy", () => {
       answerCallbackQuery: mocks.telegramAnswerCallbackQuery,
     };
   }
-  const BotSpy = vi.fn((_token: string) => {
+  const BotSpy = vi.fn(function MockBotConstructor(_token: string) {
     return new MockBot();
   });
   return { Bot: BotSpy };

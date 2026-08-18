@@ -1,5 +1,7 @@
 import { defineCommand } from "citty";
 import { FileConfigSource } from "@warden/core";
+import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config";
+import type { ProxyEntryConfig, RuntimeConfig } from "../runtime-config";
 
 export const configValidateCommand = defineCommand({
   meta: {
@@ -17,6 +19,12 @@ export const configValidateCommand = defineCommand({
     try {
       const source = new FileConfigSource(args.config);
       const config = await source.load();
+      const extended = config as typeof config & RuntimeConfig & {
+        mcpServers?: { allowed?: ProxyEntryConfig[] };
+      };
+      resolveRuntimeConfig(extended);
+      const proxyErrors = validateProxyEntries(extended.mcpServers?.allowed ?? []);
+      if (proxyErrors.length > 0) throw new Error(proxyErrors.join("\n"));
 
       const ruleIds = config.policies.map((p) => p.id);
       const duplicates = ruleIds.filter((id, i) => ruleIds.indexOf(id) !== i);

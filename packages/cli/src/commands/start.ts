@@ -9,6 +9,8 @@ import {
 import { FileConfigSource } from "@warden/core";
 import type { ApprovalChannelConfig, PolicyConfig } from "@warden/core";
 import type { ApprovalChannel } from "@warden/hook-server";
+import { resolveRuntimeConfig } from "../runtime-config";
+import type { RuntimeConfig } from "../runtime-config";
 
 function resolveEnv(value: string): string {
   return value.replace(/\$\{(\w+)\}/g, (_, name) => process.env[name] ?? "");
@@ -57,8 +59,8 @@ export const startCommand = defineCommand({
     },
     db: {
       type: "string",
-      description: "Path to SQLite ledger database",
-      default: ".warden/ledger.db",
+      description: "Override the ledger database path from warden.config.yml",
+      default: "",
     },
     pins: {
       type: "string",
@@ -84,11 +86,14 @@ export const startCommand = defineCommand({
 
     const configSource = new FileConfigSource(configPath);
     const config = await configSource.load();
+    const runtime = resolveRuntimeConfig(config as PolicyConfig & RuntimeConfig, args.db || undefined);
 
-    const dbDir = resolve(args.db, "..");
-    if (!existsSync(dbDir)) {
-      const { mkdirSync } = await import("node:fs");
-      mkdirSync(dbDir, { recursive: true });
+    if (runtime.dbPath) {
+      const dbDir = resolve(runtime.dbPath, "..");
+      if (!existsSync(dbDir)) {
+        const { mkdirSync } = await import("node:fs");
+        mkdirSync(dbDir, { recursive: true });
+      }
     }
 
     if (args["auto-approve"]) {
@@ -100,8 +105,9 @@ export const startCommand = defineCommand({
     const { fetch } = createHookServer({
       config,
       port,
-      dbPath: resolve(args.db),
       pinsPath: resolve(args.pins),
+      tokenTTLSeconds: runtime.tokenTTLSeconds,
+      ...(runtime.dbPath ? { dbPath: resolve(runtime.dbPath) } : {}),
       ...(channel ? { approvalChannel: channel } : {}),
     });
 

@@ -8,6 +8,8 @@ mcpServers:
     - name: "filesystem"
       type: local
       transport: stdio
+      command: npx
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
       allowedTools: ["read_file", "list_directory", "write_file"]
       authRequired: false
 

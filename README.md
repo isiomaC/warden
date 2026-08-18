@@ -206,9 +206,7 @@ Agent Tool Call → warden proxy (stdio MCP server) → ALLOW / DENY
 }
 ```
 
-3. `warden proxy` reads `mcpServers.allowed` from your config and exposes those tools under namespaced names (`filesystem__read_file`, `github__search_code`, etc.). Any call Warden ALLOWs returns a confirmation; any DENY returns an error the agent sees immediately.
-
-> **Note on forwarding:** `warden proxy` is a **policy gate**, not a transparent forwarder. It enforces allow/deny decisions but does not relay the call to a backing MCP server — the agent receives Warden's decision and must connect to its real MCP servers separately. For a fully forwarding proxy in TypeScript, use `@warden/mcp-gateway` directly (see [Programmatic Usage](#programmatic-usage)).
+3. `warden proxy` connects to every configured upstream, discovers its real tool schemas, and exposes the allowed subset under namespaced names (`filesystem__read_file`, `github__search_code`, etc.). ALLOWed calls are forwarded and return the upstream result; denied calls never reach the upstream.
 
 | Tool | Where to add the MCP config | What you get |
 |---|---|---|
@@ -445,12 +443,15 @@ mcpServers:
     - name: "filesystem"
       type: local
       transport: stdio
+      command: npx
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
       allowedTools: ["read_file", "list_directory", "write_file"]
       authRequired: false
 
     - name: "github"
       type: remote
       transport: http
+      url: "https://example.com/mcp"
       allowedTools: ["get_file_contents", "search_code"]
       authRequired: true
 
@@ -502,7 +503,7 @@ policies:
 **Actions:** `ALLOW`, `DENY`, `CONFIRM` (ask human, 60s timeout), `QUARANTINE` (replaces output with `[QUARANTINED: ...]` sentinel, preserves original in ledger, forces EXTERNAL trust)
 **Precedence:** DENY > QUARANTINE > CONFIRM > ALLOW. Unmatched = DENY.
 
-> **Note on YAML config:** The following blocks are parsed by `warden start` from `warden.config.yml` but must be wired programmatically when using `createHookServer` directly: `ledger`, `threatDetection`, `rateLimits`, `vault`. `approvalChannels` is now supported (stdout and telegram, with `${VAR}` env var substitution). If you configure these in YAML without the corresponding server support you will get no error and no effect.
+`warden start` honors the YAML ledger type/path, vault token TTL, and approval channel. `warden proxy` additionally honors configured upstream endpoints, tool/path allowlists, rate limits, lateral-movement settings, the ledger, and Telegram approvals. `warden config-validate` rejects missing proxy endpoints and invalid runtime values. Programmatic `createHookServer` callers pass equivalent adapters and options directly because there is no configuration file at that API boundary.
 
 ---
 

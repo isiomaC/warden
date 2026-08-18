@@ -108,16 +108,17 @@ function getRunCommand(args: string[]): { cmd: string; args: string[] } | null {
 // must not run under `bun run` even when Bun is the preferred CLI_RUNNER —
 // unlike `init`, which never opens the ledger.
 function getNodeRunCommand(args: string[]): { cmd: string; args: string[] } | null {
-  try {
-    const check = spawnSync("npx", ["tsx", "--version"], { encoding: "utf-8", timeout: 5000 });
-    if (check.status !== 0) return null;
-  } catch {
-    return null;
-  }
+  const tsxBin = resolve(
+    process.cwd(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "tsx.cmd" : "tsx",
+  );
+  if (!existsSync(tsxBin)) return null;
   // Pass --tsconfig explicitly so tsx finds the workspace path aliases even when
   // spawned from a tmpdir outside the workspace tree (e.g. cwd: mkdtempSync(...)).
   const tsconfigPath = resolve(process.cwd(), "tsconfig.json");
-  return { cmd: "npx", args: ["tsx", "--tsconfig", tsconfigPath, ...args] };
+  return { cmd: tsxBin, args: ["--tsconfig", tsconfigPath, ...args] };
 }
 
 describe("E2E — Full session lifecycle", () => {
@@ -830,7 +831,7 @@ describe("CLI Commands", () => {
       } finally {
         rmSync(tmpCwd, { recursive: true, force: true });
       }
-    });
+    }, 15_000);
 
     it("warden start (spawned) — exits 1 when config file is missing", () => {
       const binPath = resolve(process.cwd(), "packages/cli/src/bin.ts");

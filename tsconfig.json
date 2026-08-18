@@ -17,7 +17,7 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["vitest/globals"],
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@warden/core": ["./packages/core/src/index.ts"],
       "@warden/core/*": ["./packages/core/src/*"],
