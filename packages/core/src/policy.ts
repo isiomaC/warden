@@ -1,4 +1,4 @@
-import type { TrustLevel } from "./trust";
+import type { TrustLevel } from "./trust.js";
 
 export type PolicyAction = "ALLOW" | "DENY" | "CONFIRM" | "QUARANTINE";
 

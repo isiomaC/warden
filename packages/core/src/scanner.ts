@@ -1,5 +1,5 @@
-import type { TrustLevel } from "./trust";
-import { TrustLevel as TL } from "./trust";
+import type { TrustLevel } from "./trust.js";
+import { TrustLevel as TL } from "./trust.js";
 
 const INJECTION_PATTERNS: RegExp[] = [
   /ignore\s+(previous|above|all)\s+instructions/i,

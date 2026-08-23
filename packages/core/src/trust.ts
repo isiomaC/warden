@@ -1,4 +1,4 @@
-import { sha256 } from "./hash";
+import { sha256 } from "./hash.js";
 
 export const TrustLevel = {
   SYSTEM: 3,

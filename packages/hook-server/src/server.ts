@@ -26,6 +26,7 @@ import { handlePromptSubmit } from "./handlers/prompt-submit";
 import { handleConfigChange } from "./handlers/config-change";
 import { StdoutApprovalChannel, AutoApproveApprovalChannel } from "./approvals/index";
 import type { ApprovalChannel } from "./approvals/index";
+export type { ApprovalChannel, ApprovalRequest } from "./approvals/index";
 
 export { AutoApproveApprovalChannel };
 export type { ApprovalChannel } from "./approvals/index";

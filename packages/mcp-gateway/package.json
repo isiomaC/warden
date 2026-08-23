@@ -39,6 +39,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@warden/core": "^0.2.0"
+    "@warden/core": "^0.2.0",
+    "@warden/hook-server": "^0.2.0"
   }
 }
