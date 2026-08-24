@@ -42,7 +42,7 @@ export type {
   WardenExtension,
   WardenOptions,
 } from "./authorization.js";
-export { AuditChain, verifyAuditChain } from "./audit.js";
+export { AuditChain, createAuditEntry, verifyAuditChain } from "./audit.js";
 export type { AuditEntry, AuditEvent, AuditVerification } from "./audit.js";
 export { createApprovalRequest, resolveApproval } from "./approval.js";
 export type { ApprovalRequestInput, ApprovalRequest, ApprovalResolution, ApprovalStatus } from "./approval.js";

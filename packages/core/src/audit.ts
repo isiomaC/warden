@@ -43,18 +43,26 @@ function hashEntry(entry: Omit<AuditEntry, "hash">): string {
   return sha256(canonicalize(entry));
 }
 
+export function createAuditEntry(event: AuditEvent, previousHash = GENESIS_HASH): AuditEntry {
+  if (!/^[0-9a-f]{64}$/.test(previousHash)) {
+    throw new TypeError("previousHash must be exactly 64 lowercase hexadecimal characters");
+  }
+
+  const unsigned: Omit<AuditEntry, "hash"> = {
+    ledgerFormatVersion: 1,
+    canonicalizationVersion: 1,
+    hashAlgorithm: "sha256",
+    previousHash,
+    event: structuredClone(event),
+  };
+  return { ...unsigned, hash: hashEntry(unsigned) };
+}
+
 export class AuditChain {
   readonly entries: AuditEntry[] = [];
 
   append(event: AuditEvent): AuditEntry {
-    const unsigned: Omit<AuditEntry, "hash"> = {
-      ledgerFormatVersion: 1,
-      canonicalizationVersion: 1,
-      hashAlgorithm: "sha256",
-      previousHash: this.entries.at(-1)?.hash ?? GENESIS_HASH,
-      event: structuredClone(event),
-    };
-    const entry = { ...unsigned, hash: hashEntry(unsigned) };
+    const entry = createAuditEntry(event, this.entries.at(-1)?.hash ?? GENESIS_HASH);
     this.entries.push(entry);
     return structuredClone(entry);
   }

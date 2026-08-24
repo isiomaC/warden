@@ -21,6 +21,19 @@ remain available unchanged.
 Version 1 recursively sorts object keys before SHA-256 hashing. Use the
 storage-neutral `verifyAuditChain()` function to verify exported entries.
 
+Persisted ledgers can construct their next entry without loading the full chain:
+
+```typescript
+import { createAuditEntry } from "@warden/core";
+
+const entry = createAuditEntry(event, persistedChainHeadHash);
+```
+
+Omit the second argument only for a genesis entry. A supplied chain-head hash
+must contain exactly 64 lowercase hexadecimal characters; malformed hashes
+throw instead of being treated as genesis. The caller remains responsible for
+serializing concurrent updates to its persisted chain head.
+
 Hash chains detect modified, removed-middle, and reordered entries. Detecting
 truncation of the final entry requires comparing the final hash or entry count
 with an independently retained checkpoint.

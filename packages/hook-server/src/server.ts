@@ -29,7 +29,6 @@ import type { ApprovalChannel } from "./approvals/index";
 export type { ApprovalChannel, ApprovalRequest } from "./approvals/index";
 
 export { AutoApproveApprovalChannel };
-export type { ApprovalChannel } from "./approvals/index";
 export { TelegramApprovalChannel } from "./approvals/index";
 export { WebhookApprovalChannel } from "./approvals/index";
 
