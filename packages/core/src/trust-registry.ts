@@ -1,6 +1,6 @@
-import { sha256 } from "./hash";
-import { TrustLevel } from "./trust";
-import type { WardenLogger } from "./logger";
+import { sha256 } from "./hash.js";
+import { TrustLevel } from "./trust.js";
+import type { WardenLogger } from "./logger.js";
 
 export interface TrustedOutput {
   hash: string;

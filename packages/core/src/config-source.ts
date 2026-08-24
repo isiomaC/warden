@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { sha256 } from "./hash";
-import type { PolicyConfig } from "./policy";
+import { sha256 } from "./hash.js";
+import type { PolicyConfig } from "./policy.js";
 
 export interface ConfigSource {
   load(): Promise<PolicyConfig>;

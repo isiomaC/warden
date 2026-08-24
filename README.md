@@ -6,6 +6,46 @@
 
 **The policy layer for autonomous agents. Full permissions, zero blast radius.**
 
+Warden can also be embedded as a domain-neutral authorization runtime. MCP and
+tool governance remain supported compatibility integrations; generic consumers
+do not need to start either the hook server or MCP gateway.
+
+```typescript
+import { createWarden, definePolicy } from "@warden/core";
+
+const warden = createWarden({
+  extensions: [{
+    name: "documents",
+    version: "1.0.0",
+    conditions: [{
+      name: "resource.owner",
+      evaluate: ({ resource, subject }) =>
+        resource.ownerId === subject.id,
+    }],
+  }],
+});
+
+const decision = await warden.evaluate(
+  definePolicy({
+    id: "document-access",
+    version: 1,
+    rules: [{
+      id: "owner-access",
+      effect: "ALLOW",
+      conditions: [{ name: "resource.owner" }],
+    }],
+  }),
+  {
+    subject: { id: "actor-1" },
+    action: { type: "document.read" },
+    resource: { ownerId: "actor-1" },
+  },
+);
+```
+
+Unknown conditions, resolver failures, timeouts, and unmatched rules all deny.
+When several rules match, DENY wins over PENDING_APPROVAL and ALLOW.
+
 Warden sits between your LLM agent and its tools, enforcing rules on every tool call. No LLM in the security path — just deterministic policy evaluation. If Warden is down, **all tool calls are blocked**. Fail-closed, always.
 
 Works with Claude Code, OpenCode, and any MCP-connected agent.

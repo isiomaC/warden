@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Domain-neutral `createWarden()` / `definePolicy()` authorization API with structured decisions.
+- External condition and resolver registration with explicit fail-closed exception and timeout behavior.
+- Generic one-time approval request and resolution contracts with authenticated identity evidence.
+- Versioned generic audit events, canonical SHA-256 chaining, and a storage-neutral verifier.
+- Storage-neutral `createAuditEntry()` construction from a persisted chain-head hash.
+- Packed-package consumer test coverage for Node ESM compatibility.
+
 ### Fixed
+
+- Public package builds now resolve workspace dependencies through package exports instead of source aliases.
+- Core's emitted ESM uses explicit relative `.js` specifiers and runs directly in Node.
 
 #### CLI
 - `init` now actually writes `warden.config.yml` and `.warden/` instead of only printing a fake hash

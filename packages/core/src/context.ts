@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import type { TrustLevel } from "./trust";
+import type { TrustLevel } from "./trust.js";
 
 export interface TaskContext {
   taskId: string;

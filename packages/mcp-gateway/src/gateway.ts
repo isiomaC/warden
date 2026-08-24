@@ -22,7 +22,7 @@ import type {
   RateLimiterConfig,
 } from "@warden/core";
 import { TrustLevel as TL } from "@warden/core";
-import type { ApprovalChannel } from "../../hook-server/src/approvals/types";
+import type { ApprovalChannel } from "@warden/hook-server";
 
 export interface WardenGatewayOptions {
   config: PolicyConfig;

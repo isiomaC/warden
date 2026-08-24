@@ -1,9 +1,9 @@
 import { createRequire } from "node:module";
-import { sha256 } from "./hash";
-import { generateId } from "./id";
-import { redactSecrets } from "./redact";
-import type { TrustLevel } from "./trust";
-import type { PolicyDecision } from "./policy";
+import { sha256 } from "./hash.js";
+import { generateId } from "./id.js";
+import { redactSecrets } from "./redact.js";
+import type { TrustLevel } from "./trust.js";
+import type { PolicyDecision } from "./policy.js";
 
 const require = createRequire(import.meta.url);
 

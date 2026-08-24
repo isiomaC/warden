@@ -1,29 +1,48 @@
-export { SecurityError, QuarantineError, ApprovalTimeoutError, VaultError, LedgerIntegrityError } from "./errors";
-export { TrustLevel, tagValue, canPromote, lowestTrust } from "./trust";
-export type { TrustedValue } from "./trust";
-export { sha256 } from "./hash";
-export { generateId } from "./id";
-export { redactSecrets, hasSecrets } from "./redact";
-export { MemoryLedgerStore, SqliteLedgerStore } from "./ledger";
-export type { LedgerEntry, LedgerStore, SecurityEvent } from "./ledger";
-export { evaluate, evaluatePolicies, resolveConflicts } from "./policy";
-export type { PolicyAction, PolicyConfig, PolicyDecision, PolicyRule, EvaluateInput, ApprovalChannelConfig } from "./policy";
-export { LocalVault } from "./vault";
-export type { TaskToken, MintTokenParams, VaultAdapter } from "./vault";
-export { ContextManager } from "./context";
-export type { TaskContext, WardenConfig, ContextStore } from "./context";
-export { scanForInjection } from "./scanner";
-export type { ScanResult } from "./scanner";
-export { pinToolDescriptions, verifyToolPin } from "./pins";
-export type { ToolPin, MCPTool } from "./pins";
-export { checkSupplyChain, parseLockDeps } from "./supply-chain";
-export type { PackagePin, Dependency, SupplyChainViolation, SupplyChainReport } from "./supply-chain";
-export { TrustRegistry, sanitizeExternalValues } from "./trust-registry";
-export type { TrustRegistryStore } from "./trust-registry";
-export { FileConfigSource } from "./config-source";
-export type { ConfigSource } from "./config-source";
-export { WardenLogger, LogLevel, parseLogLevel } from "./logger";
-export type { LogEntry } from "./logger";
-export { SlidingWindowRateLimiter } from "./rate-limiter";
-export type { RateLimiterConfig, RateLimitResult } from "./rate-limiter";
-export { extractPaths, isPathAllowed } from "./paths";
+export { SecurityError, QuarantineError, ApprovalTimeoutError, VaultError, LedgerIntegrityError } from "./errors.js";
+export { TrustLevel, tagValue, canPromote, lowestTrust } from "./trust.js";
+export type { TrustedValue } from "./trust.js";
+export { sha256 } from "./hash.js";
+export { generateId } from "./id.js";
+export { redactSecrets, hasSecrets } from "./redact.js";
+export { MemoryLedgerStore, SqliteLedgerStore } from "./ledger.js";
+export type { LedgerEntry, LedgerStore, SecurityEvent } from "./ledger.js";
+export { evaluate, evaluatePolicies, resolveConflicts } from "./policy.js";
+export type { PolicyAction, PolicyConfig, PolicyDecision, PolicyRule, EvaluateInput, ApprovalChannelConfig } from "./policy.js";
+export { LocalVault } from "./vault.js";
+export type { TaskToken, MintTokenParams, VaultAdapter } from "./vault.js";
+export { ContextManager } from "./context.js";
+export type { TaskContext, WardenConfig, ContextStore } from "./context.js";
+export { scanForInjection } from "./scanner.js";
+export type { ScanResult } from "./scanner.js";
+export { pinToolDescriptions, verifyToolPin } from "./pins.js";
+export type { ToolPin, MCPTool } from "./pins.js";
+export { checkSupplyChain, parseLockDeps } from "./supply-chain.js";
+export type { PackagePin, Dependency, SupplyChainViolation, SupplyChainReport } from "./supply-chain.js";
+export { TrustRegistry, sanitizeExternalValues } from "./trust-registry.js";
+export type { TrustRegistryStore } from "./trust-registry.js";
+export { FileConfigSource } from "./config-source.js";
+export type { ConfigSource } from "./config-source.js";
+export { WardenLogger, LogLevel, parseLogLevel } from "./logger.js";
+export type { LogEntry } from "./logger.js";
+export { SlidingWindowRateLimiter } from "./rate-limiter.js";
+export type { RateLimiterConfig, RateLimitResult } from "./rate-limiter.js";
+export { extractPaths, isPathAllowed } from "./paths.js";
+export { createWarden, definePolicy } from "./authorization.js";
+export type {
+  AuthorizationPolicy,
+  AuthorizationRule,
+  ConditionDefinition,
+  ConditionReference,
+  Decision,
+  DecisionEffect,
+  DecisionReason,
+  EvaluationRequest,
+  ResolverDefinition,
+  Warden,
+  WardenExtension,
+  WardenOptions,
+} from "./authorization.js";
+export { AuditChain, createAuditEntry, verifyAuditChain } from "./audit.js";
+export type { AuditEntry, AuditEvent, AuditVerification } from "./audit.js";
+export { createApprovalRequest, resolveApproval } from "./approval.js";
+export type { ApprovalRequestInput, ApprovalRequest, ApprovalResolution, ApprovalStatus } from "./approval.js";

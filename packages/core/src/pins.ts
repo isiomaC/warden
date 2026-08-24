@@ -1,7 +1,7 @@
-import { sha256 } from "./hash";
-import { generateId } from "./id";
-import type { LedgerStore } from "./ledger";
-import { SecurityError } from "./errors";
+import { sha256 } from "./hash.js";
+import { generateId } from "./id.js";
+import type { LedgerStore } from "./ledger.js";
+import { SecurityError } from "./errors.js";
 
 export interface ToolPin {
   serverName: string;
