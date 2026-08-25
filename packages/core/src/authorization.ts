@@ -85,18 +85,19 @@ function assertIdentifier(value: unknown, field: string): asserts value is strin
   }
 }
 
-function assertPolicy(policy: AuthorizationPolicy): void {
+function assertPolicy(policy: unknown): asserts policy is AuthorizationPolicy {
   if (policy === null || typeof policy !== "object") throw new TypeError("Policy must be an object");
-  assertIdentifier(policy.id, "Policy id");
-  if (!Number.isSafeInteger(policy.version) || policy.version < 1) {
+  const candidate = policy as Partial<AuthorizationPolicy>;
+  assertIdentifier(candidate.id, "Policy id");
+  if (!Number.isSafeInteger(candidate.version) || (candidate.version ?? 0) < 1) {
     throw new TypeError("Policy version must be a positive safe integer");
   }
-  if (!Array.isArray(policy.rules)) throw new TypeError("Policy rules must be an array");
-  if (policy.rules.length > AUTHORIZATION_LIMITS.maxRules) {
+  if (!Array.isArray(candidate.rules)) throw new TypeError("Policy rules must be an array");
+  if (candidate.rules.length > AUTHORIZATION_LIMITS.maxRules) {
     throw new TypeError(`Policy exceeds the ${AUTHORIZATION_LIMITS.maxRules} rule limit`);
   }
   const ruleIds = new Set<string>();
-  for (const rule of policy.rules) {
+  for (const rule of candidate.rules) {
     if (rule === null || typeof rule !== "object") throw new TypeError("Policy rules must be objects");
     assertIdentifier(rule.id, "Policy rule id");
     if (ruleIds.has(rule.id)) throw new TypeError("Policy rule ids must be unique");
@@ -128,32 +129,33 @@ function assertOwnFunction(value: object, property: string, field: string): void
   }
 }
 
-function assertExtension(extension: WardenExtension): void {
+function assertExtension(extension: unknown): asserts extension is WardenExtension {
   if (extension === null || typeof extension !== "object") throw new TypeError("Extension must be an object");
-  assertIdentifier(extension.name, "Extension name");
-  if (typeof extension.version !== "string" || extension.version.length === 0 || extension.version.length > 64) {
+  const candidate = extension as Partial<WardenExtension>;
+  assertIdentifier(candidate.name, "Extension name");
+  if (typeof candidate.version !== "string" || candidate.version.length === 0 || candidate.version.length > 64) {
     throw new TypeError("Extension version must be a non-empty string of at most 64 characters");
   }
-  if (extension.conditions !== undefined && !Array.isArray(extension.conditions)) {
+  if (candidate.conditions !== undefined && !Array.isArray(candidate.conditions)) {
     throw new TypeError("Extension conditions must be an array");
   }
-  if (extension.resolvers !== undefined && !Array.isArray(extension.resolvers)) {
+  if (candidate.resolvers !== undefined && !Array.isArray(candidate.resolvers)) {
     throw new TypeError("Extension resolvers must be an array");
   }
-  for (const condition of extension.conditions ?? []) {
+  for (const condition of candidate.conditions ?? []) {
     if (condition === null || typeof condition !== "object") throw new TypeError("Condition must be an object");
     assertIdentifier(condition.name, "Condition name");
     assertOwnFunction(condition, "evaluate", `Condition ${condition.name} evaluate`);
   }
-  for (const resolver of extension.resolvers ?? []) {
+  for (const resolver of candidate.resolvers ?? []) {
     if (resolver === null || typeof resolver !== "object") throw new TypeError("Resolver must be an object");
     assertIdentifier(resolver.name, "Resolver name");
     assertOwnFunction(resolver, "resolve", `Resolver ${resolver.name} resolve`);
   }
 }
 
-function assertResolverTimeout(value: number): void {
-  if (!Number.isInteger(value) || value < 1 || value > AUTHORIZATION_LIMITS.maxResolverTimeoutMs) {
+function assertResolverTimeout(value: unknown): asserts value is number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > AUTHORIZATION_LIMITS.maxResolverTimeoutMs) {
     throw new TypeError(`Resolver timeout must be an integer from 1 to ${AUTHORIZATION_LIMITS.maxResolverTimeoutMs}`);
   }
 }
