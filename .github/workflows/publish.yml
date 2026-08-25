@@ -33,6 +33,9 @@ jobs:
       - name: Test
         run: npx vitest run
 
+      - name: Verify packed @warden/core consumer
+        run: npm run verify:core-package
+
       # ── Build in dependency order ──────────────────────────────────
 
       - name: Build @warden/core
