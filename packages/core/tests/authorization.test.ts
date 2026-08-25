@@ -25,6 +25,79 @@ const extension: WardenExtension = {
 };
 
 describe("generic authorization runtime", () => {
+  it.each([
+    ["an empty policy id", { id: "", version: 1, rules: [] }],
+    ["an invalid policy id", { id: "bad id", version: 1, rules: [] }],
+    ["an overlong policy id", { id: "a".repeat(129), version: 1, rules: [] }],
+    ["a zero policy version", { id: "policy", version: 0, rules: [] }],
+    ["a fractional policy version", { id: "policy", version: 1.5, rules: [] }],
+    ["missing rules", { id: "policy", version: 1 }],
+    ["non-array rules", { id: "policy", version: 1, rules: {} }],
+    ["an invalid rule id", { id: "policy", version: 1, rules: [{ id: "bad id", effect: "ALLOW", conditions: [] }] }],
+    ["duplicate rule ids", { id: "policy", version: 1, rules: [{ id: "same", effect: "ALLOW", conditions: [] }, { id: "same", effect: "DENY", conditions: [] }] }],
+    ["an invalid effect", { id: "policy", version: 1, rules: [{ id: "rule", effect: "allow", conditions: [] }] }],
+    ["missing conditions", { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW" }] }],
+    ["an invalid condition name", { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW", conditions: [{ name: "bad name" }] }] }],
+    ["too many conditions", { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW", conditions: Array.from({ length: 65 }, (_, index) => ({ name: `condition.${index}` })) }] }],
+  ])("fails closed when a policy has %s", async (_description, policy) => {
+    await expect(createWarden().evaluate(
+      policy as never,
+      { subject: {}, action: {}, resource: {} },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
+  it("keeps definePolicy as a throwing authoring helper", () => {
+    expect(() => definePolicy({ id: "bad id", version: 1, rules: [] })).toThrow(TypeError);
+  });
+
+  it.each([
+    ["an empty extension name", { name: "", version: "1" }],
+    ["an invalid extension name", { name: "bad name", version: "1" }],
+    ["an overlong extension name", { name: "a".repeat(129), version: "1" }],
+    ["an empty extension version", { name: "extension", version: "" }],
+    ["a non-string extension version", { name: "extension", version: 1 }],
+    ["an overlong extension version", { name: "extension", version: "v".repeat(65) }],
+    ["an invalid condition name", { name: "extension", version: "1", conditions: [{ name: "bad name", evaluate: () => true }] }],
+    ["a missing condition callback", { name: "extension", version: "1", conditions: [{ name: "condition" }] }],
+    ["an inherited condition callback", { name: "extension", version: "1", conditions: [Object.assign(Object.create({ evaluate: () => true }), { name: "condition" })] }],
+    ["an invalid resolver name", { name: "extension", version: "1", resolvers: [{ name: "bad name", resolve: () => true }] }],
+    ["a missing resolver callback", { name: "extension", version: "1", resolvers: [{ name: "resolver" }] }],
+    ["an inherited resolver callback", { name: "extension", version: "1", resolvers: [Object.assign(Object.create({ resolve: () => true }), { name: "resolver" })] }],
+  ])("rejects an extension with %s", (_description, invalidExtension) => {
+    expect(() => createWarden({ extensions: [invalidExtension as never] })).toThrow(TypeError);
+  });
+
+  it("rejects duplicate resolver names", () => {
+    expect(() => createWarden({ extensions: [
+      { name: "one", version: "1", resolvers: [{ name: "shared", resolve: () => 1 }] },
+      { name: "two", version: "1", resolvers: [{ name: "shared", resolve: () => 2 }] },
+    ] })).toThrow(TypeError);
+  });
+
+  it.each([0, -1, 1.5, Number.POSITIVE_INFINITY, 30_001])(
+    "rejects the resolver timeout %s",
+    (resolverTimeoutMs) => {
+      expect(() => createWarden({ resolverTimeoutMs })).toThrow(TypeError);
+    },
+  );
+
+  it("accepts the maximum resolver timeout", () => {
+    expect(() => createWarden({ resolverTimeoutMs: 30_000 })).not.toThrow();
+  });
+
+  it("fails closed when a condition returns a non-boolean", async () => {
+    const warden = createWarden({ extensions: [{
+      name: "invalid-result",
+      version: "1",
+      conditions: [{ name: "condition", evaluate: (() => "yes") as never }],
+    }] });
+
+    await expect(warden.evaluate(
+      { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW", conditions: [{ name: "condition" }] }] },
+      { subject: {}, action: {}, resource: {} },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
   it("evaluates domain-neutral requests with extension conditions", async () => {
     const warden = createWarden({ extensions: [extension] });
     const policy = definePolicy({
