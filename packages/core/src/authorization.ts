@@ -89,9 +89,6 @@ export function definePolicy(policy: AuthorizationPolicy): AuthorizationPolicy {
     if (!rule.id || ruleIds.has(rule.id)) throw new TypeError("Policy rule ids must be unique and non-empty");
     ruleIds.add(rule.id);
     if (!Array.isArray(rule.conditions)) throw new TypeError(`Rule ${rule.id} conditions must be an array`);
-    if (rule.conditions.length > AUTHORIZATION_LIMITS.maxConditionsPerRule) {
-      throw new TypeError(`Rule ${rule.id} exceeds the ${AUTHORIZATION_LIMITS.maxConditionsPerRule} condition limit`);
-    }
   }
   return policy;
 }
@@ -121,9 +118,6 @@ export function createWarden(options: WardenOptions = {}): Warden {
     }
   }
   const timeoutMs = options.resolverTimeoutMs ?? DEFAULT_RESOLVER_TIMEOUT_MS;
-  if (!Number.isFinite(timeoutMs) || timeoutMs < 0 || timeoutMs > AUTHORIZATION_LIMITS.maxResolverTimeoutMs) {
-    throw new TypeError(`Resolver timeout must be between 0 and ${AUTHORIZATION_LIMITS.maxResolverTimeoutMs}ms`);
-  }
 
   return {
     async evaluate(policy, request) {
