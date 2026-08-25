@@ -183,11 +183,19 @@ export function createWarden(options: WardenOptions = {}): Warden {
     assertExtension(extension);
     for (const condition of extension.conditions ?? []) {
       if (!condition.name || conditions.has(condition.name)) throw new TypeError(`Duplicate condition: ${condition.name}`);
-      conditions.set(condition.name, condition);
+      const snapshot: ConditionDefinition = Object.freeze({
+        name: condition.name,
+        evaluate: condition.evaluate,
+      });
+      conditions.set(snapshot.name, snapshot);
     }
     for (const resolver of extension.resolvers ?? []) {
       if (!resolver.name || resolvers.has(resolver.name)) throw new TypeError(`Duplicate resolver: ${resolver.name}`);
-      resolvers.set(resolver.name, resolver);
+      const snapshot: ResolverDefinition = Object.freeze({
+        name: resolver.name,
+        resolve: resolver.resolve,
+      });
+      resolvers.set(snapshot.name, snapshot);
     }
   }
   const timeoutMs = options.resolverTimeoutMs ?? DEFAULT_RESOLVER_TIMEOUT_MS;

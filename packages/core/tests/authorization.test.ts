@@ -85,6 +85,78 @@ describe("generic authorization runtime", () => {
     expect(() => createWarden({ resolverTimeoutMs: 30_000 })).not.toThrow();
   });
 
+  it.each([
+    ["replacement", (definition: Record<string, unknown>, rogue: () => boolean) => { definition.evaluate = rogue; }],
+    ["deletion and inheritance", (definition: Record<string, unknown>, rogue: () => boolean) => {
+      delete definition.evaluate;
+      Object.setPrototypeOf(definition, { evaluate: rogue });
+    }],
+    ["an accessor", (definition: Record<string, unknown>, rogue: () => boolean) => {
+      Object.defineProperty(definition, "evaluate", { configurable: true, get: rogue });
+    }],
+  ])("snapshots condition callbacks before %s mutation", async (_description, mutate) => {
+    let rogueInvocations = 0;
+    const definition = { name: "condition", evaluate: () => true };
+    const warden = createWarden({ extensions: [{ name: "extension", version: "1", conditions: [definition] }] });
+    mutate(definition, () => { rogueInvocations += 1; return false; });
+
+    await expect(warden.evaluate(
+      { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW", conditions: [{ name: "condition" }] }] },
+      { subject: {}, action: {}, resource: {} },
+    )).resolves.toMatchObject({ effect: "ALLOW" });
+    expect(rogueInvocations).toBe(0);
+  });
+
+  it.each([
+    ["replacement", (definition: Record<string, unknown>, rogue: () => string) => { definition.resolve = rogue; }],
+    ["deletion and inheritance", (definition: Record<string, unknown>, rogue: () => string) => {
+      delete definition.resolve;
+      Object.setPrototypeOf(definition, { resolve: rogue });
+    }],
+    ["an accessor", (definition: Record<string, unknown>, rogue: () => string) => {
+      Object.defineProperty(definition, "resolve", { configurable: true, get: rogue });
+    }],
+  ])("snapshots resolver callbacks before %s mutation", async (_description, mutate) => {
+    let rogueInvocations = 0;
+    const definition = { name: "resolver", resolve: () => "trusted" };
+    const warden = createWarden({ extensions: [{
+      name: "extension",
+      version: "1",
+      resolvers: [definition],
+      conditions: [{ name: "equals", evaluate: (_request, expected, resolved) => expected === resolved }],
+    }] });
+    mutate(definition, () => { rogueInvocations += 1; return "rogue"; });
+
+    await expect(warden.evaluate(
+      { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW", conditions: [{ name: "resolver:equals", value: "trusted" }] }] },
+      { subject: {}, action: {}, resource: {} },
+    )).resolves.toMatchObject({ effect: "ALLOW" });
+    expect(rogueInvocations).toBe(0);
+  });
+
+  it("accepts contract boundaries", () => {
+    expect(() => definePolicy({
+      id: "a".repeat(128),
+      version: 1,
+      rules: [{
+        id: "rule",
+        effect: "ALLOW",
+        conditions: Array.from({ length: 64 }, (_, index) => ({ name: `condition.${index}` })),
+      }],
+    })).not.toThrow();
+    expect(() => createWarden({ resolverTimeoutMs: 1 })).not.toThrow();
+  });
+
+  it.each(["resolver:", ":condition", "resolver:condition:extra"])(
+    "fails closed for the malformed qualified condition name %s",
+    async (name) => {
+      await expect(createWarden().evaluate(
+        { id: "policy", version: 1, rules: [{ id: "rule", effect: "ALLOW", conditions: [{ name }] }] },
+        { subject: {}, action: {}, resource: {} },
+      )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+    },
+  );
+
   it("fails closed when a condition returns a non-boolean", async () => {
     const warden = createWarden({ extensions: [{
       name: "invalid-result",
