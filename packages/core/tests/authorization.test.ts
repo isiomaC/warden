@@ -170,6 +170,30 @@ describe("generic authorization runtime", () => {
       .resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
   });
 
+  it("fails closed for arrays with a hostile custom prototype", async () => {
+    const resource: unknown[] = [];
+    Object.setPrototypeOf(resource, { hostile: true });
+
+    await expect(createWarden().evaluate(
+      { id: "hostile-array", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [] }] },
+      { subject: {}, action: {}, resource },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
+  it("permits the node-limit boundary and fails closed above it", async () => {
+    const warden = createWarden();
+    const policy = { id: "node-limit", version: 1, rules: [{ id: "allow", effect: "ALLOW" as const, conditions: [] }] };
+
+    await expect(warden.evaluate(
+      policy,
+      { subject: {}, action: {}, resource: Array(9_995).fill(null) },
+    )).resolves.toMatchObject({ effect: "ALLOW" });
+    await expect(warden.evaluate(
+      policy,
+      { subject: {}, action: {}, resource: Array(9_996).fill(null) },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
   it("fails closed for unsafe condition values before evaluating conditions", async () => {
     let evaluations = 0;
     const warden = createWarden({ extensions: [{

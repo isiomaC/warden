@@ -49,6 +49,9 @@ export function assertSafeValue(value: unknown, field: string): void {
     if (typeof current !== "object") throw new TypeError(`${path} has an unsupported value type`);
 
     const prototype = Object.getPrototypeOf(current);
+    if (Array.isArray(current) && prototype !== Array.prototype) {
+      throw new TypeError(`${path} must contain only plain arrays`);
+    }
     if (!Array.isArray(current) && prototype !== Object.prototype && prototype !== null) {
       throw new TypeError(`${path} must contain only arrays and plain objects`);
     }
