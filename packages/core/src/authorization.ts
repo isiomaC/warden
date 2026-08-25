@@ -214,8 +214,9 @@ function withTimeout<T>(value: Promise<T>, timeoutMs: number): Promise<T> {
 export function createWarden(options: WardenOptions = {}): Warden {
   const conditions = new Map<string, ConditionDefinition>();
   const resolvers = new Map<string, ResolverDefinition>();
-  if (!Array.isArray(options.extensions ?? [])) throw new TypeError("Extensions must be an array");
-  for (const extension of options.extensions ?? []) {
+  const extensionValues = options.extensions ?? [];
+  if (!Array.isArray(extensionValues)) throw new TypeError("Extensions must be an array");
+  for (const extension of extensionValues) {
     const snapshot = assertExtension(extension, true);
     for (const condition of snapshot.conditions) {
       if (!condition.name || conditions.has(condition.name)) throw new TypeError(`Duplicate condition: ${condition.name}`);

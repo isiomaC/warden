@@ -85,6 +85,19 @@ describe("generic authorization runtime", () => {
     },
   );
 
+  it("captures options.extensions once before validation and iteration", () => {
+    let getterInvocations = 0;
+    const options = Object.defineProperty({}, "extensions", {
+      get() {
+        getterInvocations += 1;
+        return getterInvocations === 1 ? [] : new Set();
+      },
+    });
+
+    expect(() => createWarden(options as never)).not.toThrow();
+    expect(getterInvocations).toBe(1);
+  });
+
   it.each([
     ["condition name", "conditions", "name"],
     ["condition callback", "conditions", "evaluate"],
