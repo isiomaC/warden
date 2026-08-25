@@ -104,4 +104,84 @@ describe("generic authorization runtime", () => {
   it("rejects duplicate extension condition names", () => {
     expect(() => createWarden({ extensions: [extension, extension] })).toThrow(/duplicate/i);
   });
+
+  it.each([
+    ["non-finite numbers", { amount: Number.POSITIVE_INFINITY }],
+    ["functions", { callback: () => undefined }],
+    ["symbols", { marker: Symbol("unsafe") }],
+  ])("fails closed for requests containing %s", async (_description, resource) => {
+    const decision = await createWarden().evaluate(
+      { id: "unsafe-request", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [] }] },
+      { subject: {}, action: {}, resource },
+    );
+
+    expect(decision).toMatchObject({
+      effect: "DENY",
+      reasons: [{ code: "EVALUATION_ERROR" }],
+    });
+  });
+
+  it("fails closed for cyclic requests without recursing forever", async () => {
+    const resource: Record<string, unknown> = {};
+    resource.self = resource;
+
+    await expect(createWarden().evaluate(
+      { id: "cyclic-request", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [] }] },
+      { subject: {}, action: {}, resource },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
+  it("rejects accessors without invoking their getters", async () => {
+    let getterInvocations = 0;
+    const resource = Object.defineProperty({}, "secret", {
+      enumerable: true,
+      get() { getterInvocations += 1; return "secret"; },
+    });
+
+    await expect(createWarden().evaluate(
+      { id: "accessor-request", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [] }] },
+      { subject: {}, action: {}, resource },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+    expect(getterInvocations).toBe(0);
+  });
+
+  it.each(["__proto__", "prototype", "constructor"])(
+    "fails closed for the prototype-pollution key %s",
+    async (key) => {
+      const resource = Object.create(null) as Record<string, unknown>;
+      Object.defineProperty(resource, key, { enumerable: true, value: {} });
+
+      await expect(createWarden().evaluate(
+        { id: "pollution-request", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [] }] },
+        { subject: {}, action: {}, resource },
+      )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+    },
+  );
+
+  it("fails closed for excessive nesting and oversized strings", async () => {
+    let nested: Record<string, unknown> = {};
+    for (let depth = 0; depth < 17; depth += 1) nested = { nested };
+    const warden = createWarden();
+    const policy = { id: "bounded", version: 1, rules: [{ id: "allow", effect: "ALLOW" as const, conditions: [] }] };
+
+    await expect(warden.evaluate(policy, { subject: {}, action: {}, resource: nested }))
+      .resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+    await expect(warden.evaluate(policy, { subject: {}, action: {}, resource: "x".repeat(64 * 1024 + 1) }))
+      .resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
+  it("fails closed for unsafe condition values before evaluating conditions", async () => {
+    let evaluations = 0;
+    const warden = createWarden({ extensions: [{
+      name: "safe",
+      version: "1",
+      conditions: [{ name: "equals", evaluate: () => { evaluations += 1; return true; } }],
+    }] });
+
+    await expect(warden.evaluate(
+      { id: "unsafe-policy", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [{ name: "equals", value: () => undefined }] }] },
+      { subject: {}, action: {}, resource: {} },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+    expect(evaluations).toBe(0);
+  });
 });

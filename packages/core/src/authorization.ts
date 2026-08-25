@@ -1,3 +1,5 @@
+import { AUTHORIZATION_LIMITS, assertSafeValue } from "./validation.js";
+
 export type DecisionEffect = "ALLOW" | "DENY" | "PENDING_APPROVAL";
 
 export interface EvaluationRequest<
@@ -73,21 +75,23 @@ export interface Warden {
   evaluate(policy: AuthorizationPolicy, request: EvaluationRequest): Promise<Decision>;
 }
 
-const MAX_RULES = 1_000;
 const DEFAULT_RESOLVER_TIMEOUT_MS = 1_000;
 
 export function definePolicy(policy: AuthorizationPolicy): AuthorizationPolicy {
   if (!policy.id || !Number.isSafeInteger(policy.version) || policy.version < 1) {
     throw new TypeError("Policy id and positive integer version are required");
   }
-  if (policy.rules.length > MAX_RULES) {
-    throw new TypeError(`Policy exceeds the ${MAX_RULES} rule limit`);
+  if (policy.rules.length > AUTHORIZATION_LIMITS.maxRules) {
+    throw new TypeError(`Policy exceeds the ${AUTHORIZATION_LIMITS.maxRules} rule limit`);
   }
   const ruleIds = new Set<string>();
   for (const rule of policy.rules) {
     if (!rule.id || ruleIds.has(rule.id)) throw new TypeError("Policy rule ids must be unique and non-empty");
     ruleIds.add(rule.id);
     if (!Array.isArray(rule.conditions)) throw new TypeError(`Rule ${rule.id} conditions must be an array`);
+    if (rule.conditions.length > AUTHORIZATION_LIMITS.maxConditionsPerRule) {
+      throw new TypeError(`Rule ${rule.id} exceeds the ${AUTHORIZATION_LIMITS.maxConditionsPerRule} condition limit`);
+    }
   }
   return policy;
 }
@@ -117,11 +121,25 @@ export function createWarden(options: WardenOptions = {}): Warden {
     }
   }
   const timeoutMs = options.resolverTimeoutMs ?? DEFAULT_RESOLVER_TIMEOUT_MS;
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0 || timeoutMs > AUTHORIZATION_LIMITS.maxResolverTimeoutMs) {
+    throw new TypeError(`Resolver timeout must be between 0 and ${AUTHORIZATION_LIMITS.maxResolverTimeoutMs}ms`);
+  }
 
   return {
     async evaluate(policy, request) {
+      let policyId = "";
+      let policyVersion = 0;
       try {
+        assertSafeValue(policy, "policy");
+        assertSafeValue(request, "request");
         definePolicy(policy);
+        policyId = policy.id;
+        policyVersion = policy.version;
+        for (const rule of policy.rules) {
+          for (const reference of rule.conditions) {
+            assertSafeValue(reference.value, `policy.rules.${rule.id}.conditions.${reference.name}.value`);
+          }
+        }
         const matched: AuthorizationRule[] = [];
         for (const rule of policy.rules) {
           let matches = true;
@@ -150,20 +168,20 @@ export function createWarden(options: WardenOptions = {}): Warden {
           ?? matched.find((rule) => rule.effect === "PENDING_APPROVAL")
           ?? matched.find((rule) => rule.effect === "ALLOW");
         if (!winner) {
-          return { effect: "DENY", policyId: policy.id, policyVersion: policy.version, matchedRules, reasons: [{ code: "NO_MATCH" }] };
+          return { effect: "DENY", policyId, policyVersion, matchedRules, reasons: [{ code: "NO_MATCH" }] };
         }
         return {
           effect: winner.effect,
-          policyId: policy.id,
-          policyVersion: policy.version,
+          policyId,
+          policyVersion,
           matchedRules,
           reasons: matched.map((rule) => ({ code: "RULE_MATCHED", ruleId: rule.id })),
         };
       } catch (error) {
         return {
           effect: "DENY",
-          policyId: policy.id,
-          policyVersion: policy.version,
+          policyId,
+          policyVersion,
           matchedRules: [],
           reasons: [{ code: "EVALUATION_ERROR", message: error instanceof Error ? error.message : "Unknown evaluation error" }],
         };
