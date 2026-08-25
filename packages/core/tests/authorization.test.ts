@@ -67,6 +67,49 @@ describe("generic authorization runtime", () => {
     expect(() => createWarden({ extensions: [invalidExtension as never] })).toThrow(TypeError);
   });
 
+  it.each(["conditions", "resolvers"])(
+    "rejects a changing extension-level %s accessor without invoking it",
+    (property) => {
+      let getterInvocations = 0;
+      const invalidExtension = { name: "extension", version: "1" } as Record<string, unknown>;
+      Object.defineProperty(invalidExtension, property, {
+        enumerable: true,
+        get() {
+          getterInvocations += 1;
+          return getterInvocations === 1 ? [] : [{ name: "bypass" }];
+        },
+      });
+
+      expect(() => createWarden({ extensions: [invalidExtension as never] })).toThrow(TypeError);
+      expect(getterInvocations).toBe(0);
+    },
+  );
+
+  it.each([
+    ["condition name", "conditions", "name"],
+    ["condition callback", "conditions", "evaluate"],
+    ["resolver name", "resolvers", "name"],
+    ["resolver callback", "resolvers", "resolve"],
+  ])("rejects a definition-level %s accessor without invoking it", (_description, collection, property) => {
+    let getterInvocations = 0;
+    const definition: Record<string, unknown> = {
+      name: collection === "conditions" ? "condition" : "resolver",
+      [collection === "conditions" ? "evaluate" : "resolve"]: () => true,
+    };
+    Object.defineProperty(definition, property, {
+      configurable: true,
+      enumerable: true,
+      get() { getterInvocations += 1; return property === "name" ? "safe" : () => true; },
+    });
+
+    expect(() => createWarden({ extensions: [{
+      name: "extension",
+      version: "1",
+      [collection]: [definition],
+    } as never] })).toThrow(TypeError);
+    expect(getterInvocations).toBe(0);
+  });
+
   it("rejects duplicate resolver names", () => {
     expect(() => createWarden({ extensions: [
       { name: "one", version: "1", resolvers: [{ name: "shared", resolve: () => 1 }] },

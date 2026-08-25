@@ -122,36 +122,72 @@ function assertPolicy(policy: unknown): asserts policy is AuthorizationPolicy {
   }
 }
 
-function assertOwnFunction(value: object, property: string, field: string): void {
+function ownDataProperty(value: object, property: string, field: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(value, property);
-  if (!descriptor || !("value" in descriptor) || typeof descriptor.value !== "function") {
-    throw new TypeError(`${field} must be an own data property containing a function`);
+  if (!descriptor || !("value" in descriptor)) {
+    throw new TypeError(`${field} must be an own data property`);
   }
+  return descriptor.value;
 }
 
-function assertExtension(extension: unknown): asserts extension is WardenExtension {
+interface RegisteredExtension {
+  readonly name: string;
+  readonly version: string;
+  readonly conditions: readonly ConditionDefinition[];
+  readonly resolvers: readonly ResolverDefinition[];
+}
+
+function assertExtension(extension: unknown): asserts extension is WardenExtension;
+function assertExtension(extension: unknown, normalize: true): RegisteredExtension;
+function assertExtension(extension: unknown, normalize?: true): RegisteredExtension | void {
   if (extension === null || typeof extension !== "object") throw new TypeError("Extension must be an object");
-  const candidate = extension as Partial<WardenExtension>;
-  assertIdentifier(candidate.name, "Extension name");
-  if (typeof candidate.version !== "string" || candidate.version.length === 0 || candidate.version.length > 64) {
+  const name = ownDataProperty(extension, "name", "Extension name");
+  const version = ownDataProperty(extension, "version", "Extension version");
+  assertIdentifier(name, "Extension name");
+  if (typeof version !== "string" || version.length === 0 || version.length > 64) {
     throw new TypeError("Extension version must be a non-empty string of at most 64 characters");
   }
-  if (candidate.conditions !== undefined && !Array.isArray(candidate.conditions)) {
+  const conditionDescriptor = Object.getOwnPropertyDescriptor(extension, "conditions");
+  if (conditionDescriptor && !("value" in conditionDescriptor)) {
+    throw new TypeError("Extension conditions must be an own data property");
+  }
+  const resolverDescriptor = Object.getOwnPropertyDescriptor(extension, "resolvers");
+  if (resolverDescriptor && !("value" in resolverDescriptor)) {
+    throw new TypeError("Extension resolvers must be an own data property");
+  }
+  const conditionValues: unknown = conditionDescriptor?.value;
+  const resolverValues: unknown = resolverDescriptor?.value;
+  if (conditionValues !== undefined && !Array.isArray(conditionValues)) {
     throw new TypeError("Extension conditions must be an array");
   }
-  if (candidate.resolvers !== undefined && !Array.isArray(candidate.resolvers)) {
+  if (resolverValues !== undefined && !Array.isArray(resolverValues)) {
     throw new TypeError("Extension resolvers must be an array");
   }
-  for (const condition of candidate.conditions ?? []) {
+  const conditions: ConditionDefinition[] = [];
+  for (const condition of conditionValues ?? []) {
     if (condition === null || typeof condition !== "object") throw new TypeError("Condition must be an object");
-    assertIdentifier(condition.name, "Condition name");
-    assertOwnFunction(condition, "evaluate", `Condition ${condition.name} evaluate`);
+    const conditionName = ownDataProperty(condition, "name", "Condition name");
+    assertIdentifier(conditionName, "Condition name");
+    const evaluate = ownDataProperty(condition, "evaluate", `Condition ${conditionName} evaluate`);
+    if (typeof evaluate !== "function") throw new TypeError(`Condition ${conditionName} evaluate must be a function`);
+    conditions.push(Object.freeze({ name: conditionName, evaluate }) as ConditionDefinition);
   }
-  for (const resolver of candidate.resolvers ?? []) {
+  const resolvers: ResolverDefinition[] = [];
+  for (const resolver of resolverValues ?? []) {
     if (resolver === null || typeof resolver !== "object") throw new TypeError("Resolver must be an object");
-    assertIdentifier(resolver.name, "Resolver name");
-    assertOwnFunction(resolver, "resolve", `Resolver ${resolver.name} resolve`);
+    const resolverName = ownDataProperty(resolver, "name", "Resolver name");
+    assertIdentifier(resolverName, "Resolver name");
+    const resolve = ownDataProperty(resolver, "resolve", `Resolver ${resolverName} resolve`);
+    if (typeof resolve !== "function") throw new TypeError(`Resolver ${resolverName} resolve must be a function`);
+    resolvers.push(Object.freeze({ name: resolverName, resolve }) as ResolverDefinition);
   }
+  const snapshot = Object.freeze({
+    name,
+    version,
+    conditions: Object.freeze(conditions),
+    resolvers: Object.freeze(resolvers),
+  });
+  if (normalize) return snapshot;
 }
 
 function assertResolverTimeout(value: unknown): asserts value is number {
@@ -180,22 +216,14 @@ export function createWarden(options: WardenOptions = {}): Warden {
   const resolvers = new Map<string, ResolverDefinition>();
   if (!Array.isArray(options.extensions ?? [])) throw new TypeError("Extensions must be an array");
   for (const extension of options.extensions ?? []) {
-    assertExtension(extension);
-    for (const condition of extension.conditions ?? []) {
+    const snapshot = assertExtension(extension, true);
+    for (const condition of snapshot.conditions) {
       if (!condition.name || conditions.has(condition.name)) throw new TypeError(`Duplicate condition: ${condition.name}`);
-      const snapshot: ConditionDefinition = Object.freeze({
-        name: condition.name,
-        evaluate: condition.evaluate,
-      });
-      conditions.set(snapshot.name, snapshot);
+      conditions.set(condition.name, condition);
     }
-    for (const resolver of extension.resolvers ?? []) {
+    for (const resolver of snapshot.resolvers) {
       if (!resolver.name || resolvers.has(resolver.name)) throw new TypeError(`Duplicate resolver: ${resolver.name}`);
-      const snapshot: ResolverDefinition = Object.freeze({
-        name: resolver.name,
-        resolve: resolver.resolve,
-      });
-      resolvers.set(snapshot.name, snapshot);
+      resolvers.set(resolver.name, resolver);
     }
   }
   const timeoutMs = options.resolverTimeoutMs ?? DEFAULT_RESOLVER_TIMEOUT_MS;
