@@ -6,6 +6,8 @@ coverage/
 *.log
 docs/internal/
 docs/qa/
+# Local agent planning and handoff artifacts. Never commit these files.
+docs/superpowers/
 
 # Claude Code's convention for personal, untracked hook config — this is
 # where our own docs tell users to put a literal WARDEN_AUTH_TOKEN value

@@ -49,6 +49,11 @@ These are **hard requirements**. PRs that violate them will not be merged.
 - All files use **kebab-case**: `hook-server.ts`, `supply-chain.test.ts`, `pre-tool-use.ts`.
 - Exceptions: `index.ts` entry points and config files at the root.
 
+### Local Agent Artifacts
+
+- Do not commit `docs/superpowers/`. It is reserved for local agent plans,
+  specifications, and handoffs, and is ignored by Git.
+
 ### Dependencies
 
 - **Do not add new dependencies without prior discussion.** The tech stack is locked: Hono
