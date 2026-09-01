@@ -395,6 +395,13 @@ describe("generic authorization runtime", () => {
     )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
   });
 
+  it("fails closed for sparse arrays exceeding the node limit", async () => {
+    await expect(createWarden().evaluate(
+      { id: "sparse-array", version: 1, rules: [{ id: "allow", effect: "ALLOW", conditions: [] }] },
+      { subject: {}, action: {}, resource: new Array(10_001) },
+    )).resolves.toMatchObject({ effect: "DENY", reasons: [{ code: "EVALUATION_ERROR" }] });
+  });
+
   it("fails closed for unsafe condition values before evaluating conditions", async () => {
     let evaluations = 0;
     const warden = createWarden({ extensions: [{

@@ -52,6 +52,9 @@ export function assertSafeValue(value: unknown, field: string): void {
     if (Array.isArray(current) && prototype !== Array.prototype) {
       throw new TypeError(`${path} must contain only plain arrays`);
     }
+    if (Array.isArray(current) && current.length > AUTHORIZATION_LIMITS.maxNodes) {
+      throw new TypeError(`${path} exceeds the array length limit`);
+    }
     if (!Array.isArray(current) && prototype !== Object.prototype && prototype !== null) {
       throw new TypeError(`${path} must contain only arrays and plain objects`);
     }
