@@ -1,3 +1,5 @@
+import { AUTHORIZATION_LIMITS, assertSafeValue } from "./validation.js";
+
 export type DecisionEffect = "ALLOW" | "DENY" | "PENDING_APPROVAL";
 
 export interface EvaluationRequest<
@@ -73,22 +75,129 @@ export interface Warden {
   evaluate(policy: AuthorizationPolicy, request: EvaluationRequest): Promise<Decision>;
 }
 
-const MAX_RULES = 1_000;
 const DEFAULT_RESOLVER_TIMEOUT_MS = 1_000;
+const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const EFFECTS = new Set<DecisionEffect>(["ALLOW", "DENY", "PENDING_APPROVAL"]);
 
-export function definePolicy(policy: AuthorizationPolicy): AuthorizationPolicy {
-  if (!policy.id || !Number.isSafeInteger(policy.version) || policy.version < 1) {
-    throw new TypeError("Policy id and positive integer version are required");
+function assertIdentifier(value: unknown, field: string): asserts value is string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 128 || !IDENTIFIER_PATTERN.test(value)) {
+    throw new TypeError(`${field} must be a valid identifier`);
   }
-  if (policy.rules.length > MAX_RULES) {
-    throw new TypeError(`Policy exceeds the ${MAX_RULES} rule limit`);
+}
+
+function assertPolicy(policy: unknown): asserts policy is AuthorizationPolicy {
+  if (policy === null || typeof policy !== "object") throw new TypeError("Policy must be an object");
+  const candidate = policy as Partial<AuthorizationPolicy>;
+  assertIdentifier(candidate.id, "Policy id");
+  if (!Number.isSafeInteger(candidate.version) || (candidate.version ?? 0) < 1) {
+    throw new TypeError("Policy version must be a positive safe integer");
+  }
+  if (!Array.isArray(candidate.rules)) throw new TypeError("Policy rules must be an array");
+  if (candidate.rules.length > AUTHORIZATION_LIMITS.maxRules) {
+    throw new TypeError(`Policy exceeds the ${AUTHORIZATION_LIMITS.maxRules} rule limit`);
   }
   const ruleIds = new Set<string>();
-  for (const rule of policy.rules) {
-    if (!rule.id || ruleIds.has(rule.id)) throw new TypeError("Policy rule ids must be unique and non-empty");
+  for (const rule of candidate.rules) {
+    if (rule === null || typeof rule !== "object") throw new TypeError("Policy rules must be objects");
+    assertIdentifier(rule.id, "Policy rule id");
+    if (ruleIds.has(rule.id)) throw new TypeError("Policy rule ids must be unique");
     ruleIds.add(rule.id);
+    if (!EFFECTS.has(rule.effect)) throw new TypeError(`Rule ${rule.id} has an invalid effect`);
     if (!Array.isArray(rule.conditions)) throw new TypeError(`Rule ${rule.id} conditions must be an array`);
+    if (rule.conditions.length > AUTHORIZATION_LIMITS.maxConditionsPerRule) {
+      throw new TypeError(`Rule ${rule.id} exceeds the ${AUTHORIZATION_LIMITS.maxConditionsPerRule} condition limit`);
+    }
+    for (const condition of rule.conditions) {
+      if (condition === null || typeof condition !== "object") {
+        throw new TypeError(`Rule ${rule.id} conditions must be objects`);
+      }
+      const separator = typeof condition.name === "string" ? condition.name.indexOf(":") : -1;
+      if (separator > 0 && condition.name.indexOf(":", separator + 1) === -1) {
+        assertIdentifier(condition.name.slice(0, separator), `Rule ${rule.id} resolver name`);
+        assertIdentifier(condition.name.slice(separator + 1), `Rule ${rule.id} condition name`);
+      } else {
+        assertIdentifier(condition.name, `Rule ${rule.id} condition name`);
+      }
+    }
   }
+}
+
+function ownDataProperty(value: object, property: string, field: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, property);
+  if (!descriptor || !("value" in descriptor)) {
+    throw new TypeError(`${field} must be an own data property`);
+  }
+  return descriptor.value;
+}
+
+interface RegisteredExtension {
+  readonly name: string;
+  readonly version: string;
+  readonly conditions: readonly ConditionDefinition[];
+  readonly resolvers: readonly ResolverDefinition[];
+}
+
+function assertExtension(extension: unknown): asserts extension is WardenExtension;
+function assertExtension(extension: unknown, normalize: true): RegisteredExtension;
+function assertExtension(extension: unknown, normalize?: true): RegisteredExtension | void {
+  if (extension === null || typeof extension !== "object") throw new TypeError("Extension must be an object");
+  const name = ownDataProperty(extension, "name", "Extension name");
+  const version = ownDataProperty(extension, "version", "Extension version");
+  assertIdentifier(name, "Extension name");
+  if (typeof version !== "string" || version.length === 0 || version.length > 64) {
+    throw new TypeError("Extension version must be a non-empty string of at most 64 characters");
+  }
+  const conditionDescriptor = Object.getOwnPropertyDescriptor(extension, "conditions");
+  if (conditionDescriptor && !("value" in conditionDescriptor)) {
+    throw new TypeError("Extension conditions must be an own data property");
+  }
+  const resolverDescriptor = Object.getOwnPropertyDescriptor(extension, "resolvers");
+  if (resolverDescriptor && !("value" in resolverDescriptor)) {
+    throw new TypeError("Extension resolvers must be an own data property");
+  }
+  const conditionValues: unknown = conditionDescriptor?.value;
+  const resolverValues: unknown = resolverDescriptor?.value;
+  if (conditionValues !== undefined && !Array.isArray(conditionValues)) {
+    throw new TypeError("Extension conditions must be an array");
+  }
+  if (resolverValues !== undefined && !Array.isArray(resolverValues)) {
+    throw new TypeError("Extension resolvers must be an array");
+  }
+  const conditions: ConditionDefinition[] = [];
+  for (const condition of conditionValues ?? []) {
+    if (condition === null || typeof condition !== "object") throw new TypeError("Condition must be an object");
+    const conditionName = ownDataProperty(condition, "name", "Condition name");
+    assertIdentifier(conditionName, "Condition name");
+    const evaluate = ownDataProperty(condition, "evaluate", `Condition ${conditionName} evaluate`);
+    if (typeof evaluate !== "function") throw new TypeError(`Condition ${conditionName} evaluate must be a function`);
+    conditions.push(Object.freeze({ name: conditionName, evaluate }) as ConditionDefinition);
+  }
+  const resolvers: ResolverDefinition[] = [];
+  for (const resolver of resolverValues ?? []) {
+    if (resolver === null || typeof resolver !== "object") throw new TypeError("Resolver must be an object");
+    const resolverName = ownDataProperty(resolver, "name", "Resolver name");
+    assertIdentifier(resolverName, "Resolver name");
+    const resolve = ownDataProperty(resolver, "resolve", `Resolver ${resolverName} resolve`);
+    if (typeof resolve !== "function") throw new TypeError(`Resolver ${resolverName} resolve must be a function`);
+    resolvers.push(Object.freeze({ name: resolverName, resolve }) as ResolverDefinition);
+  }
+  const snapshot = Object.freeze({
+    name,
+    version,
+    conditions: Object.freeze(conditions),
+    resolvers: Object.freeze(resolvers),
+  });
+  if (normalize) return snapshot;
+}
+
+function assertResolverTimeout(value: unknown): asserts value is number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > AUTHORIZATION_LIMITS.maxResolverTimeoutMs) {
+    throw new TypeError(`Resolver timeout must be an integer from 1 to ${AUTHORIZATION_LIMITS.maxResolverTimeoutMs}`);
+  }
+}
+
+export function definePolicy(policy: AuthorizationPolicy): AuthorizationPolicy {
+  assertPolicy(policy);
   return policy;
 }
 
@@ -105,23 +214,37 @@ function withTimeout<T>(value: Promise<T>, timeoutMs: number): Promise<T> {
 export function createWarden(options: WardenOptions = {}): Warden {
   const conditions = new Map<string, ConditionDefinition>();
   const resolvers = new Map<string, ResolverDefinition>();
-  for (const extension of options.extensions ?? []) {
-    if (!extension.name || !extension.version) throw new TypeError("Extension name and version are required");
-    for (const condition of extension.conditions ?? []) {
+  const extensionValues = options.extensions ?? [];
+  if (!Array.isArray(extensionValues)) throw new TypeError("Extensions must be an array");
+  for (const extension of extensionValues) {
+    const snapshot = assertExtension(extension, true);
+    for (const condition of snapshot.conditions) {
       if (!condition.name || conditions.has(condition.name)) throw new TypeError(`Duplicate condition: ${condition.name}`);
       conditions.set(condition.name, condition);
     }
-    for (const resolver of extension.resolvers ?? []) {
+    for (const resolver of snapshot.resolvers) {
       if (!resolver.name || resolvers.has(resolver.name)) throw new TypeError(`Duplicate resolver: ${resolver.name}`);
       resolvers.set(resolver.name, resolver);
     }
   }
   const timeoutMs = options.resolverTimeoutMs ?? DEFAULT_RESOLVER_TIMEOUT_MS;
+  assertResolverTimeout(timeoutMs);
 
   return {
     async evaluate(policy, request) {
+      let policyId = "";
+      let policyVersion = 0;
       try {
+        assertSafeValue(policy, "policy");
+        assertSafeValue(request, "request");
         definePolicy(policy);
+        policyId = policy.id;
+        policyVersion = policy.version;
+        for (const rule of policy.rules) {
+          for (const reference of rule.conditions) {
+            assertSafeValue(reference.value, `policy.rules.${rule.id}.conditions.${reference.name}.value`);
+          }
+        }
         const matched: AuthorizationRule[] = [];
         for (const rule of policy.rules) {
           let matches = true;
@@ -137,7 +260,9 @@ export function createWarden(options: WardenOptions = {}): Warden {
               resolved = await withTimeout(Promise.resolve(resolver.resolve(request)), timeoutMs);
             }
             if (!condition) throw new Error(`Unknown condition: ${conditionName}`);
-            if (!await condition.evaluate(request, reference.value, resolved)) {
+            const result = await condition.evaluate(request, reference.value, resolved);
+            if (typeof result !== "boolean") throw new TypeError(`Condition ${conditionName} must return a boolean`);
+            if (!result) {
               matches = false;
               break;
             }
@@ -150,20 +275,20 @@ export function createWarden(options: WardenOptions = {}): Warden {
           ?? matched.find((rule) => rule.effect === "PENDING_APPROVAL")
           ?? matched.find((rule) => rule.effect === "ALLOW");
         if (!winner) {
-          return { effect: "DENY", policyId: policy.id, policyVersion: policy.version, matchedRules, reasons: [{ code: "NO_MATCH" }] };
+          return { effect: "DENY", policyId, policyVersion, matchedRules, reasons: [{ code: "NO_MATCH" }] };
         }
         return {
           effect: winner.effect,
-          policyId: policy.id,
-          policyVersion: policy.version,
+          policyId,
+          policyVersion,
           matchedRules,
           reasons: matched.map((rule) => ({ code: "RULE_MATCHED", ruleId: rule.id })),
         };
       } catch (error) {
         return {
           effect: "DENY",
-          policyId: policy.id,
-          policyVersion: policy.version,
+          policyId,
+          policyVersion,
           matchedRules: [],
           reasons: [{ code: "EVALUATION_ERROR", message: error instanceof Error ? error.message : "Unknown evaluation error" }],
         };

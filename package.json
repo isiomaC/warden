@@ -27,7 +27,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "verify:core-package": "node scripts/verify-core-package.mjs"
   },
   "overrides": {
     "incur": {
