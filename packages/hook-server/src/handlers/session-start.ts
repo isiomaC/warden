@@ -6,14 +6,14 @@ import {
   parseLockDeps,
   TrustLevel,
   generateId,
-} from "@warden/core";
+} from "@stlw/warden";
 import type {
   PolicyConfig,
   VaultAdapter,
   LedgerStore,
   ContextStore,
   PackagePin,
-} from "@warden/core";
+} from "@stlw/warden";
 import type { ApprovalChannel } from "../approvals/types";
 
 const VALID_ENVIRONMENTS = ["development", "staging", "production"];

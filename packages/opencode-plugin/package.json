@@ -1,5 +1,5 @@
 {
-  "name": "@warden/opencode-plugin",
+  "name": "@stlw/warden-opencode-plugin",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -12,6 +12,6 @@
     "directory": "packages/opencode-plugin"
   },
   "peerDependencies": {
-    "@warden/core": "^0.2.0"
+    "@stlw/warden": "^0.2.0"
   }
 }

@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { sha256 } from "@warden/core";
+import { sha256 } from "@stlw/warden";
 
 const VALID_ENVIRONMENTS = ["development", "staging", "production"];
 

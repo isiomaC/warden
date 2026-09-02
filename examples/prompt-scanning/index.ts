@@ -7,7 +7,7 @@
  * Run: npx tsx examples/prompt-scanning/index.ts
  */
 
-import { scanForInjection, TrustLevel } from "@warden/core";
+import { scanForInjection, TrustLevel } from "@stlw/warden";
 
 const prompts = [
   { text: "What is the weather today?", trust: TrustLevel.EXTERNAL },

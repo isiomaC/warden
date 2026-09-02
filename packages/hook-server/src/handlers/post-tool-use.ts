@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { tagValue, hasSecrets, TrustLevel, generateId, scanForInjection } from "@warden/core";
-import type { LedgerStore, ContextStore, TrustRegistry } from "@warden/core";
+import { tagValue, hasSecrets, TrustLevel, generateId, scanForInjection } from "@stlw/warden";
+import type { LedgerStore, ContextStore, TrustRegistry } from "@stlw/warden";
 
 function registerExternalValues(
   value: unknown,

@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initCommand } from "../src/commands/init";
-import { FileConfigSource } from "@warden/core";
+import { FileConfigSource } from "@stlw/warden";
 
 async function withTmpCwd<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "warden-init-test-"));

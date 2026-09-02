@@ -86,7 +86,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify packed @warden/core consumer
+      - name: Verify packed @stlw/warden consumer
         run: npm run verify:core-package
 
   docker-build:

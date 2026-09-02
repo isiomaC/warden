@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import type { VaultAdapter, ContextStore } from "@warden/core";
+import type { VaultAdapter, ContextStore } from "@stlw/warden";
 
 /**
  * Establishes sessionId/taskId/token on the request context, or denies.

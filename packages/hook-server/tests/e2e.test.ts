@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { createHookServer } from "../src/server";
-import type { PolicyConfig } from "@warden/core";
-import { TrustLevel } from "@warden/core";
+import type { PolicyConfig } from "@stlw/warden";
+import { TrustLevel } from "@stlw/warden";
 import type { ApprovalChannel, ApprovalRequest } from "../src/approvals/index";
-import { MemoryLedgerStore, SqliteLedgerStore, generateId } from "@warden/core";
+import { MemoryLedgerStore, SqliteLedgerStore, generateId } from "@stlw/warden";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -617,7 +617,7 @@ describe("CLI Commands", () => {
 
   describe("warden init (programmatic)", () => {
     it("19.1 should produce a valid config hash", async () => {
-      const { sha256 } = await import("@warden/core");
+      const { sha256 } = await import("@stlw/warden");
       const hash = sha256(`warden-init-${Date.now()}`);
       expect(hash).toBeTruthy();
       expect(hash.length).toBe(64);
@@ -660,7 +660,7 @@ describe("CLI Commands", () => {
 
     // 19.3: Verify missing config handling via FileConfigSource directly
     it("19.3 should handle missing config file gracefully", async () => {
-      const { FileConfigSource } = await import("@warden/core");
+      const { FileConfigSource } = await import("@stlw/warden");
       const badPath = resolve(process.cwd(), ".warden-nonexistent-12345.yml");
       const source = new FileConfigSource(badPath);
       await expect(source.load()).rejects.toThrow();
@@ -669,8 +669,8 @@ describe("CLI Commands", () => {
 
   describe("warden audit (programmatic)", () => {
     it("19.4-19.6 should display entries, decisions, chain integrity", async () => {
-      const { SqliteLedgerStore } = await import("@warden/core");
-      const { TrustLevel } = await import("@warden/core");
+      const { SqliteLedgerStore } = await import("@stlw/warden");
+      const { TrustLevel } = await import("@stlw/warden");
 
       const auditDb = resolve(process.cwd(), ".warden-e2e-audit.db");
       try { rmSync(auditDb, { force: true }); } catch { /* ok */ }

@@ -1,5 +1,5 @@
 {
-  "name": "@warden/hook-server",
+  "name": "@stlw/warden-hook-server",
   "version": "0.2.0",
   "description": "HTTP hook server for Claude Code, Codex CLI, and Copilot SDK integration",
   "type": "module",
@@ -39,7 +39,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@warden/core": "^0.2.0",
+    "@stlw/warden": "^0.2.0",
     "hono": "^4.13.0",
     "grammy": "^1.32.0"
   }

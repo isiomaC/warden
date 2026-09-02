@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { FileConfigSource } from "@warden/core";
+import { FileConfigSource } from "@stlw/warden";
 import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config";
 import type { ProxyEntryConfig, RuntimeConfig } from "../runtime-config";
 

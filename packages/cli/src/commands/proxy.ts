@@ -1,9 +1,9 @@
 import { defineCommand } from "citty";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { FileConfigSource, MemoryLedgerStore, SqliteLedgerStore, ContextManager, TrustLevel } from "@warden/core";
-import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
-import { TelegramApprovalChannel } from "@warden/hook-server";
+import { FileConfigSource, MemoryLedgerStore, SqliteLedgerStore, ContextManager, TrustLevel } from "@stlw/warden";
+import { WardenGateway, MCPRegistry } from "@stlw/warden-mcp-gateway";
+import { TelegramApprovalChannel } from "@stlw/warden-hook-server";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";

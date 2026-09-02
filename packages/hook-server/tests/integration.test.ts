@@ -3,8 +3,8 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHookServer } from "../src/server";
-import type { PolicyConfig } from "@warden/core";
-import { TrustLevel } from "@warden/core";
+import type { PolicyConfig } from "@stlw/warden";
+import { TrustLevel } from "@stlw/warden";
 import type { ApprovalChannel } from "../src/approvals/types";
 import type { ApprovalRequest } from "../src/approvals/types";
 
@@ -798,7 +798,7 @@ describe("Hook Server — Mock LLM Integration", () => {
     it("should DENY tool call after task expires", async () => {
       const srv = createHookServer({
         config: testConfig,
-        contextManager: new (await import("@warden/core")).ContextManager(),
+        contextManager: new (await import("@stlw/warden")).ContextManager(),
       });
 
       const startRes = await srv.fetch(

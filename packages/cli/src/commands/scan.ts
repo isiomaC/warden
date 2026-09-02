@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { scanForInjection, TrustLevel } from "@warden/core";
+import { scanForInjection, TrustLevel } from "@stlw/warden";
 
 export const scanCommand = defineCommand({
   meta: {

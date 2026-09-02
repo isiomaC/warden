@@ -1,8 +1,8 @@
 import { defineCommand } from "citty";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { checkSupplyChain, parseLockDeps } from "@warden/core";
-import type { Dependency, PackagePin } from "@warden/core";
+import { checkSupplyChain, parseLockDeps } from "@stlw/warden";
+import type { Dependency, PackagePin } from "@stlw/warden";
 
 interface NpmLockPackage {
   version?: string;

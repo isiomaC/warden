@@ -7,9 +7,9 @@ import {
   generateId,
   extractPaths,
   isPathAllowed,
-} from "@warden/core";
-import type { PolicyConfig, LedgerStore, ContextStore, TaskToken } from "@warden/core";
-import type { TrustRegistry } from "@warden/core";
+} from "@stlw/warden";
+import type { PolicyConfig, LedgerStore, ContextStore, TaskToken } from "@stlw/warden";
+import type { TrustRegistry } from "@stlw/warden";
 import type { ApprovalChannel } from "../approvals/types";
 
 export function handlePreToolUse(

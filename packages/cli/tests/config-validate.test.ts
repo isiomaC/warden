@@ -133,7 +133,7 @@ describe("configValidateCommand", () => {
   it("does not call ConfigSource.verify (regression guard for the dead hash-check branch)", async () => {
     await withTmpCwd(async (dir) => {
       writeFileSync(join(dir, "warden.config.yml"), VALID_YAML);
-      const { FileConfigSource } = await import("@warden/core");
+      const { FileConfigSource } = await import("@stlw/warden");
       const verifySpy = vi.spyOn(FileConfigSource.prototype, "verify");
       vi.spyOn(process, "exit").mockImplementation(() => {
         throw new Error("EXIT");

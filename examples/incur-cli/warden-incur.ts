@@ -5,7 +5,7 @@
  *
  * This is NOT wired into the real `warden` binary — it's a side-by-side
  * spike proving out the migration described in ROADMAP.md. It reuses the
- * exact same @warden/core primitives as packages/cli/src/commands/{policy,audit,scan}.ts
+ * exact same @stlw/warden primitives as packages/cli/src/commands/{policy,audit,scan}.ts
  * so the only thing under test is the CLI framework layer.
  *
  * Try it:
@@ -28,8 +28,8 @@ import {
   MemoryLedgerStore,
   SqliteLedgerStore,
   TrustLevel,
-} from "@warden/core";
-import type { PolicyConfig } from "@warden/core";
+} from "@stlw/warden";
+import type { PolicyConfig } from "@stlw/warden";
 
 const TRUST_LEVELS = ["SYSTEM", "AGENT", "TOOL", "EXTERNAL"] as const;
 

@@ -19,7 +19,7 @@ assignees: ""
 - [ ] Claude Code (hook server)
 - [ ] Cursor / Windsurf / MCP-only agents (`warden proxy`)
 - [ ] OpenCode plugin
-- [ ] Programmatic (`@warden/core` / `@warden/mcp-gateway`)
+- [ ] Programmatic (`@stlw/warden` / `@stlw/warden-mcp-gateway`)
 - [ ] CLI
 
 ## Alternatives considered

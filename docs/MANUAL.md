@@ -35,7 +35,7 @@ Warden is a local tool that sits between your AI agent and your computer. Every 
 ### Install
 
 ```bash
-npm install -g @warden/cli
+npm install -g @stlw/warden-cli
 ```
 
 Verify:
@@ -170,8 +170,7 @@ reference — we confirmed by end-to-end testing against a real `claude -p` sess
 interpolation into hook headers did not work despite the CLI documenting a
 `httpHookAllowedEnvVars` allowlist for it (every placement we tried produced an empty header,
 which 401s every hook call rather than raising an error, so the failure is silent). A literal
-value in `.claude/settings.local.json` is the pattern that actually worked end to end; see
-[`docs/internal/e2e-plan.md`](internal/e2e-plan.md) for the full investigation.
+value in `.claude/settings.local.json` is the pattern that actually worked end to end.
 
 ### OpenCode
 
@@ -181,7 +180,7 @@ Download the plugin file from the Warden repo and copy it into your project:
 mkdir -p .opencode/plugins
 # Download from: https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts
 cp warden-plugin.ts .opencode/plugins/
-npm install @warden/core
+npm install @stlw/warden
 ```
 
 Add to `opencode.json`:
@@ -234,7 +233,6 @@ Press Ctrl+C to stop.
 > `warden start` and the shell running `claude`. There's no rotation mechanism; to rotate,
 > generate a new value, export it in both shells, and restart both processes. A bootstrapped
 > session has no vault-issued `allowedTools`/`allowedPaths` scoping — see
-> [`docs/internal/e2e-plan.md`](internal/e2e-plan.md) for the e2e verification steps.
 
 ### Run in background
 
@@ -346,6 +344,6 @@ warden reset --ledger                            # Start fresh
 ## 9. Uninstall
 
 ```bash
-npm uninstall -g @warden/cli
+npm uninstall -g @stlw/warden-cli
 rm -rf .warden/ warden.config.yml
 ```

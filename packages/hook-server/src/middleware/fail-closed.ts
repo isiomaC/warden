@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { WardenLogger } from "@warden/core";
+import type { WardenLogger } from "@stlw/warden";
 
 const HOOK_EVENT_NAMES_BY_PATH: Record<string, string> = {
   "/hooks/session-start": "SessionStart",

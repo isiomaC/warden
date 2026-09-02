@@ -7,7 +7,7 @@
  * Run: npx tsx examples/vault-tokens/index.ts
  */
 
-import { LocalVault } from "@warden/core";
+import { LocalVault } from "@stlw/warden";
 
 async function main() {
 

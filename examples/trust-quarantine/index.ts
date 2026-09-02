@@ -15,8 +15,8 @@ import {
   TrustRegistry,
   sanitizeExternalValues,
   MemoryLedgerStore,
-} from "@warden/core";
-import type { PolicyConfig } from "@warden/core";
+} from "@stlw/warden";
+import type { PolicyConfig } from "@stlw/warden";
 
 // Policy with QUARANTINE rule: EXTERNAL content cannot flow into write_file
 const config: PolicyConfig = {

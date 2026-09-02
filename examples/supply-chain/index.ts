@@ -8,7 +8,7 @@
  * Run: npx tsx examples/supply-chain/index.ts
  */
 
-import { checkSupplyChain } from "@warden/core";
+import { checkSupplyChain } from "@stlw/warden";
 
 console.log("=== Warden Supply Chain Verification ===\n");
 
