@@ -5,7 +5,7 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.1] - 2026-09-02
 
 ### Added
 
@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Published npm package tarballs now include their package-specific README files; CI verifies this before release.
 - Public package builds now resolve workspace dependencies through package exports instead of source aliases.
 - Core's emitted ESM uses explicit relative `.js` specifiers and runs directly in Node.
 
