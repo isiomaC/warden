@@ -333,8 +333,8 @@ env-var interpolation in hook headers did not work in our end-to-end testing aga
 but every configuration we tried (top-level, per-hook, user- and project-scoped settings)
 resulted in an empty header, silently 401ing every hook call. A literal value in
 `.claude/settings.local.json` is the pattern we verified actually works end to end; treat
-env-var interpolation as unconfirmed for now (see `docs/internal/e2e-plan.md` for the full
-investigation) and revisit if a future Claude Code release documents the working incantation.
+env-var interpolation as unconfirmed until a future Claude Code release documents the
+working incantation.
 
 **OpenCode — copy the plugin into your project:**
 
@@ -412,7 +412,6 @@ Press Ctrl+C to stop.
 > A bootstrapped session has no vault-issued scoping (no `allowedTools`/`allowedPaths`
 > restriction) — trust boundary is "knows the shared secret," not per-session scope. This
 > is the same trust level a caller gets by reaching `/hooks/session-start` at all. See
-> [`docs/internal/e2e-plan.md`](docs/internal/e2e-plan.md) for how to verify this end to end
 > with a real `claude -p` session.
 
 ### 5. Start coding
@@ -696,10 +695,8 @@ npx vitest run packages/opencode-plugin/tests/  # Plugin lifecycle tests
 | Document | What It Covers |
 |---|---|
 | [`docs/MANUAL.md`](docs/MANUAL.md) | Install, configure, run, verify, background daemons, troubleshooting |
-| [`docs/internal/DEPLOYMENT.md`](docs/internal/DEPLOYMENT.md) | Developer deployment: hook server, MCP gateway, daemon configs, production checklist |
 | [`docs/TESTING.md`](docs/TESTING.md) | Full test strategy: unit, integration (mock corpus), live Claude Code session, CI |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Local deployment architecture and the interfaces that make backends swappable |
-| [`docs/internal/ROADMAP.md`](docs/internal/ROADMAP.md) | Planned work and explicit non-goals |
 
 ---
 

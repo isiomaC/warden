@@ -93,4 +93,4 @@ What's swappable via the interfaces above:
 - How tokens are verified (`VaultAdapter`)
 - How task context is tracked (`ContextStore`)
 
-See `docs/internal/DEPLOYMENT.md` for how to actually run Warden, and `internal/ROADMAP.md` for planned work.
+See the public [manual](MANUAL.md) for installation and configuration details.
