@@ -25,7 +25,10 @@ try {
 
   run("npm", ["run", "build", "--workspace=packages/core"], { cwd: workspace });
   const packOutput = run("npm", ["pack", "--json", "--pack-destination", artifactDirectory], { cwd: coreDirectory, env: npmEnvironment });
-  const [packed] = JSON.parse(packOutput);
+  const packMetadata = JSON.parse(packOutput);
+  const packed = Array.isArray(packMetadata)
+    ? packMetadata[0]
+    : packMetadata["@stlw/warden"] ?? Object.values(packMetadata)[0];
   assert(packed && typeof packed.filename === "string" && Array.isArray(packed.files), "npm pack did not return filename/files metadata");
 
   const paths = packed.files.map((file) => file.path);
