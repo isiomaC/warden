@@ -54,30 +54,24 @@ jobs:
         run: cd packages/cli && npx tsc && cd ../..
 
       # ── Publish in dependency order ────────────────────────────────
+      # npm Trusted Publishing exchanges this job's OIDC identity for a
+      # short-lived publish credential. Do not add an NPM_TOKEN here.
 
       - name: Publish @stlw/warden
         run: npm publish --provenance --access public
         working-directory: packages/core
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @stlw/warden-hook-server
         run: npm publish --provenance --access public
         working-directory: packages/hook-server
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @stlw/warden-mcp-gateway
         run: npm publish --provenance --access public
         working-directory: packages/mcp-gateway
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @stlw/warden-cli
         run: npm publish --provenance --access public
         working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   docker:
     name: Publish Docker image to GHCR
