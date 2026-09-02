@@ -22,7 +22,10 @@ try {
       env: npmEnvironment,
       stdio: ["ignore", "pipe", "inherit"],
     });
-    const [packed] = JSON.parse(output);
+    const packMetadata = JSON.parse(output);
+    const packed = Array.isArray(packMetadata)
+      ? packMetadata[0]
+      : packMetadata[name] ?? Object.values(packMetadata)[0];
     if (!packed?.files?.some((file) => file.path === "README.md")) {
       throw new Error(`Packed ${name} is missing README.md`);
     }
