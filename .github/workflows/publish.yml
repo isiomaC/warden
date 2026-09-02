@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: '22'
           package-manager-cache: false
           # Do not set registry-url: setup-node would write an empty
           # _authToken entry that prevents npm from initiating its OIDC flow.
