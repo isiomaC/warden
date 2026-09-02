@@ -28,7 +28,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "verify:core-package": "node scripts/verify-core-package.mjs"
+    "verify:core-package": "node scripts/verify-core-package.mjs",
+    "verify:package-readmes": "node scripts/verify-package-readmes.mjs"
   },
   "overrides": {
     "incur": {

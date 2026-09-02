@@ -89,6 +89,9 @@ jobs:
       - name: Verify packed @stlw/warden consumer
         run: npm run verify:core-package
 
+      - name: Verify package READMEs
+        run: npm run verify:package-readmes
+
   docker-build:
     name: Docker Build Verification
     runs-on: ubuntu-latest
