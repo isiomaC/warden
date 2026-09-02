@@ -1,6 +1,6 @@
 {
   "name": "@stlw/warden-mcp-gateway",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MCP proxy gateway with policy enforcement, server allowlist, and lateral movement detection",
   "type": "module",
   "main": "./dist/src/gateway.js",
