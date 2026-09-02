@@ -19,15 +19,15 @@
     "rootDir": ".",
     "types": ["node", "vitest/globals"],
     "paths": {
-      "@warden/core": ["./packages/core/src/index.ts"],
-      "@warden/core/*": ["./packages/core/src/*"],
-      "@warden/hook-server": ["./packages/hook-server/src/server.ts"],
-      "@warden/hook-server/*": ["./packages/hook-server/src/*"],
-      "@warden/mcp-gateway": ["./packages/mcp-gateway/src/gateway.ts"],
-      "@warden/mcp-gateway/*": ["./packages/mcp-gateway/src/*"],
-      "@warden/cli": ["./packages/cli/src/index.ts"],
-      "@warden/cli/*": ["./packages/cli/src/*"],
-      "@warden/opencode-plugin": ["./packages/opencode-plugin/warden-plugin.ts"]
+      "@stlw/warden": ["./packages/core/src/index.ts"],
+      "@stlw/warden/*": ["./packages/core/src/*"],
+      "@stlw/warden-hook-server": ["./packages/hook-server/src/server.ts"],
+      "@stlw/warden-hook-server/*": ["./packages/hook-server/src/*"],
+      "@stlw/warden-mcp-gateway": ["./packages/mcp-gateway/src/gateway.ts"],
+      "@stlw/warden-mcp-gateway/*": ["./packages/mcp-gateway/src/*"],
+      "@stlw/warden-cli": ["./packages/cli/src/index.ts"],
+      "@stlw/warden-cli/*": ["./packages/cli/src/*"],
+      "@stlw/warden-opencode-plugin": ["./packages/opencode-plugin/warden-plugin.ts"]
     }
   },
   "include": ["packages/**/*.ts"],

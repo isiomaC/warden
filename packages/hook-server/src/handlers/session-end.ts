@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { VaultAdapter, LedgerStore, ContextStore } from "@warden/core";
+import type { VaultAdapter, LedgerStore, ContextStore } from "@stlw/warden";
 
 export function handleSessionEnd(
   vault: VaultAdapter,

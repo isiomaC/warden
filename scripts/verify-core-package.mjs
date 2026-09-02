@@ -30,7 +30,7 @@ try {
 
   const paths = packed.files.map((file) => file.path);
   for (const required of ["dist/src/index.js", "dist/src/index.d.ts", "LICENSE", "package.json"]) {
-    assert(paths.includes(required), `Packed @warden/core is missing ${required}`);
+    assert(paths.includes(required), `Packed @stlw/warden is missing ${required}`);
   }
   const unintended = paths.filter((path) =>
     path.startsWith("src/")
@@ -41,7 +41,7 @@ try {
     || path === "coverage"
     || path.startsWith("coverage/"),
   );
-  assert(unintended.length === 0, `Packed @warden/core contains unintended files: ${unintended.join(", ")}`);
+  assert(unintended.length === 0, `Packed @stlw/warden contains unintended files: ${unintended.join(", ")}`);
 
   const tarball = join(artifactDirectory, packed.filename);
   writeFileSync(join(fixtureDirectory, "package.json"), `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`);
@@ -52,7 +52,7 @@ try {
   writeFileSync(join(fixtureDirectory, "consumer.ts"), `import {
   AuditChain, createApprovalRequest, createWarden, definePolicy, resolveApproval, verifyAuditChain,
   type EvaluationRequest, type WardenExtension,
-} from "@warden/core";
+} from "@stlw/warden";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -92,7 +92,7 @@ assert(resolved.status === "APPROVED", "expected approved request");
   run(process.execPath, [compiler, "--project", "tsconfig.json", "--noEmit", "false", "--outDir", "compiled"], { cwd: fixtureDirectory });
   run(process.execPath, [join(fixtureDirectory, "compiled", "consumer.js")], { cwd: fixtureDirectory });
 
-  console.log(`Verified packed @warden/core consumer: ${packed.filename}`);
+  console.log(`Verified packed @stlw/warden consumer: ${packed.filename}`);
 } finally {
   rmSync(temporaryDirectory, { recursive: true, force: true });
   rmSync(join(coreDirectory, "dist"), { recursive: true, force: true });

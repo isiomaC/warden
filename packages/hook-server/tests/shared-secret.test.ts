@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createHookServer } from "../src/server";
-import type { PolicyConfig } from "@warden/core";
+import type { PolicyConfig } from "@stlw/warden";
 
 const config: PolicyConfig = {
   version: "2",

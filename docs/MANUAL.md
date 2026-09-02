@@ -35,7 +35,7 @@ Warden is a local tool that sits between your AI agent and your computer. Every 
 ### Install
 
 ```bash
-npm install -g @warden/cli
+npm install -g @stlw/warden-cli
 ```
 
 Verify:
@@ -181,7 +181,7 @@ Download the plugin file from the Warden repo and copy it into your project:
 mkdir -p .opencode/plugins
 # Download from: https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts
 cp warden-plugin.ts .opencode/plugins/
-npm install @warden/core
+npm install @stlw/warden
 ```
 
 Add to `opencode.json`:
@@ -346,6 +346,6 @@ warden reset --ledger                            # Start fresh
 ## 9. Uninstall
 
 ```bash
-npm uninstall -g @warden/cli
+npm uninstall -g @stlw/warden-cli
 rm -rf .warden/ warden.config.yml
 ```

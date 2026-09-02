@@ -1,6 +1,6 @@
 # Embedding Warden
 
-Import `createWarden` and `definePolicy` from `@warden/core`. The core package
+Import `createWarden` and `definePolicy` from `@stlw/warden`. The core package
 does not start a server. An evaluation request supplies arbitrary typed
 `subject`, `action`, `resource`, and optional `context` values.
 
@@ -24,7 +24,7 @@ storage-neutral `verifyAuditChain()` function to verify exported entries.
 Persisted ledgers can construct their next entry without loading the full chain:
 
 ```typescript
-import { createAuditEntry } from "@warden/core";
+import { createAuditEntry } from "@stlw/warden";
 
 const entry = createAuditEntry(event, persistedChainHeadHash);
 ```

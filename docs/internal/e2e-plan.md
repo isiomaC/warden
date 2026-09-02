@@ -215,10 +215,10 @@ no change.
 
 **Known gotcha hit while doing this testing, worth flagging for whoever
 re-runs Step 0 next:** `warden start`, run via `npx tsx packages/cli/src/bin.ts
-start` from a directory **outside** this repo, resolves `@warden/hook-server`
+start` from a directory **outside** this repo, resolves `@stlw/warden-hook-server`
 via that package's `package.json` `exports` field — i.e. its **pre-built
 `dist/`** — not live source, because `tsx` only picks up this repo's root
-`tsconfig.json` `paths` overrides (which point `@warden/hook-server` at
+`tsconfig.json` `paths` overrides (which point `@stlw/warden-hook-server` at
 `src/server.ts`) when a tsconfig.json is discoverable from the current
 working directory. Testing hook-server source changes from a tmp/scratch
 directory will silently run stale `dist/` output unless you `npm run build`

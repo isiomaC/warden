@@ -24,7 +24,7 @@ pointers to detailed reports.
 
 ## Live e2e Findings
 
-1. **OpenCode plugin enforcement CONFIRMED** — `opencode run` with `@warden/opencode-plugin` blocks unauthorized tools with `Warden BLOCKED` errors
+1. **OpenCode plugin enforcement CONFIRMED** — `opencode run` with `@stlw/warden-opencode-plugin` blocks unauthorized tools with `Warden BLOCKED` errors
 2. **Claude Code headless CONFIRMED** — `claude -p` fires PreToolUse/PostToolUse hooks when using `--output-format stream-json --include-hook-events --verbose`
 3. **`warden proxy` wire protocol CONFIRMED** — spawned process, `tools/list` + `tools/call` over stdio JSON-RPC, ALLOW/DENY enforced
 4. **`--auto-approve` flag added** — `warden start --auto-approve` uses `AutoApproveApprovalChannel` to auto-approve all CONFIRM prompts
@@ -53,7 +53,7 @@ pointers to detailed reports.
 | A — CLI | `warden init`, `audit`, `start`, `proxy`, `policy`, `scan`, `reset`, `config-validate`, `supply-chain` | Phase 3 |
 | B — MCP | `warden proxy` — tools/list, tools/call over stdio JSON-RPC | Phase 2 |
 | C1 — Claude Code | `claude -p` headless with HTTP hooks → `warden start` | Phase 1 |
-| C2 — OpenCode | `opencode run` with `@warden/opencode-plugin` loaded | Phase 1 |
+| C2 — OpenCode | `opencode run` with `@stlw/warden-opencode-plugin` loaded | Phase 1 |
 | E — Core | `packages/core/tests/` unit tests + `packages/hook-server/tests/` integration | Layer 1 + 2 |
 | F — Telegram | `TelegramApprovalChannel` — real bot, real button clicks, CONFIRM flow | Approval channels |
 
@@ -75,7 +75,7 @@ pointers to detailed reports.
 
 ## Known Gaps
 
-- **`@warden/core` must be built** for opencode plugin — source imports don't resolve in opencode's runtime. `npm run build --workspace=packages/core` required before plugin testing.
+- **`@stlw/warden` must be built** for opencode plugin — source imports don't resolve in opencode's runtime. `npm run build --workspace=packages/core` required before plugin testing.
 
 ## Quick Links
 

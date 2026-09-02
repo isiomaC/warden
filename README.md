@@ -1,7 +1,7 @@
 # Warden
 
 [![CI](https://github.com/isiomaC/warden/actions/workflows/ci.yml/badge.svg)](https://github.com/isiomaC/warden/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@warden/core)](https://www.npmjs.com/package/@warden/core)
+[![npm](https://img.shields.io/npm/v/@stlw/warden)](https://www.npmjs.com/package/@stlw/warden)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **The policy layer for autonomous agents. Full permissions, zero blast radius.**
@@ -11,7 +11,7 @@ tool governance remain supported compatibility integrations; generic consumers
 do not need to start either the hook server or MCP gateway.
 
 ```typescript
-import { createWarden, definePolicy } from "@warden/core";
+import { createWarden, definePolicy } from "@stlw/warden";
 
 const warden = createWarden({
   extensions: [{
@@ -112,10 +112,10 @@ Then add to `opencode.json`:
 }
 ```
 
-The plugin requires `@warden/core` to be installed in your project:
+The plugin requires `@stlw/warden` to be installed in your project:
 
 ```bash
-npm install @warden/core
+npm install @stlw/warden
 ```
 
 Get the latest plugin file from: `https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts`
@@ -148,7 +148,7 @@ Add Warden to your Copilot extension's `agent.json`:
 Hook handler (`warden-copilot.js`):
 
 ```javascript
-import { evaluate, MemoryLedgerStore, ContextManager } from "@warden/core";
+import { evaluate, MemoryLedgerStore, ContextManager } from "@stlw/warden";
 
 const ledger = new MemoryLedgerStore();
 const ctx = new ContextManager();
@@ -172,7 +172,7 @@ export async function onPreToolUse(event) {
 
 export async function onUserPromptSubmitted(event) {
   // Scan for injection patterns
-  const { scanForInjection } = await import("@warden/core");
+  const { scanForInjection } = await import("@stlw/warden");
   const result = scanForInjection(event.prompt, 0 /* EXTERNAL */);
   if (!result.clean) throw new Error("Injection detected");
 }
@@ -190,7 +190,7 @@ codex hooks set pre-tool-use --command "npx tsx warden-codex-hook.ts"
 Hook script (`warden-codex-hook.ts`):
 
 ```typescript
-import { evaluate, MemoryLedgerStore } from "@warden/core";
+import { evaluate, MemoryLedgerStore } from "@stlw/warden";
 
 const ledger = new MemoryLedgerStore();
 
@@ -257,7 +257,7 @@ Agent Tool Call → warden proxy (stdio MCP server) → ALLOW / DENY
 
 #### Testing `warden proxy` manually
 
-After installing (`npm install -g @warden/cli`), you can drive the proxy over stdin just like any MCP client would:
+After installing (`npm install -g @stlw/warden-cli`), you can drive the proxy over stdin just like any MCP client would:
 
 ```bash
 # List all tools exposed through your warden.config.yml
@@ -293,7 +293,7 @@ No built-in hook or MCP support. Options:
 ### 1. Install
 
 ```bash
-npm install -g @warden/cli
+npm install -g @stlw/warden-cli
 ```
 
 ### 2. Initialize Warden in your project
@@ -342,7 +342,7 @@ investigation) and revisit if a future Claude Code release documents the working
 mkdir -p .opencode/plugins
 # Download from: https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts
 cp warden-plugin.ts .opencode/plugins/
-npm install @warden/core
+npm install @stlw/warden
 ```
 
 Then add to `opencode.json`:
@@ -618,7 +618,7 @@ warden/
 
 Three ways to put Warden in the path of tool calls — choose based on your agent:
 
-| | `warden start` (hook server) | `warden proxy` (MCP stdio) | `@warden/mcp-gateway` (library) |
+| | `warden start` (hook server) | `warden proxy` (MCP stdio) | `@stlw/warden-mcp-gateway` (library) |
 |---|---|---|---|
 | **What it is** | HTTP server on `localhost:7429` | CLI command — stdio MCP server process | TypeScript library, no transport |
 | **Who uses it** | Claude Code | Cursor, Windsurf, Continue.dev | Custom agent integrations |
@@ -631,7 +631,7 @@ Three ways to put Warden in the path of tool calls — choose based on your agen
 **Rule of thumb:**
 - Using Claude Code → `warden start`
 - Using Cursor / Windsurf / any MCP-only agent → `warden proxy`
-- Building a custom agent in TypeScript → `@warden/mcp-gateway`
+- Building a custom agent in TypeScript → `@stlw/warden-mcp-gateway`
 
 ---
 
@@ -653,8 +653,8 @@ Three ways to put Warden in the path of tool calls — choose based on your agen
 ## Programmatic Usage
 
 ```typescript
-import { WardenGateway, MCPRegistry } from "@warden/mcp-gateway";
-import { MemoryLedgerStore, ContextManager, TrustLevel } from "@warden/core";
+import { WardenGateway, MCPRegistry } from "@stlw/warden-mcp-gateway";
+import { MemoryLedgerStore, ContextManager, TrustLevel } from "@stlw/warden";
 
 const gateway = new WardenGateway({
   config: myConfig,

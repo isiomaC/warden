@@ -1,7 +1,7 @@
 # Surface C2 — OpenCode Plugin Headless
 
 Date: 2026-07-10
-Status: **PASS** — Real `opencode run` with `@warden/opencode-plugin` confirmed enforcing policy
+Status: **PASS** — Real `opencode run` with `@stlw/warden-opencode-plugin` confirmed enforcing policy
 
 ## Step 0 — Gate Check (RESOLVED)
 
@@ -11,7 +11,7 @@ Setup:
 1. Copy `packages/opencode-plugin/warden-plugin.ts` → project's `.opencode/plugins/`
 2. Add `"plugin": ["./.opencode/plugins/warden-plugin.ts"]` to `opencode.json`
 3. Ensure `warden.config.yml` exists in project root
-4. Build `packages/core` first (`npm run build --workspace=packages/core` — the plugin needs `@warden/core` dist files to resolve)
+4. Build `packages/core` first (`npm run build --workspace=packages/core` — the plugin needs `@stlw/warden` dist files to resolve)
 
 ## Prerequisites Met
 
@@ -66,14 +66,14 @@ These call the plugin's hook functions directly — all 17 pass:
 
 ## Blockers / Known Issues
 
-1. **`@warden/core` must be built** — the plugin imports from `@warden/core` which needs compiled dist files. Raw TypeScript imports don't resolve in opencode's runtime.
-2. **Plugin resolution outside workspace** — the plugin only works when `@warden/core` is in `node_modules`. For standalone projects, core needs to be published to npm or linked.
+1. **`@stlw/warden` must be built** — the plugin imports from `@stlw/warden` which needs compiled dist files. Raw TypeScript imports don't resolve in opencode's runtime.
+2. **Plugin resolution outside workspace** — the plugin only works when `@stlw/warden` is in `node_modules`. For standalone projects, core needs to be published to npm or linked.
 3. **`tui.prompt.append` hook visibility** — in `--format json` mode, hook errors may not be visible in output. Need to investigate.
 4. **EZLEAD offset** — the `block-rmrf` policy didn't match by name (showed "Default deny" instead of specific rule). The input pattern matching needs investigation.
 
 ## Where to run tests
 
-Tests must run from within the warden workspace (or anywhere `@warden/core` is resolvable):
+Tests must run from within the warden workspace (or anywhere `@stlw/warden` is resolvable):
 
 ```bash
 cd /path/to/warden

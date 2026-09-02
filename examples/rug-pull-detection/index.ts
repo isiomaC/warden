@@ -7,8 +7,8 @@
  * Run: npx tsx examples/rug-pull-detection/index.ts
  */
 
-import { pinToolDescriptions, verifyToolPin, sha256, SecurityError } from "@warden/core";
-import type { ToolPin } from "@warden/core";
+import { pinToolDescriptions, verifyToolPin, sha256, SecurityError } from "@stlw/warden";
+import type { ToolPin } from "@stlw/warden";
 
 async function main() {
 

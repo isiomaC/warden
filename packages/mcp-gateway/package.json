@@ -1,5 +1,5 @@
 {
-  "name": "@warden/mcp-gateway",
+  "name": "@stlw/warden-mcp-gateway",
   "version": "0.2.0",
   "description": "MCP proxy gateway with policy enforcement, server allowlist, and lateral movement detection",
   "type": "module",
@@ -39,7 +39,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@warden/core": "^0.2.0",
-    "@warden/hook-server": "^0.2.0"
+    "@stlw/warden": "^0.2.0",
+    "@stlw/warden-hook-server": "^0.2.0"
   }
 }

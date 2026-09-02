@@ -8,7 +8,7 @@
  * Run twice to see persistence across restarts.
  */
 
-import { SqliteLedgerStore, MemoryLedgerStore, TrustLevel } from "@warden/core";
+import { SqliteLedgerStore, MemoryLedgerStore, TrustLevel } from "@stlw/warden";
 import { existsSync, unlinkSync } from "node:fs";
 
 const DB_PATH = ".warden/example-ledger.db";

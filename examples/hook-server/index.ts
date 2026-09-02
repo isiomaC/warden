@@ -10,7 +10,7 @@
  *   curl -s -X POST http://localhost:7429/hooks/session-start -H 'Content-Type: application/json' -d '{"session_id":"demo","allowedTools":["read_file","Bash"]}'
  */
 
-import { createHookServer, startHookServer } from "@warden/hook-server";
+import { createHookServer, startHookServer } from "@stlw/warden-hook-server";
 
 const PORT = 7429;
 

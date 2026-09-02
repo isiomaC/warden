@@ -11,7 +11,7 @@
 import {
   StdoutApprovalChannel,
   TelegramApprovalChannel,
-} from "@warden/hook-server";
+} from "@stlw/warden-hook-server";
 
 const approvalRequest = {
   tool: "delete_file",

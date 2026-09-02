@@ -21,7 +21,7 @@ OpenCode, Codex CLI, Copilot SDK). This is the only tier with full
 enforcement + ledger audit today (per README's tier table); `warden proxy`
 (Tier 2: Cursor/Windsurf) is out of scope until its transparent-forwarding
 rewrite (tracked in ROADMAP.md) lands, since instrumenting it now would be
-thrown away. `@warden/mcp-gateway` (Tier 3) is likewise out of scope — no UI
+thrown away. `@stlw/warden-mcp-gateway` (Tier 3) is likewise out of scope — no UI
 work planned for library consumers' custom integrations.
 
 **Two subsystems inside `@openuidev/*`, only one of which Phases 0-2 need:**
@@ -209,7 +209,7 @@ viewing. **This is the phase that actually needs `@openuidev/react-ui` +
 - [ ] Enforce the guardrail above in code, not just docs: the query
       endpoint's handler should have no import path to `evaluate()`,
       `LedgerStore.write()`, or any `ApprovalChannel` — a read-only client of
-      `@warden/core`'s exported types only
+      `@stlw/warden`'s exported types only
 
 **Exit criteria:** This becomes the primary demo surface for the
 prompt-injection / deny-wins credibility demo (GTM asset).
@@ -237,7 +237,7 @@ Not blocking Warden ship, but sequence after Phase 2 stabilizes:
   `ledger.ts` are untouched by this plan. The one real core-package change is
   additive (`ruleId` on `PolicyDecision`, Phase 1.5) — everything else lives
   in `packages/hook-server` and the new Console app.
-- Tier 2 (`warden proxy`) and Tier 3 (`@warden/mcp-gateway`) get no Console
+- Tier 2 (`warden proxy`) and Tier 3 (`@stlw/warden-mcp-gateway`) get no Console
   wiring in this plan. Revisit once the transparent-forwarding proxy rewrite
   (ROADMAP.md, "Near term") lands — instrumenting `proxy.ts` before that
   rewrite would be thrown away.

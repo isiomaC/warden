@@ -8,13 +8,13 @@ import {
   WardenLogger,
   LogLevel,
   parseLogLevel,
-} from "@warden/core";
+} from "@stlw/warden";
 import type {
   PolicyConfig,
   LedgerStore,
   VaultAdapter,
   ContextStore,
-} from "@warden/core";
+} from "@stlw/warden";
 import { authMiddleware } from "./middleware/auth";
 import { sharedSecretMiddleware } from "./middleware/shared-secret";
 import { failClosedHandler } from "./middleware/fail-closed";

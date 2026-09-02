@@ -10,21 +10,21 @@ How to deploy every package and service for Warden on an MCP-connected agent set
 
 | Package | npm Name | Role |
 |---|---|---|
-| `packages/core/` | `@warden/core` | Pure enforcement logic: trust tagger, policy engine, hash-chained ledger, vault, context isolation, injection scanner, tool pins, supply chain, redaction. Zero runtime deps beyond ulid + better-sqlite3. |
-| `packages/hook-server/` | `@warden/hook-server` | HTTP hook server (Hono on localhost:7429) for Claude Code. Handles all 6 hook events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, ConfigChange, SessionEnd. Includes approval channels (stdout, telegram, slack). |
-| `packages/mcp-gateway/` | `@warden/mcp-gateway` | Programmatic MCP wrapper. Provides `WardenGateway.wrapMCP()` to add policy enforcement to any MCP server connection. Includes registry (allowlist), OAuth 2.1 token management, and lateral movement detection. |
-| `packages/cli/` | `@warden/cli` | Developer CLI (citty). Commands: `init`, `start`, `audit`, `policy`, `scan`, `supply-chain`, `config-validate`, `reset`. |
+| `packages/core/` | `@stlw/warden` | Pure enforcement logic: trust tagger, policy engine, hash-chained ledger, vault, context isolation, injection scanner, tool pins, supply chain, redaction. Zero runtime deps beyond ulid + better-sqlite3. |
+| `packages/hook-server/` | `@stlw/warden-hook-server` | HTTP hook server (Hono on localhost:7429) for Claude Code. Handles all 6 hook events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, ConfigChange, SessionEnd. Includes approval channels (stdout, telegram, slack). |
+| `packages/mcp-gateway/` | `@stlw/warden-mcp-gateway` | Programmatic MCP wrapper. Provides `WardenGateway.wrapMCP()` to add policy enforcement to any MCP server connection. Includes registry (allowlist), OAuth 2.1 token management, and lateral movement detection. |
+| `packages/cli/` | `@stlw/warden-cli` | Developer CLI (citty). Commands: `init`, `start`, `audit`, `policy`, `scan`, `supply-chain`, `config-validate`, `reset`. |
 
 ### Dependency Graph
 
 ```
-@warden/cli
-  ├── @warden/hook-server
-  │     └── @warden/core
-  └── @warden/core
+@stlw/warden-cli
+  ├── @stlw/warden-hook-server
+  │     └── @stlw/warden
+  └── @stlw/warden
 
-@warden/mcp-gateway
-  └── @warden/core
+@stlw/warden-mcp-gateway
+  └── @stlw/warden
 ```
 
 **Build order (must follow this sequence):**
@@ -218,7 +218,7 @@ All channels respect a **60-second hard cap**. After timeout, the decision is au
 ### Programmatic Usage
 
 ```typescript
-import { createHookServer } from "@warden/hook-server";
+import { createHookServer } from "@stlw/warden-hook-server";
 
 const { app, fetch, vault, ledger, contextManager } = createHookServer({
   config,              // PolicyConfig from warden.config.yml
@@ -370,7 +370,7 @@ The hook server can be configured for verbose development logging:
 
 ```typescript
 // In your own start script or test harness:
-import { createHookServer } from "@warden/hook-server";
+import { createHookServer } from "@stlw/warden-hook-server";
 
 const { app } = createHookServer({
   config,
@@ -402,7 +402,7 @@ ledger:
   retentionDays: 7                 # Shorter retention for dev
 
 # NOTE: the threatDetection block below is parsed but not currently wired into
-# `warden start` — lateralMovement is enforced by @warden/mcp-gateway when used
+# `warden start` — lateralMovement is enforced by @stlw/warden-mcp-gateway when used
 # programmatically, but toolDescriptionPinning/rugPullDetection have no implementation
 # yet (see ROADMAP.md). Included here to show the intended shape, not a working example.
 threatDetection:
@@ -574,10 +574,10 @@ The monorepo uses npm workspaces. Four packages will be linked:
 
 ```
 warden/
-├── packages/core/         @warden/core
-├── packages/hook-server/  @warden/hook-server
-├── packages/mcp-gateway/  @warden/mcp-gateway
-└── packages/cli/          @warden/cli
+├── packages/core/         @stlw/warden
+├── packages/hook-server/  @stlw/warden-hook-server
+├── packages/mcp-gateway/  @stlw/warden-mcp-gateway
+└── packages/cli/          @stlw/warden-cli
 ```
 
 ---
@@ -697,7 +697,7 @@ The hook server runs on `localhost:7429` and handles all Claude Code hook events
 ### Option A: Programmatic (embedded in your app)
 
 ```typescript
-import { createHookServer } from "@warden/hook-server";
+import { createHookServer } from "@stlw/warden-hook-server";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -712,7 +712,7 @@ export default server;
 ### Option B: Standalone Bun server
 
 ```typescript
-import { startHookServer } from "@warden/hook-server";
+import { startHookServer } from "@stlw/warden-hook-server";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -727,7 +727,7 @@ console.log(`Warden hook server running on http://localhost:${server.port}`);
 
 ```typescript
 import { createServer } from "node:http";
-import { createHookServer } from "@warden/hook-server";
+import { createHookServer } from "@stlw/warden-hook-server";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -843,14 +843,14 @@ Add Warden hooks to `.claude/settings.json`:
 The MCP gateway wraps MCP server connections with policy enforcement.
 
 ```typescript
-import { WardenGateway } from "@warden/mcp-gateway";
-import { MCPRegistry } from "@warden/mcp-gateway";
+import { WardenGateway } from "@stlw/warden-mcp-gateway";
+import { MCPRegistry } from "@stlw/warden-mcp-gateway";
 import {
   MemoryLedgerStore,
   LocalVault,
   ContextManager,
   TrustLevel,
-} from "@warden/core";
+} from "@stlw/warden";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
@@ -965,7 +965,7 @@ your-project/
 │   ├── ledger.db              # SQLite ledger (gitignored)
 │   └── pins.json              # Supply-chain package pins (commit this)
 ├── warden.config.yml          # Policy configuration (commit this)
-└── package.json               # Should include @warden/* as deps
+└── package.json               # Should include @stlw/warden* as deps
 ```
 
 ---

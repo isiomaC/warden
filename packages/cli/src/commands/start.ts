@@ -5,10 +5,10 @@ import {
   createHookServer,
   AutoApproveApprovalChannel,
   TelegramApprovalChannel,
-} from "@warden/hook-server";
-import { FileConfigSource } from "@warden/core";
-import type { ApprovalChannelConfig, PolicyConfig } from "@warden/core";
-import type { ApprovalChannel } from "@warden/hook-server";
+} from "@stlw/warden-hook-server";
+import { FileConfigSource } from "@stlw/warden";
+import type { ApprovalChannelConfig, PolicyConfig } from "@stlw/warden";
+import type { ApprovalChannel } from "@stlw/warden-hook-server";
 import { resolveRuntimeConfig } from "../runtime-config";
 import type { RuntimeConfig } from "../runtime-config";
 

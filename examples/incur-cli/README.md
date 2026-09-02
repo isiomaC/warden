@@ -2,7 +2,7 @@
 
 A spike proving out the `citty` → [`incur`](https://github.com/wevm/incur) migration
 tracked in [ROADMAP.md](../../docs/internal/ROADMAP.md). `warden-incur.ts` reimplements three real
-`packages/cli` commands (`policy`, `scan`, `audit`) against the same `@warden/core`
+`packages/cli` commands (`policy`, `scan`, `audit`) against the same `@stlw/warden`
 primitives (`evaluate`, `scanForInjection`, `MemoryLedgerStore`/`SqliteLedgerStore`) —
 only the CLI framework changes, not the enforcement logic.
 
@@ -12,7 +12,7 @@ Every claim below was run against `incur@0.4.10`, not assumed from the README.
 
 ```bash
 npm install   # incur is already a root devDependency + npm override, see below
-npm run build --workspace=packages/core   # warden-incur.ts imports @warden/core
+npm run build --workspace=packages/core   # warden-incur.ts imports @stlw/warden
 ```
 
 > **Known issue found during this spike:** incur's `package.json` depends on

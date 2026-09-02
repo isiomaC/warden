@@ -25,7 +25,7 @@ All 6 surfaces (A-F) tested. 359/359 tests pass, 0 failures.
 
 ### OpenCode plugin enforcement CONFIRMED
 
-- `opencode run` with `@warden/opencode-plugin` blocks unauthorized tools with `Warden BLOCKED` errors
+- `opencode run` with `@stlw/warden-opencode-plugin` blocks unauthorized tools with `Warden BLOCKED` errors
 - `read` ALLOWed by policy — confirmed
 - 17 in-process plugin tests + 5 live `opencode run` scenarios
 - Prompts injection blocked (S4 — LLM safety + Warden hook both active)
@@ -52,7 +52,7 @@ All 6 surfaces (A-F) tested. 359/359 tests pass, 0 failures.
 |---|---|---|
 | Add `AutoApproveApprovalChannel` | `packages/hook-server/src/approvals/types.ts:57-61` | Auto-approve all CONFIRM prompts |
 | Export it | `packages/hook-server/src/approvals/index.ts:3` | Available to consumers |
-| Re-export from server | `packages/hook-server/src/server.ts:29-30` | Accessible via `@warden/hook-server` |
+| Re-export from server | `packages/hook-server/src/server.ts:29-30` | Accessible via `@stlw/warden-hook-server` |
 | Add `--auto-approve` flag | `packages/cli/src/commands/start.ts:32-36,61-63` | CLI flag for headless CONFIRM testing |
 | **QUARANTINE: allow trust downgrade** | `packages/core/src/trust-registry.ts:27-49` | Changed first-write-wins to allow TOOL→EXTERNAL downgrade |
 | **QUARANTINE: scan output + register EXTERNAL** | `packages/hook-server/src/handlers/post-tool-use.ts:61-78` | Scan tool output for injection patterns, register as EXTERNAL with field-level granularity |
@@ -66,7 +66,7 @@ All 6 surfaces (A-F) tested. 359/359 tests pass, 0 failures.
 
 - **CONFIRM approval channels from YAML not wired** — `--auto-approve` CLI flag is the workaround.
 - **CLI argv parsing layer** — `policy`, `scan`, `reset`, `config-validate`, `supply-chain` only tested in-process, citty argv parsing layer untested.
-- **OpenCode plugin needs `@warden/core` built** — source resolution not supported in opencode's runtime.
+- **OpenCode plugin needs `@stlw/warden` built** — source resolution not supported in opencode's runtime.
 - **`tui.prompt.append` hook visibility** — in `--format json` mode, hook errors may not be visible in output.
 
 ## Next session
@@ -74,7 +74,7 @@ All 6 surfaces (A-F) tested. 359/359 tests pass, 0 failures.
 1. Wire CONFIRM approval channels from YAML config into `warden start`
 2. Add spawned CLI tests for `policy`, `scan`, `reset`, `config-validate`, `supply-chain` (citty argv parsing layer)
 3. Investigate `tui.prompt.append` hook visibility in `opencode run --format json` mode
-4. Publish `@warden/core` to npm for standalone plugin usage (or implement bundled plugin)
+4. Publish `@stlw/warden` to npm for standalone plugin usage (or implement bundled plugin)
 5. Investigate `block-rmrf` policy naming issue with input pattern matching
 
 ## Coverage Summary
@@ -84,6 +84,6 @@ All 6 surfaces (A-F) tested. 359/359 tests pass, 0 failures.
 | A — CLI | `warden init`, `audit`, `start`, `proxy`, `policy`, `scan`, `reset`, `config-validate`, `supply-chain` | PASS |
 | B — MCP | `warden proxy` — tools/list, tools/call over stdio JSON-RPC | PASS |
 | C1 — Claude Code | `claude -p` headless with HTTP hooks → `warden start` | PASS |
-| C2 — OpenCode | `opencode run` with `@warden/opencode-plugin` loaded | PASS |
+| C2 — OpenCode | `opencode run` with `@stlw/warden-opencode-plugin` loaded | PASS |
 | E — Core | `packages/core/tests/` unit tests + `packages/hook-server/tests/` integration (359/359) | PASS |
 | F — Telegram | `TelegramApprovalChannel` — real bot, real button clicks, CONFIRM flow | PASS |

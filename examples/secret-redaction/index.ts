@@ -11,7 +11,7 @@
  * Run: npx tsx examples/secret-redaction/index.ts
  */
 
-import { redactSecrets, hasSecrets } from "@warden/core";
+import { redactSecrets, hasSecrets } from "@stlw/warden";
 
 // Build fake tokens via concatenation to avoid GitHub push protection false positives
 const OPENAI_KEY = "sk-" + "proj-example-placeholder-fake-key-12345";

@@ -13,16 +13,16 @@ import {
   WardenLogger,
   parseLogLevel,
   generateId,
-} from "@warden/core";
+} from "@stlw/warden";
 import type {
   PolicyConfig,
   LedgerStore,
   ContextStore,
   PolicyDecision,
   RateLimiterConfig,
-} from "@warden/core";
-import { TrustLevel as TL } from "@warden/core";
-import type { ApprovalChannel } from "@warden/hook-server";
+} from "@stlw/warden";
+import { TrustLevel as TL } from "@stlw/warden";
+import type { ApprovalChannel } from "@stlw/warden-hook-server";
 
 export interface WardenGatewayOptions {
   config: PolicyConfig;

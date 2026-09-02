@@ -10,7 +10,7 @@
 // Setup:
 //   1. Copy this file to .opencode/plugins/warden-plugin.ts in your project
 //   2. Add { "plugin": [".opencode/plugins/warden-plugin.ts"] } to opencode.json
-//   3. npm install @warden/core
+//   3. npm install @stlw/warden
 //   4. Run `warden init` to create warden.config.yml (or write one manually)
 //
 // Latest version: https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts
@@ -27,8 +27,8 @@ import {
   scanForInjection,
   TrustLevel,
   generateId,
-} from "@warden/core";
-import type { PolicyConfig, PolicyDecision, LedgerStore } from "@warden/core";
+} from "@stlw/warden";
+import type { PolicyConfig, PolicyDecision, LedgerStore } from "@stlw/warden";
 
 const DEFAULT_CONFIG: PolicyConfig = {
   version: "2",
