@@ -1,6 +1,6 @@
 {
   "name": "@stlw/warden-hook-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "HTTP hook server for Claude Code, Codex CLI, and Copilot SDK integration",
   "type": "module",
   "main": "./dist/src/server.js",
@@ -13,7 +13,8 @@
   },
   "files": [
     "dist",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -39,7 +40,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@stlw/warden": "^0.2.0",
+    "@stlw/warden": "^0.2.1",
     "hono": "^4.13.0",
     "grammy": "^1.32.0"
   }

@@ -1,6 +1,6 @@
 {
   "name": "@stlw/warden",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Deterministic policy engine for autonomous agent tool enforcement",
   "type": "module",
   "main": "./dist/src/index.js",
@@ -14,7 +14,8 @@
   "files": [
     "dist",
     "!dist/**/*.tsbuildinfo",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",

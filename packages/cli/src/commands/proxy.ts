@@ -120,7 +120,7 @@ export const proxyCommand = defineCommand({
     const allTools: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> = [];
 
     for (const entry of serverEntries) {
-      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.0" });
+      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.1" });
       if (entry.transport === "stdio") {
         if (!entry.command) {
           throw new Error(`MCP server "${entry.name}" uses stdio but has no command.`);
@@ -168,7 +168,7 @@ export const proxyCommand = defineCommand({
     }
 
     const mcpServer = new Server(
-      { name: "warden-proxy", version: "0.2.0" },
+      { name: "warden-proxy", version: "0.2.1" },
       { capabilities: { tools: {} } },
     );
 

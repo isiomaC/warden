@@ -36,6 +36,9 @@ jobs:
       - name: Verify packed @stlw/warden consumer
         run: npm run verify:core-package
 
+      - name: Verify package READMEs
+        run: npm run verify:package-readmes
+
       # ── Build in dependency order ──────────────────────────────────
 
       - name: Build @stlw/warden
