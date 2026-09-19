@@ -1,0 +1,19 @@
+{
+  "name": "warden-codex",
+  "version": "0.2.2",
+  "description": "Local, fail-closed policy enforcement for Codex.",
+  "author": {
+    "name": "Stalewell"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Warden Codex",
+    "shortDescription": "Protect Codex tool use with local Warden policies.",
+    "longDescription": "Adds a local, deterministic Warden policy layer to Codex tools and MCP servers.",
+    "developerName": "Stalewell",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me verify my Warden policy."
+  },
+  "mcpServers": "./.mcp.json"
+}

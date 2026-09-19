@@ -43,9 +43,9 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@stlw/warden": "^0.2.1",
-    "@stlw/warden-hook-server": "^0.2.1",
-    "@stlw/warden-mcp-gateway": "^0.2.1",
+    "@stlw/warden": "^0.2.2",
+    "@stlw/warden-hook-server": "^0.2.2",
+    "@stlw/warden-mcp-gateway": "^0.2.2",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "citty": "^0.1.6"
   }

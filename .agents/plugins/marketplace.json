@@ -1,0 +1,20 @@
+{
+  "name": "stalewell",
+  "interface": {
+    "displayName": "Stalewell"
+  },
+  "plugins": [
+    {
+      "name": "warden-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/warden-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Security"
+    }
+  ]
+}
