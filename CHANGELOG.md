@@ -5,6 +5,27 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-09-20
+
+### Added
+
+- `warden-codex`, an installable Codex plugin distributed through the Stalewell
+  marketplace entry. It registers Warden's version-pinned MCP proxy, provides
+  Codex lifecycle hooks for native tools, and includes a focused policy skill.
+
+### Security
+
+- Codex `PreToolUse` enforcement fails closed: malformed input or an
+  unavailable local Warden hook server returns a deny result rather than
+  bypassing policy evaluation.
+
+### Changed
+
+- Updated Codex setup documentation to use the plugin instead of obsolete hook
+  commands. The plugin is opt-in and never writes a user's `.codex/config.toml`.
+- Aligned all Warden package and plugin versions and internal dependency ranges
+  to `0.2.3`.
+
 ## [0.2.1] - 2026-09-02
 
 ### Added
