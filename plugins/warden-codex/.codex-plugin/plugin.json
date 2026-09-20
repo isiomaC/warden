@@ -1,6 +1,6 @@
 {
   "name": "warden-codex",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Local, fail-closed policy enforcement for Codex.",
   "author": {
     "name": "Stalewell"
