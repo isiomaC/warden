@@ -71,7 +71,7 @@ Warden integrates at different depths depending on the platform's capabilities:
 | **Cursor / Windsurf / Continue.dev / Cody / Amazon Q** | `warden proxy` (MCP stdio) | Wire protocol verified | Spawned process: `tools/list` + `tools/call` ALLOW/DENY confirmed |
 | **Cursor / Windsurf / Continue.dev / Cody / Amazon Q** | Actual GUI apps | Untested | Would require UI automation of third-party Electron apps |
 | **GitHub Copilot SDK** | Hook handler in `agent.json` | Documented, untested | Code example in README; never run against a real Copilot extension |
-| **OpenAI Codex CLI** | Hook script via `codex hooks set` | Documented, untested | Code example in README; never run against a real Codex CLI session |
+| **OpenAI Codex CLI** | Bundled `warden-codex` plugin | Documented, untested | Includes Warden proxy and hooks; requires user review/trust |
 | **Aider** | Process-level proxy | Documented, untested | No integration built |
 
 > **Claude Code headless mode note:** `claude -p` requires `--output-format stream-json --include-hook-events --verbose` to fire hooks. The default `--output-format json` does **not** fire PreToolUse/PostToolUse/SessionStart hooks. Interactive mode (`claude` without `-p`) fires all six hooks normally.
@@ -178,42 +178,30 @@ export async function onUserPromptSubmitted(event) {
 }
 ```
 
-### OpenAI Codex CLI (Hooks)
+### OpenAI Codex CLI (Plugin)
 
-Codex CLI supports `PreToolUse`/`PostToolUse` semantics. Add to an AGENTS.md or hook config:
+Install the bundled `plugins/warden-codex` plugin from a Warden marketplace.
+It contributes Warden's stdio MCP proxy plus lifecycle hooks for native Codex
+tools. It is opt-in and never creates, merges, or overwrites
+`.codex/config.toml`.
 
 ```bash
-# codex.json or AGENTS.md hook directive
-codex hooks set pre-tool-use --command "npx tsx warden-codex-hook.ts"
+codex plugin marketplace add isiomaC/warden
+codex plugin add warden-codex@stalewell
 ```
 
-Hook script (`warden-codex-hook.ts`):
+Before enabling it, create or review `warden.config.yml`, declare upstream MCP
+servers under `mcpServers.allowed`, and start the local hook server:
 
-```typescript
-import { evaluate, MemoryLedgerStore } from "@stlw/warden";
-
-const ledger = new MemoryLedgerStore();
-
-// Read tool name + args from stdin (Codex hook protocol)
-const chunks: Buffer[] = [];
-for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
-const input = JSON.parse(Buffer.concat(chunks).toString());
-const decision = evaluate(config, {
-  toolName: input.tool_name,
-  toolInput: input.tool_input,
-  environment: "development",
-  trustSources: [{ source: "agent", trust: 2 }],
-  serverInAllowlist: true,
-});
-
-ledger.write({ /* ... */ });
-
-// Codex expects JSON on stdout with permission decision
-console.log(JSON.stringify({
-  permissionDecision: decision.action === "ALLOW" ? "allow" : "deny",
-  permissionDecisionReason: decision.reason,
-}));
+```bash
+warden init # only if warden.config.yml does not already exist
+warden start
 ```
+
+Review and trust the plugin's hooks in Codex, then verify one expected allow
+and one expected deny. If the local hook server is unavailable, Warden's
+`PreToolUse` adapter denies the action; policy evaluation stays local and
+deterministic, with no LLM in the decision path.
 
 ### Tier 2 Tools: MCP Proxy (Cursor, Windsurf, Continue.dev, Cody, Amazon Q)
 
@@ -368,13 +356,9 @@ The plugin reads `warden.config.yml` from your project root for policies.
 
 See the [Copilot SDK section](#github-copilot-sdk-extension) above for the hook handler code.
 
-**OpenAI Codex CLI — set a hook:**
+**OpenAI Codex CLI — install the Warden plugin:**
 
-```bash
-codex hooks set pre-tool-use --command "npx tsx warden-codex-hook.ts"
-```
-
-See the [Codex CLI section](#openai-codex-cli-hooks) above for the hook handler code.
+Use the bundled `plugins/warden-codex` plugin and follow the [Codex setup](#openai-codex-cli-plugin) above. It does not modify your existing Codex configuration.
 
 **Tier 2 tools (Cursor, Windsurf, etc.) — use the MCP proxy:**
 
