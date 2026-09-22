@@ -6,7 +6,7 @@ import {
   AutoApproveApprovalChannel,
   TelegramApprovalChannel,
 } from "@stlw/warden-hook-server";
-import { FileConfigSource } from "@stlw/warden";
+import { FileConfigSource, PersistentVault } from "@stlw/warden";
 import type { ApprovalChannelConfig, PolicyConfig } from "@stlw/warden";
 import type { ApprovalChannel } from "@stlw/warden-hook-server";
 import { resolveRuntimeConfig } from "../runtime-config.js";
@@ -88,6 +88,14 @@ export const startCommand = defineCommand({
     const config = await configSource.load();
     const runtime = resolveRuntimeConfig(config as PolicyConfig & RuntimeConfig, args.db || undefined);
 
+    const vault = runtime.persistentVaultPath
+      ? (() => {
+          const key = process.env.WARDEN_VAULT_KEY;
+          if (!key) throw new Error("WARDEN_VAULT_KEY is required when vault.persistence is true.");
+          return new PersistentVault({ path: resolve(runtime.persistentVaultPath), key });
+        })()
+      : undefined;
+
     if (runtime.dbPath) {
       const dbDir = resolve(runtime.dbPath, "..");
       if (!existsSync(dbDir)) {
@@ -107,6 +115,7 @@ export const startCommand = defineCommand({
       port,
       pinsPath: resolve(args.pins),
       tokenTTLSeconds: runtime.tokenTTLSeconds,
+      ...(vault ? { vault, contextManager: vault } : {}),
       ...(runtime.dbPath ? { dbPath: resolve(runtime.dbPath) } : {}),
       ...(channel ? { approvalChannel: channel } : {}),
     });

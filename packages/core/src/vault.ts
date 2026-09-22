@@ -1,8 +1,10 @@
 import { ulid } from "ulid";
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { VaultError } from "./errors.js";
+import type { ContextStore, TaskContext, WardenConfig } from "./context.js";
+import type { TrustLevel } from "./trust.js";
 
 export interface TaskToken {
   tokenId: string;
@@ -62,13 +64,15 @@ function validToken(value: unknown): value is TaskToken {
     && typeof token.revoked === "boolean";
 }
 
-export class PersistentVault implements VaultAdapter {
+export class PersistentVault implements VaultAdapter, ContextStore {
   private tokens = new Map<string, TaskToken>();
+  private contexts = new Map<string, TaskContext>();
 
   constructor(private readonly options: PersistentVaultOptions) {
     if (!options.key.trim()) throw new VaultError("Persistent vault requires WARDEN_VAULT_KEY.");
     if (!options.path) throw new VaultError("Persistent vault requires a storage path.");
     mkdirSync(dirname(options.path), { recursive: true, mode: 0o700 });
+    chmodSync(dirname(options.path), 0o700);
     if (existsSync(options.path)) {
       if ((statSync(options.path).mode & 0o077) !== 0) {
         throw new VaultError("Persistent vault file permissions must be owner-only.");
@@ -77,6 +81,19 @@ export class PersistentVault implements VaultAdapter {
     }
     this.pruneExpired();
   }
+
+  createTask(sessionId: string, ttlMinutes = 30): TaskContext {
+    const now = new Date();
+    const context: TaskContext = { taskId: ulid(), sessionId, startedAt: now.toISOString(), expiresAt: new Date(now.getTime() + ttlMinutes * 60_000).toISOString(), trustBudget: new Map(), toolCallCount: 0, mcpServersContacted: new Set() };
+    this.mutate(() => this.contexts.set(context.taskId, context));
+    return context;
+  }
+  getTask(taskId: string): TaskContext | undefined { const context = this.contexts.get(taskId); return context && Date.now() <= new Date(context.expiresAt).getTime() ? context : undefined; }
+  recordToolCall(taskId: string, serverName: string): void { const context = this.getTask(taskId); if (context) this.mutate(() => { context.toolCallCount++; context.mcpServersContacted.add(serverName); }); }
+  checkLateralMovement(taskId: string, config: WardenConfig): boolean { const context = this.getTask(taskId); return Boolean(context && config.threatDetection.lateralMovement.enabled && context.mcpServersContacted.size > config.threatDetection.lateralMovement.maxMCPServersPerTaskChain); }
+  expireTask(taskId: string): void { if (this.contexts.has(taskId)) this.mutate(() => this.contexts.delete(taskId)); }
+  expireAllForSession(sessionId: string): void { if ([...this.contexts.values()].some((context) => context.sessionId === sessionId)) this.mutate(() => { for (const [id, context] of this.contexts) if (context.sessionId === sessionId) this.contexts.delete(id); }); }
+  listActiveTasks(): TaskContext[] { return [...this.contexts.values()].filter((context) => Date.now() <= new Date(context.expiresAt).getTime()); }
 
   mintToken(params: MintTokenParams): TaskToken {
     const now = new Date();
@@ -132,8 +149,15 @@ export class PersistentVault implements VaultAdapter {
       const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.cipher.nonce, "base64"));
       decipher.setAuthTag(Buffer.from(envelope.cipher.tag, "base64"));
       const plaintext = Buffer.concat([decipher.update(Buffer.from(envelope.cipher.ciphertext, "base64")), decipher.final()]);
-      const tokens: unknown = JSON.parse(plaintext.toString("utf8"));
-      if (!Array.isArray(tokens) || !tokens.every(validToken)) throw new Error("invalid token payload");
+      const payload: unknown = JSON.parse(plaintext.toString("utf8"));
+      if (!payload || typeof payload !== "object") throw new Error("invalid vault payload");
+      const { tokens, contexts } = payload as { tokens?: unknown; contexts?: unknown };
+      if (!Array.isArray(tokens) || !tokens.every(validToken) || !Array.isArray(contexts)) throw new Error("invalid vault payload");
+      this.contexts = new Map(contexts.map((value) => {
+        const context = value as Record<string, unknown>;
+        if (typeof context.taskId !== "string" || typeof context.sessionId !== "string" || typeof context.startedAt !== "string" || typeof context.expiresAt !== "string" || typeof context.toolCallCount !== "number" || !Array.isArray(context.trustBudget) || !Array.isArray(context.mcpServersContacted)) throw new Error("invalid task context");
+        return [context.taskId, { ...context, trustBudget: new Map(context.trustBudget as Array<[string, TrustLevel]>), mcpServersContacted: new Set(context.mcpServersContacted as string[]) } as TaskContext];
+      }));
       return new Map(tokens.map((token) => [token.tokenId, token]));
     } catch (error) { throw new VaultError(`Persistent vault cannot be opened: ${error instanceof Error ? error.message : "unknown error"}`); }
   }
@@ -141,10 +165,16 @@ export class PersistentVault implements VaultAdapter {
   private save(): void {
     const salt = randomBytes(16); const nonce = randomBytes(12); const key = scryptSync(this.options.key, salt, 32);
     const cipher = createCipheriv("aes-256-gcm", key, nonce);
-    const ciphertext = Buffer.concat([cipher.update(JSON.stringify([...this.tokens.values()]), "utf8"), cipher.final()]);
+    const contexts = [...this.contexts.values()].map((context) => ({ ...context, trustBudget: [...context.trustBudget], mcpServersContacted: [...context.mcpServersContacted] }));
+    const ciphertext = Buffer.concat([cipher.update(JSON.stringify({ tokens: [...this.tokens.values()], contexts }), "utf8"), cipher.final()]);
     const envelope: EncryptedVaultEnvelope = { version: 1, kdf: { name: "scrypt", salt: salt.toString("base64") }, cipher: { name: "aes-256-gcm", nonce: nonce.toString("base64"), tag: cipher.getAuthTag().toString("base64"), ciphertext: ciphertext.toString("base64") } };
     const temporary = join(dirname(this.options.path), `.${this.options.path.split("/").pop()}.${randomBytes(8).toString("hex")}.tmp`);
-    try { writeFileSync(temporary, JSON.stringify(envelope), { mode: 0o600 }); renameSync(temporary, this.options.path); }
+    try {
+      writeFileSync(temporary, JSON.stringify(envelope), { mode: 0o600 });
+      const descriptor = openSync(temporary, "r");
+      try { fsyncSync(descriptor); } finally { closeSync(descriptor); }
+      renameSync(temporary, this.options.path);
+    }
     finally { rmSync(temporary, { force: true }); }
   }
 }

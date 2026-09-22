@@ -5,12 +5,15 @@ interface RuntimeConfig {
   };
   vault?: {
     tokenTTLSeconds?: number;
+    persistence?: boolean;
+    path?: string;
   };
 }
 
 interface ResolvedRuntimeConfig {
   dbPath?: string;
   tokenTTLSeconds: number;
+  persistentVaultPath?: string;
 }
 
 interface ProxyEntryConfig {
@@ -29,13 +32,21 @@ export function resolveRuntimeConfig(
   if (!Number.isInteger(tokenTTLSeconds) || tokenTTLSeconds <= 0) {
     throw new Error("vault.tokenTTLSeconds must be a positive integer.");
   }
+  const persistence = config.vault?.persistence ?? false;
+  if (typeof persistence !== "boolean") throw new Error("vault.persistence must be a boolean.");
+  if (config.vault?.path !== undefined && (typeof config.vault.path !== "string" || config.vault.path.trim() === "")) {
+    throw new Error("vault.path must be a non-empty string.");
+  }
+  if (!persistence && config.vault?.path !== undefined) throw new Error("vault.path requires vault.persistence: true.");
+  const persistentVaultPath = persistence ? (config.vault?.path ?? ".warden/vault.enc") : undefined;
 
-  if (cliDbPath) return { dbPath: cliDbPath, tokenTTLSeconds };
-  if (config.ledger?.type === "memory") return { tokenTTLSeconds };
+  if (cliDbPath) return { dbPath: cliDbPath, tokenTTLSeconds, ...(persistentVaultPath ? { persistentVaultPath } : {}) };
+  if (config.ledger?.type === "memory") return { tokenTTLSeconds, ...(persistentVaultPath ? { persistentVaultPath } : {}) };
 
   return {
     dbPath: config.ledger?.path ?? ".warden/ledger.db",
     tokenTTLSeconds,
+    ...(persistentVaultPath ? { persistentVaultPath } : {}),
   };
 }
 

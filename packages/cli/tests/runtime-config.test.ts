@@ -22,6 +22,20 @@ describe("runtime config wiring", () => {
     ).dbPath).toBe(".warden/flag.db");
   });
 
+  it("enables persistent vault storage only when explicitly configured", () => {
+    expect(resolveRuntimeConfig({ vault: { persistence: true } })).toMatchObject({
+      persistentVaultPath: ".warden/vault.enc",
+    });
+    expect(resolveRuntimeConfig({ vault: { persistence: true, path: ".warden/session.enc" } }))
+      .toMatchObject({ persistentVaultPath: ".warden/session.enc" });
+    expect(resolveRuntimeConfig({ vault: { persistence: false } }).persistentVaultPath).toBeUndefined();
+  });
+
+  it("rejects invalid persistent vault settings", () => {
+    expect(() => resolveRuntimeConfig({ vault: { persistence: "true" as unknown as boolean } })).toThrow("vault.persistence");
+    expect(() => resolveRuntimeConfig({ vault: { persistence: true, path: "" } })).toThrow("vault.path");
+  });
+
   it("rejects proxy entries without a transport endpoint", () => {
     expect(validateProxyEntries([
       { name: "local", transport: "stdio", allowedTools: ["read"] },
