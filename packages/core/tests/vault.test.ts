@@ -1,5 +1,17 @@
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { LocalVault } from "../src/vault";
+import { VaultError } from "../src/errors";
+import { LocalVault, PersistentVault } from "../src/vault";
+
+const vaultParams = {
+  taskId: "task_1",
+  sessionId: "session_1",
+  allowedTools: ["read_file"],
+  environment: "development",
+  ttlSeconds: 300,
+};
 
 describe("LocalVault", () => {
   describe("mintToken", () => {
@@ -141,4 +153,87 @@ describe("LocalVault", () => {
       expect(vault.revokedCount()).toBe(1);
     });
   });
+});
+
+describe("PersistentVault", () => {
+  function withVaultPath(test: (path: string) => void) {
+    const directory = mkdtempSync(join(tmpdir(), "warden-persistent-vault-"));
+    try {
+      test(join(directory, "vault.enc"));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+
+  it("restores an unexpired token after reconstruction with the same key", () => withVaultPath((path) => {
+    const vault = new PersistentVault({ path, key: "test-vault-key" });
+    const token = vault.mintToken(vaultParams);
+
+    expect(new PersistentVault({ path, key: "test-vault-key" }).verifyToken(token.tokenId))
+      .toMatchObject({ tokenId: token.tokenId });
+    expect(readFileSync(path, "utf8")).not.toContain(token.tokenId);
+  }));
+
+  it("fails closed for a missing key, wrong key, tampered envelope, or unsupported version", () => withVaultPath((path) => {
+    expect(() => new PersistentVault({ path, key: "" })).toThrow(VaultError);
+    expect(() => new PersistentVault({ path: "", key: "test-vault-key" })).toThrow(VaultError);
+
+    const vault = new PersistentVault({ path, key: "test-vault-key" });
+    vault.mintToken(vaultParams);
+    expect(() => new PersistentVault({ path, key: "wrong-key" })).toThrow(VaultError);
+
+    writeFileSync(path, "{\"version\":2}", { mode: 0o600 });
+    expect(() => new PersistentVault({ path, key: "test-vault-key" })).toThrow(VaultError);
+  }));
+
+  it("persists individual and session revocation without leaking bearer tokens", () => withVaultPath((path) => {
+    const vault = new PersistentVault({ path, key: "test-vault-key" });
+    const revoked = vault.mintToken(vaultParams);
+    const sessionRevoked = vault.mintToken({ ...vaultParams, taskId: "task_2", sessionId: "session_2" });
+    vault.revokeToken(revoked.tokenId);
+    vault.revokeAllForSession("session_2");
+
+    const restored = new PersistentVault({ path, key: "test-vault-key" });
+    expect(restored.getTask("missing-task")).toBeUndefined();
+    expect(restored.verifyToken(revoked.tokenId)).toBeNull();
+    expect(restored.verifyToken(sessionRevoked.tokenId)).toBeNull();
+    expect(readFileSync(path, "utf8")).not.toContain(revoked.tokenId);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+  }));
+
+  it("rejects unsafe vault permissions and persists expiry revocation", () => withVaultPath((path) => {
+    const vault = new PersistentVault({ path, key: "test-vault-key" });
+    const expired = vault.mintToken({ ...vaultParams, ttlSeconds: -1 });
+    expect(vault.verifyToken(expired.tokenId)).toBeNull();
+    expect(new PersistentVault({ path, key: "test-vault-key" }).verifyToken(expired.tokenId)).toBeNull();
+
+    chmodSync(path, 0o644);
+    expect(() => new PersistentVault({ path, key: "test-vault-key" })).toThrow(VaultError);
+  }));
+
+  it("persists task security state and handles no-op context/token mutations", () => withVaultPath((path) => {
+    const vault = new PersistentVault({ path, key: "test-vault-key" });
+    const task = vault.createTask("session-context", 30);
+    vault.recordToolCall(task.taskId, "server-a");
+    vault.recordToolCall(task.taskId, "server-b");
+    vault.recordToolCall("missing-task", "server-c");
+    vault.revokeToken("missing-token");
+    vault.revokeAllForSession("missing-session");
+    vault.expireTask("missing-task");
+    vault.expireAllForSession("missing-session");
+
+    const restored = new PersistentVault({ path, key: "test-vault-key" });
+    expect(restored.getTask(task.taskId)).toMatchObject({ toolCallCount: 2 });
+    expect(restored.checkLateralMovement(task.taskId, {
+      threatDetection: { lateralMovement: { enabled: true, maxMCPServersPerTaskChain: 1, alertAction: "DENY" } },
+    })).toBe(true);
+    expect(restored.checkLateralMovement(task.taskId, {
+      threatDetection: { lateralMovement: { enabled: false, maxMCPServersPerTaskChain: 1, alertAction: "DENY" } },
+    })).toBe(false);
+    expect(restored.checkLateralMovement("missing-task", {
+      threatDetection: { lateralMovement: { enabled: true, maxMCPServersPerTaskChain: 1, alertAction: "DENY" } },
+    })).toBe(false);
+    restored.expireTask(task.taskId);
+    expect(restored.getTask(task.taskId)).toBeUndefined();
+  }));
 });

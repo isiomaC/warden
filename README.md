@@ -378,6 +378,32 @@ Warden hook server running on http://localhost:7429 (Node.js)
 Press Ctrl+C to stop.
 ```
 
+#### Optional: persist scoped sessions across restarts
+
+By default, Warden keeps session tokens and task context only in memory. To
+continue an unexpired scoped session after restarting `warden start`, enable
+the encrypted local session store:
+
+```yaml
+vault:
+  persistence: true
+  path: .warden/vault.enc # optional; this is the default
+  tokenTTLSeconds: 3600
+```
+
+Set a separate encryption key in the environment that starts Warden:
+
+```bash
+export WARDEN_VAULT_KEY="$(openssl rand -hex 32)"
+warden start
+```
+
+Warden encrypts both bearer-token and task-context state locally. If the key
+is missing or wrong, the file is corrupt, or its permissions are unsafe, Warden
+refuses to start rather than accepting an ambiguous session. Losing the key
+requires explicitly removing `.warden/vault.enc`, which invalidates every
+persisted session.
+
 > **Required for Claude Code: set `WARDEN_AUTH_TOKEN`.** Claude Code's HTTP hooks can only
 > send static, env-var-interpolated headers fixed when `settings.json` loads — there is no
 > mechanism for it to carry a value learned from one hook's response (e.g. SessionStart's
@@ -525,7 +551,7 @@ policies:
 **Actions:** `ALLOW`, `DENY`, `CONFIRM` (ask human, 60s timeout), `QUARANTINE` (replaces output with `[QUARANTINED: ...]` sentinel, preserves original in ledger, forces EXTERNAL trust)
 **Precedence:** DENY > QUARANTINE > CONFIRM > ALLOW. Unmatched = DENY.
 
-`warden start` honors the YAML ledger type/path, vault token TTL, and approval channel. `warden proxy` additionally honors configured upstream endpoints, tool/path allowlists, rate limits, lateral-movement settings, the ledger, and Telegram approvals. `warden config-validate` rejects missing proxy endpoints and invalid runtime values. Programmatic `createHookServer` callers pass equivalent adapters and options directly because there is no configuration file at that API boundary.
+`warden start` honors the YAML ledger type/path, vault token TTL and optional encrypted persistence, and approval channel. `warden proxy` additionally honors configured upstream endpoints, tool/path allowlists, rate limits, lateral-movement settings, the ledger, and Telegram approvals. `warden config-validate` rejects missing proxy endpoints and invalid runtime values. Programmatic `createHookServer` callers pass equivalent adapters and options directly because there is no configuration file at that API boundary.
 
 ---
 

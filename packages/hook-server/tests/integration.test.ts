@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHookServer } from "../src/server";
 import type { PolicyConfig } from "@stlw/warden";
-import { TrustLevel } from "@stlw/warden";
+import { PersistentVault, TrustLevel } from "@stlw/warden";
 import type { ApprovalChannel } from "../src/approvals/types";
 import type { ApprovalRequest } from "../src/approvals/types";
 
@@ -590,6 +590,33 @@ describe("Hook Server — Mock LLM Integration", () => {
   });
 
   describe("Token lifecycle", () => {
+    it("accepts a restored persistent-vault token and preserves session revocation", async () => {
+      const directory = mkdtempSync(join(tmpdir(), "warden-vault-auth-"));
+      const path = join(directory, "vault.enc");
+      try {
+        const firstStore = new PersistentVault({ path, key: "test-vault-key" });
+        const first = createHookServer({ config: testConfig, vault: firstStore, contextManager: firstStore });
+        const { token } = await createAuthSession(first, "persistent-session");
+        const restoredStore = new PersistentVault({ path, key: "test-vault-key" });
+        const restored = createHookServer({ config: testConfig, vault: restoredStore, contextManager: restoredStore });
+
+        const allowed = await authRequest(restored, token, "/hooks/pre-tool-use", {
+          tool_name: "read_file", tool_input: {}, session_id: "persistent-session",
+        });
+        expect(getDecision(await allowed.json() as Record<string, unknown>)).toBe("allow");
+
+        await authRequest(restored, token, "/hooks/session-end", { session_id: "persistent-session" });
+        const afterRestartStore = new PersistentVault({ path, key: "test-vault-key" });
+        const afterRestart = createHookServer({ config: testConfig, vault: afterRestartStore, contextManager: afterRestartStore });
+        const denied = await authRequest(afterRestart, token, "/hooks/pre-tool-use", {
+          tool_name: "read_file", tool_input: {}, session_id: "persistent-session",
+        });
+        expect(denied.status).toBe(401);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
+
     it("should verify token has correct properties", async () => {
       const srv = createTestServer();
       const { token } = await createAuthSession(srv, "token-prop");
