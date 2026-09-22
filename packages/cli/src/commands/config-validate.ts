@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { FileConfigSource } from "@stlw/warden";
-import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config";
-import type { ProxyEntryConfig, RuntimeConfig } from "../runtime-config";
+import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config.js";
+import type { ProxyEntryConfig, RuntimeConfig } from "../runtime-config.js";
 
 export const configValidateCommand = defineCommand({
   meta: {

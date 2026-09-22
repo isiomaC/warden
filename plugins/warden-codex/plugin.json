@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "warden-codex",
-  "version": "0.2.3",
-  "description": "Local, fail-closed policy enforcement for Codex tools and MCP servers.",
+  "version": "0.2.4",
+  "description": "Local, fail-closed Warden policy enforcement for MCP tools in Codex.",
   "author": { "name": "Stalewell", "url": "https://stalewell.com" },
   "repository": "https://github.com/isiomaC/warden",
   "license": "MIT",

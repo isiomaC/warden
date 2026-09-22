@@ -1,8 +1,8 @@
-import { MCPRegistry } from "./registry";
-export { MCPRegistry } from "./registry";
-export { OAuthManager } from "./oauth";
-import { OAuthManager } from "./oauth";
-import { checkLateralMovement } from "./lateral";
+import { MCPRegistry } from "./registry.js";
+export { MCPRegistry } from "./registry.js";
+export { OAuthManager } from "./oauth.js";
+import { OAuthManager } from "./oauth.js";
+import { checkLateralMovement } from "./lateral.js";
 import {
   evaluate,
   tagValue,

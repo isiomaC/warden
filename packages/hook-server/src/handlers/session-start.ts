@@ -14,7 +14,7 @@ import type {
   ContextStore,
   PackagePin,
 } from "@stlw/warden";
-import type { ApprovalChannel } from "../approvals/types";
+import type { ApprovalChannel } from "../approvals/types.js";
 
 const VALID_ENVIRONMENTS = ["development", "staging", "production"];
 

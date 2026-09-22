@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import type { ApprovalChannel, ApprovalRequest } from "./types";
+import type { ApprovalChannel, ApprovalRequest } from "./types.js";
 
 export class TelegramApprovalChannel implements ApprovalChannel {
   private bot: Bot | null = null;

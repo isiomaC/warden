@@ -2,12 +2,12 @@ export {
   StdoutApprovalChannel,
   AutoApproveApprovalChannel,
   TimeoutApprovalChannel,
-} from "./types";
+} from "./types.js";
 export type {
   ApprovalChannel,
   ApprovalRequest,
   HookResponse,
-} from "./types";
+} from "./types.js";
 
-export { TelegramApprovalChannel } from "./telegram";
-export { WebhookApprovalChannel } from "./webhook";
+export { TelegramApprovalChannel } from "./telegram.js";
+export { WebhookApprovalChannel } from "./webhook.js";

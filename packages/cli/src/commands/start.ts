@@ -9,8 +9,8 @@ import {
 import { FileConfigSource } from "@stlw/warden";
 import type { ApprovalChannelConfig, PolicyConfig } from "@stlw/warden";
 import type { ApprovalChannel } from "@stlw/warden-hook-server";
-import { resolveRuntimeConfig } from "../runtime-config";
-import type { RuntimeConfig } from "../runtime-config";
+import { resolveRuntimeConfig } from "../runtime-config.js";
+import type { RuntimeConfig } from "../runtime-config.js";
 
 function resolveEnv(value: string): string {
   return value.replace(/\$\{(\w+)\}/g, (_, name) => process.env[name] ?? "");

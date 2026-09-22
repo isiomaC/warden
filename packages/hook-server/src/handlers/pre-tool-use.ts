@@ -10,7 +10,7 @@ import {
 } from "@stlw/warden";
 import type { PolicyConfig, LedgerStore, ContextStore, TaskToken } from "@stlw/warden";
 import type { TrustRegistry } from "@stlw/warden";
-import type { ApprovalChannel } from "../approvals/types";
+import type { ApprovalChannel } from "../approvals/types.js";
 
 export function handlePreToolUse(
   config: PolicyConfig,

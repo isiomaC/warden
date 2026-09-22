@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import { defineCommand } from "citty";
-import { initCommand } from "./commands/init";
-import { auditCommand } from "./commands/audit";
-import { policyCommand } from "./commands/policy";
-import { scanCommand } from "./commands/scan";
-import { supplyChainCommand } from "./commands/supply-chain";
-import { startCommand } from "./commands/start";
-import { configValidateCommand } from "./commands/config-validate";
-import { resetCommand } from "./commands/reset";
-import { proxyCommand } from "./commands/proxy";
+import { initCommand } from "./commands/init.js";
+import { auditCommand } from "./commands/audit.js";
+import { policyCommand } from "./commands/policy.js";
+import { scanCommand } from "./commands/scan.js";
+import { supplyChainCommand } from "./commands/supply-chain.js";
+import { startCommand } from "./commands/start.js";
+import { configValidateCommand } from "./commands/config-validate.js";
+import { resetCommand } from "./commands/reset.js";
+import { proxyCommand } from "./commands/proxy.js";
 
 const main = defineCommand({
   meta: {
