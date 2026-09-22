@@ -176,6 +176,7 @@ describe("PersistentVault", () => {
 
   it("fails closed for a missing key, wrong key, tampered envelope, or unsupported version", () => withVaultPath((path) => {
     expect(() => new PersistentVault({ path, key: "" })).toThrow(VaultError);
+    expect(() => new PersistentVault({ path: "", key: "test-vault-key" })).toThrow(VaultError);
 
     const vault = new PersistentVault({ path, key: "test-vault-key" });
     vault.mintToken(vaultParams);
@@ -193,6 +194,7 @@ describe("PersistentVault", () => {
     vault.revokeAllForSession("session_2");
 
     const restored = new PersistentVault({ path, key: "test-vault-key" });
+    expect(restored.getTask("missing-task")).toBeUndefined();
     expect(restored.verifyToken(revoked.tokenId)).toBeNull();
     expect(restored.verifyToken(sessionRevoked.tokenId)).toBeNull();
     expect(readFileSync(path, "utf8")).not.toContain(revoked.tokenId);
@@ -207,5 +209,31 @@ describe("PersistentVault", () => {
 
     chmodSync(path, 0o644);
     expect(() => new PersistentVault({ path, key: "test-vault-key" })).toThrow(VaultError);
+  }));
+
+  it("persists task security state and handles no-op context/token mutations", () => withVaultPath((path) => {
+    const vault = new PersistentVault({ path, key: "test-vault-key" });
+    const task = vault.createTask("session-context", 30);
+    vault.recordToolCall(task.taskId, "server-a");
+    vault.recordToolCall(task.taskId, "server-b");
+    vault.recordToolCall("missing-task", "server-c");
+    vault.revokeToken("missing-token");
+    vault.revokeAllForSession("missing-session");
+    vault.expireTask("missing-task");
+    vault.expireAllForSession("missing-session");
+
+    const restored = new PersistentVault({ path, key: "test-vault-key" });
+    expect(restored.getTask(task.taskId)).toMatchObject({ toolCallCount: 2 });
+    expect(restored.checkLateralMovement(task.taskId, {
+      threatDetection: { lateralMovement: { enabled: true, maxMCPServersPerTaskChain: 1, alertAction: "DENY" } },
+    })).toBe(true);
+    expect(restored.checkLateralMovement(task.taskId, {
+      threatDetection: { lateralMovement: { enabled: false, maxMCPServersPerTaskChain: 1, alertAction: "DENY" } },
+    })).toBe(false);
+    expect(restored.checkLateralMovement("missing-task", {
+      threatDetection: { lateralMovement: { enabled: true, maxMCPServersPerTaskChain: 1, alertAction: "DENY" } },
+    })).toBe(false);
+    restored.expireTask(task.taskId);
+    expect(restored.getTask(task.taskId)).toBeUndefined();
   }));
 });
