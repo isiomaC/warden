@@ -15,22 +15,22 @@ import type {
   VaultAdapter,
   ContextStore,
 } from "@stlw/warden";
-import { authMiddleware } from "./middleware/auth";
-import { sharedSecretMiddleware } from "./middleware/shared-secret";
-import { failClosedHandler } from "./middleware/fail-closed";
-import { handleSessionStart } from "./handlers/session-start";
-import { handleSessionEnd } from "./handlers/session-end";
-import { handlePreToolUse } from "./handlers/pre-tool-use";
-import { handlePostToolUse } from "./handlers/post-tool-use";
-import { handlePromptSubmit } from "./handlers/prompt-submit";
-import { handleConfigChange } from "./handlers/config-change";
-import { StdoutApprovalChannel, AutoApproveApprovalChannel } from "./approvals/index";
-import type { ApprovalChannel } from "./approvals/index";
-export type { ApprovalChannel, ApprovalRequest } from "./approvals/index";
+import { authMiddleware } from "./middleware/auth.js";
+import { sharedSecretMiddleware } from "./middleware/shared-secret.js";
+import { failClosedHandler } from "./middleware/fail-closed.js";
+import { handleSessionStart } from "./handlers/session-start.js";
+import { handleSessionEnd } from "./handlers/session-end.js";
+import { handlePreToolUse } from "./handlers/pre-tool-use.js";
+import { handlePostToolUse } from "./handlers/post-tool-use.js";
+import { handlePromptSubmit } from "./handlers/prompt-submit.js";
+import { handleConfigChange } from "./handlers/config-change.js";
+import { StdoutApprovalChannel, AutoApproveApprovalChannel } from "./approvals/index.js";
+import type { ApprovalChannel } from "./approvals/index.js";
+export type { ApprovalChannel, ApprovalRequest } from "./approvals/index.js";
 
 export { AutoApproveApprovalChannel };
-export { TelegramApprovalChannel } from "./approvals/index";
-export { WebhookApprovalChannel } from "./approvals/index";
+export { TelegramApprovalChannel } from "./approvals/index.js";
+export { WebhookApprovalChannel } from "./approvals/index.js";
 
 export interface HookServerOptions {
   config: PolicyConfig;

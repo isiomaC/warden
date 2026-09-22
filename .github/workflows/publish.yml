@@ -48,6 +48,9 @@ jobs:
       - name: Verify packed @stlw/warden consumer
         run: npm run verify:core-package
 
+      - name: Verify packed @stlw/warden-cli executable
+        run: npm run verify:cli-package
+
       - name: Verify package READMEs
         run: npm run verify:package-readmes
 

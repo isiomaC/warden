@@ -73,7 +73,7 @@ jobs:
         run: npx vitest run --coverage
 
   package-consumer:
-    name: Packed Core Consumer (Node.js 22)
+    name: Packed Package Consumers (Node.js 22)
     runs-on: ubuntu-latest
     needs: [typecheck]
     steps:
@@ -94,6 +94,9 @@ jobs:
 
       - name: Verify packed @stlw/warden consumer
         run: npm run verify:core-package
+
+      - name: Verify packed @stlw/warden-cli executable
+        run: npm run verify:cli-package
 
       - name: Verify package READMEs
         run: npm run verify:package-readmes

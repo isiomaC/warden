@@ -34,6 +34,7 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "verify:core-package": "node scripts/verify-core-package.mjs",
+    "verify:cli-package": "node scripts/verify-cli-package.mjs",
     "verify:package-readmes": "node scripts/verify-package-readmes.mjs"
   },
   "overrides": {

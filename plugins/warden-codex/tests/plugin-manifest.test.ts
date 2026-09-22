@@ -14,12 +14,14 @@ describe("Warden Codex plugin bundle", () => {
   it("declares a version-pinned Warden proxy", () => {
     const server = readJson("mcp.json").mcpServers.warden;
     expect(server).toMatchObject({ type: "stdio", command: "npx" });
-    expect(server.args).toContain("@stlw/warden-cli@0.2.2");
+    expect(server.args).toContain("@stlw/warden-cli@0.2.4");
   });
 
-  it("uses the fail-closed adapter for PreToolUse", () => {
-    const hook = readJson("hooks/hooks.json").hooks.PreToolUse[0].hooks[0];
-    expect(hook).toMatchObject({ type: "command", timeout: 30 });
-    expect(hook.command).toContain("codex-hook-adapter.mjs");
+  it("does not claim unsupported native Codex hook enforcement", () => {
+    expect(readJson("plugin.json").extensions).toBeUndefined();
+    expect(readJson(".codex-plugin/plugin.json").hooks).toBeUndefined();
+    expect(readJson(".codex-plugin/plugin.json").interface.longDescription).toContain("MCP tools");
+    expect(readJson(".codex-plugin/plugin.json").interface.longDescription).not.toContain("Codex tools and MCP servers");
+    expect(readFileSync(resolve(root, "skills/warden-policy/SKILL.md"), "utf8")).not.toContain("warden start");
   });
 });

@@ -3,7 +3,7 @@
     "warden": {
       "type": "stdio",
       "command": "npx",
-      "args": ["--yes", "@stlw/warden-cli@0.2.2", "proxy"]
+      "args": ["--yes", "@stlw/warden-cli@0.2.4", "proxy"]
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { ApprovalChannel, ApprovalRequest } from "./types";
+import type { ApprovalChannel, ApprovalRequest } from "./types.js";
 
 export class WebhookApprovalChannel implements ApprovalChannel {
   constructor(

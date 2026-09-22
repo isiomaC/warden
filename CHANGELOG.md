@@ -5,6 +5,23 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-09-22
+
+### Fixed
+
+- The published CLI and its runtime packages now emit Node-compatible ESM
+  imports, so an installed `@stlw/warden-cli` executable can start correctly.
+- CI and the release workflow now install and execute the packed CLI artifact,
+  preventing a package-only ESM regression from reaching npm again.
+
+### Changed
+
+- The Codex plugin is explicitly MCP-only. It governs MCP tools routed through
+  Warden's proxy and does not claim to intercept native Codex tools. The
+  unsupported bundled lifecycle-hook adapter has been removed.
+- Aligned all Warden package and Codex plugin versions and internal dependency
+  ranges to `0.2.4`.
+
 ## [0.2.3] - 2026-09-20
 
 ### Added

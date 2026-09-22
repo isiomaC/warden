@@ -56,8 +56,8 @@ Warden integrates at different depths depending on the platform's capabilities:
 
 | Tier | Tools | Integration | Warden Capability |
 |---|---|---|---|
-| **Full hooks + MCP** | Claude Code, GitHub Copilot SDK, OpenAI Codex CLI, OpenCode | PreToolUse/PostToolUse hooks, prompt scanning, session lifecycle | Full policy enforcement, per-call inspection, CONFIRM, ledger audit |
-| **MCP only (no hooks)** | Cursor, Windsurf, Continue.dev, Cody, Amazon Q | Warden acts as an MCP proxy — all tools go through `warden.wrapMCP()` | Tool-level policy, server allowlist, rate limiting. **Cannot** intercept tool calls from other agent types (non-MCP). |
+| **Full hooks + MCP** | Claude Code, GitHub Copilot SDK, OpenCode | PreToolUse/PostToolUse hooks, prompt scanning, session lifecycle | Full policy enforcement, per-call inspection, CONFIRM, ledger audit |
+| **MCP only (no hooks)** | OpenAI Codex CLI, Cursor, Windsurf, Continue.dev, Cody, Amazon Q | Warden acts as an MCP proxy — all tools go through `warden.wrapMCP()` | Tool-level policy, server allowlist, rate limiting. **Cannot** intercept native or other non-MCP tools. |
 | **No MCP + no hooks** | Aider | Process-level proxy or fork modification | None out of the box. Requires custom integration. |
 
 ### What's been verified
@@ -71,7 +71,7 @@ Warden integrates at different depths depending on the platform's capabilities:
 | **Cursor / Windsurf / Continue.dev / Cody / Amazon Q** | `warden proxy` (MCP stdio) | Wire protocol verified | Spawned process: `tools/list` + `tools/call` ALLOW/DENY confirmed |
 | **Cursor / Windsurf / Continue.dev / Cody / Amazon Q** | Actual GUI apps | Untested | Would require UI automation of third-party Electron apps |
 | **GitHub Copilot SDK** | Hook handler in `agent.json` | Documented, untested | Code example in README; never run against a real Copilot extension |
-| **OpenAI Codex CLI** | Bundled `warden-codex` plugin | Documented, untested | Includes Warden proxy and hooks; requires user review/trust |
+| **OpenAI Codex CLI** | Bundled `warden-codex` plugin | MCP proxy verified | Governs only MCP tools routed through Warden; native Codex tools are not intercepted |
 | **Aider** | Process-level proxy | Documented, untested | No integration built |
 
 > **Claude Code headless mode note:** `claude -p` requires `--output-format stream-json --include-hook-events --verbose` to fire hooks. The default `--output-format json` does **not** fire PreToolUse/PostToolUse/SessionStart hooks. Interactive mode (`claude` without `-p`) fires all six hooks normally.
@@ -181,9 +181,8 @@ export async function onUserPromptSubmitted(event) {
 ### OpenAI Codex CLI (Plugin)
 
 Install the bundled `plugins/warden-codex` plugin from a Warden marketplace.
-It contributes Warden's stdio MCP proxy plus lifecycle hooks for native Codex
-tools. It is opt-in and never creates, merges, or overwrites
-`.codex/config.toml`.
+It contributes Warden's stdio MCP proxy. It is opt-in and never creates,
+merges, or overwrites `.codex/config.toml`.
 
 ```bash
 codex plugin marketplace add isiomaC/warden
@@ -191,17 +190,17 @@ codex plugin add warden-codex@stalewell
 ```
 
 Before enabling it, create or review `warden.config.yml`, declare upstream MCP
-servers under `mcpServers.allowed`, and start the local hook server:
+servers under `mcpServers.allowed`, and start Warden's local proxy:
 
 ```bash
 warden init # only if warden.config.yml does not already exist
-warden start
+warden proxy
 ```
 
-Review and trust the plugin's hooks in Codex, then verify one expected allow
-and one expected deny. If the local hook server is unavailable, Warden's
-`PreToolUse` adapter denies the action; policy evaluation stays local and
-deterministic, with no LLM in the decision path.
+Verify one expected allow and one expected deny through a proxied MCP tool.
+The plugin does not intercept native Codex tools such as Bash or apply_patch;
+policy evaluation stays local and deterministic, with no LLM in the decision
+path.
 
 ### Tier 2 Tools: MCP Proxy (Cursor, Windsurf, Continue.dev, Cody, Amazon Q)
 
@@ -358,7 +357,7 @@ See the [Copilot SDK section](#github-copilot-sdk-extension) above for the hook 
 
 **OpenAI Codex CLI — install the Warden plugin:**
 
-Use the bundled `plugins/warden-codex` plugin and follow the [Codex setup](#openai-codex-cli-plugin) above. It does not modify your existing Codex configuration.
+Use the bundled `plugins/warden-codex` plugin and follow the [Codex setup](#openai-codex-cli-plugin) above. It governs proxied MCP tools only and does not modify your existing Codex configuration.
 
 **Tier 2 tools (Cursor, Windsurf, etc.) — use the MCP proxy:**
 

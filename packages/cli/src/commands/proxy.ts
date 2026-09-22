@@ -10,8 +10,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config";
-import type { RuntimeConfig } from "../runtime-config";
+import { resolveRuntimeConfig, validateProxyEntries } from "../runtime-config.js";
+import type { RuntimeConfig } from "../runtime-config.js";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -120,7 +120,7 @@ export const proxyCommand = defineCommand({
     const allTools: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> = [];
 
     for (const entry of serverEntries) {
-      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.1" });
+      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.4" });
       if (entry.transport === "stdio") {
         if (!entry.command) {
           throw new Error(`MCP server "${entry.name}" uses stdio but has no command.`);
@@ -168,7 +168,7 @@ export const proxyCommand = defineCommand({
     }
 
     const mcpServer = new Server(
-      { name: "warden-proxy", version: "0.2.1" },
+      { name: "warden-proxy", version: "0.2.4" },
       { capabilities: { tools: {} } },
     );
 
