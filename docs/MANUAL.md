@@ -299,7 +299,16 @@ Every tool call now flows through Warden.
 warden config-validate     # Check config syntax
 warden audit               # View the decision ledger
 warden audit --db .warden/ledger.db   # Persistent ledger
+
+# Machine-readable reports for compliance or archival systems
+warden audit --db .warden/ledger.db --export json > warden-audit.json
+warden audit --db .warden/ledger.db --export csv > warden-audit.csv
 ```
+
+`--export json` writes a versioned report containing the chain result, ledger
+entries, and security events. `--export csv` writes headered, CSV-escaped
+`ledger_entry` and `security_event` records. Both formats use the ledger's
+stored redacted input values.
 
 ---
 

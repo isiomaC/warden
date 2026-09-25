@@ -34,6 +34,26 @@ warden start
 | `warden audit` | View and verify the tamper-evident action ledger. |
 | `warden supply-chain` | Check dependencies against pinned package hashes. |
 
+## Export an audit ledger
+
+By default, `warden audit` prints a human-readable integrity report. For
+compliance tooling or archival pipelines, export the same ledger as structured
+data:
+
+```bash
+# Versioned JSON containing chain status, ledger entries, and security events.
+warden audit --db .warden/ledger.db --export json > warden-audit.json
+
+# RFC 4180-compatible CSV records for spreadsheet or SIEM import.
+warden audit --db .warden/ledger.db --export csv > warden-audit.csv
+```
+
+JSON output has `formatVersion: 1` and includes `chain`, `entries`, and
+`securityEvents`. CSV emits a header followed by `ledger_entry` and
+`security_event` records; nested values are JSON-encoded and CSV-escaped.
+Exports contain Warden's stored, redacted tool input values. A valid chain is
+evidence of continuity, not proof that an external tool executed successfully.
+
 For MCP-only clients, register `warden proxy` as a stdio server and keep the target servers in `mcpServers.allowed` in `warden.config.yml`.
 
 See the [public manual](https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md) for the config schema and Claude Code, OpenCode, Cursor, and Windsurf setup.
