@@ -14,7 +14,7 @@ describe("Warden Codex plugin bundle", () => {
   it("declares a version-pinned Warden proxy", () => {
     const server = readJson("mcp.json").mcpServers.warden;
     expect(server).toMatchObject({ type: "stdio", command: "npx" });
-    expect(server.args).toContain("@stlw/warden-cli@0.2.4");
+    expect(server.args).toContain("@stlw/warden-cli@0.2.5");
   });
 
   it("does not claim unsupported native Codex hook enforcement", () => {

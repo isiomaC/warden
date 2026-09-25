@@ -5,6 +5,27 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-09-25
+
+### Added
+
+- Encrypted persistent vault storage for session tokens and task context, with
+  explicit opt-in configuration and secure restoration across local restarts.
+- `warden audit --export json` and `warden audit --export csv` for versioned,
+  machine-readable ledger and security-event exports.
+- MCP gateway tool discovery filtering: only registry-allowed tools whose
+  policy decision is `ALLOW` are exposed to clients.
+- Short-lived, single-use MCP approval grants bound to a session, task,
+  canonical action, and exact tool input.
+
+### Changed
+
+- MCP gateway policy evaluation, rate limits, and ledger evidence now use
+  canonical action IDs such as `mcp.filesystem.read_file`. Existing
+  `filesystem__read_file` policy rules remain compatible during migration.
+- Aligned all Warden packages, proxy protocol identifiers, and Codex plugin
+  manifests to `0.2.5`.
+
 ## [0.2.4] - 2026-09-22
 
 ### Fixed
