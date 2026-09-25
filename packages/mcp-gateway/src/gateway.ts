@@ -1,10 +1,12 @@
 import { MCPRegistry } from "./registry.js";
+import { ApprovalGrantStore, type ApprovalGrant } from "./approval-grants.js";
 export { MCPRegistry } from "./registry.js";
 export { OAuthManager } from "./oauth.js";
 import { OAuthManager } from "./oauth.js";
 import { checkLateralMovement } from "./lateral.js";
 import {
-  evaluate,
+  evaluatePolicies,
+  resolveConflicts,
   tagValue,
   redactSecrets,
   extractPaths,
@@ -31,6 +33,7 @@ export interface WardenGatewayOptions {
   registry: MCPRegistry;
   oauth?: OAuthManager;
   approvalChannel?: ApprovalChannel | undefined;
+  approvalGrants?: ApprovalGrantStore;
   logger?: WardenLogger;
 }
 
@@ -48,6 +51,7 @@ export class WardenGateway {
   private registry: MCPRegistry;
   private oauth: OAuthManager;
   private approvalChannel: ApprovalChannel | undefined;
+  private approvalGrants: ApprovalGrantStore;
   private rateLimiter: SlidingWindowRateLimiter;
   private logger: WardenLogger;
 
@@ -58,6 +62,7 @@ export class WardenGateway {
     this.registry = options.registry;
     this.oauth = options.oauth ?? new OAuthManager();
     this.approvalChannel = options.approvalChannel;
+    this.approvalGrants = options.approvalGrants ?? new ApprovalGrantStore();
     this.logger = options.logger ?? new WardenLogger("mcp-gateway", parseLogLevel(process.env.LOG_LEVEL));
 
     // Build rate-limiter config from policy config's rateLimits block,
@@ -83,16 +88,20 @@ export class WardenGateway {
       allowedTools: options.allowedTools,
       trustLevel: options.trustLevel,
       maxCallsPerMinute: options.maxCallsPerMinute,
+      listTools<T extends { name: string }>(tools: T[]): T[] {
+        return self.listTools(serverName, tools, options.trustLevel);
+      },
 
       async onToolCall(
         toolName: string,
         toolInput: unknown,
         sessionId: string,
         currentTaskId: string,
+        approvalGrantId?: string,
       ): Promise<PolicyDecision> {
         self.registry.assertAllowed(serverName);
 
-        if (!options.allowedTools.includes(toolName)) {
+        if (!options.allowedTools.includes(toolName) || !self.registry.isToolAllowed(serverName, toolName)) {
           return {
             action: "DENY" as const,
             reason: `Tool "${toolName}" not in allowed list for server "${serverName}".`,
@@ -126,7 +135,8 @@ export class WardenGateway {
 
         // Sliding-window rate-limit check (before policy evaluation).
         // Per-tool limits are resolved from the gateway config.
-        const rateKey = `tool:${toolName}`;
+        const canonicalAction = self.registry.canonicalAction(serverName, toolName);
+        const rateKey = `tool:${canonicalAction}`;
         const rateCheck = self.rateLimiter.check(rateKey);
         if (!rateCheck.allowed) {
           self.logger.warn("Rate limit exceeded.", {
@@ -182,13 +192,13 @@ export class WardenGateway {
           };
         }
 
-        const decision = evaluate(self.config, {
-          toolName: `${serverName}__${toolName}`,
-          toolInput: toolInput as Record<string, unknown>,
-          environment: self.config.meta.environment,
-          trustSources: [{ source: trustedInput.source, trust: trustedInput.trust }],
-          serverInAllowlist: self.registry.isAllowed(serverName),
-        });
+        const decision = self.evaluateAction(
+          serverName,
+          toolName,
+          toolInput as Record<string, unknown>,
+          trustedInput.source,
+          trustedInput.trust,
+        );
 
         self.contextManager.recordToolCall(currentTaskId, serverName);
 
@@ -198,7 +208,7 @@ export class WardenGateway {
           timestamp: new Date().toISOString(),
           sessionId,
           taskId: currentTaskId,
-          tool: `${serverName}__${toolName}`,
+          tool: canonicalAction,
           toolInput: redactSecrets(toolInput),
           trustLevel: trustedInput.trust,
           trustSource: trustedInput.source,
@@ -209,9 +219,18 @@ export class WardenGateway {
           previousEntryHash: self.ledger.lastHash(),
         });
 
+        if (decision.action === "CONFIRM" && self.approvalGrants.consume(approvalGrantId, {
+          sessionId,
+          taskId: currentTaskId,
+          canonicalAction,
+          input: toolInput as Record<string, unknown>,
+        })) {
+          return { action: "ALLOW" as const, reason: "Approval grant accepted." };
+        }
+
         if (decision.action === "CONFIRM" && self.approvalChannel) {
           const approved = await self.approvalChannel.request({
-            tool: `${serverName}__${toolName}`,
+            tool: canonicalAction,
             input: redactSecrets(toolInput),
             reason: decision.reason,
             timeoutMs: 60_000,
@@ -240,5 +259,75 @@ export class WardenGateway {
 
   getOAuth(): OAuthManager {
     return this.oauth;
+  }
+
+  listTools<T extends { name: string }>(
+    serverName: string,
+    tools: T[],
+    trustLevel: (typeof TL)[keyof typeof TL] = TL.TOOL,
+  ): T[] {
+    this.registry.assertAllowed(serverName);
+    return tools.filter((tool) => this.registry.isToolAllowed(serverName, tool.name) && this.evaluateAction(
+      serverName,
+      tool.name,
+      {},
+      `mcp__${serverName}__${tool.name}`,
+      trustLevel,
+    ).action === "ALLOW");
+  }
+
+  async requestApprovalGrant(request: {
+    sessionId: string;
+    taskId: string;
+    serverName: string;
+    toolName: string;
+    toolInput: Record<string, unknown>;
+  }): Promise<ApprovalGrant | undefined> {
+    this.registry.assertAllowed(request.serverName);
+    if (!this.registry.isToolAllowed(request.serverName, request.toolName)) return undefined;
+    const canonicalAction = this.registry.canonicalAction(request.serverName, request.toolName);
+    const decision = this.evaluateAction(
+      request.serverName,
+      request.toolName,
+      request.toolInput,
+      `mcp__${request.serverName}__${request.toolName}`,
+      TL.TOOL,
+    );
+    if (decision.action !== "CONFIRM" || !this.approvalChannel) return undefined;
+    const approved = await this.approvalChannel.request({
+      tool: canonicalAction,
+      input: redactSecrets(request.toolInput),
+      reason: decision.reason,
+      timeoutMs: 60_000,
+    });
+    if (!approved) return undefined;
+    return this.approvalGrants.issue({
+      sessionId: request.sessionId,
+      taskId: request.taskId,
+      canonicalAction,
+      input: request.toolInput,
+    });
+  }
+
+  private evaluateAction(
+    serverName: string,
+    toolName: string,
+    toolInput: Record<string, unknown>,
+    trustSource: string,
+    trustLevel: (typeof TL)[keyof typeof TL],
+  ): PolicyDecision {
+    const canonicalAction = this.registry.canonicalAction(serverName, toolName);
+    const legacyAction = `${serverName}__${toolName}`;
+    const buildInput = (action: string) => ({
+      toolName: action,
+      toolInput,
+      environment: this.config.meta.environment,
+      trustSources: [{ source: trustSource, trust: trustLevel }],
+      serverInAllowlist: true,
+    });
+    return resolveConflicts([
+      ...evaluatePolicies(this.config, buildInput(canonicalAction)),
+      ...evaluatePolicies(this.config, buildInput(legacyAction)),
+    ]);
   }
 }
