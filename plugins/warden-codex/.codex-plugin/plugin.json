@@ -1,6 +1,6 @@
 {
   "name": "warden-codex",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Local, fail-closed Warden policy enforcement for Codex MCP tools.",
   "author": {
     "name": "Stalewell"

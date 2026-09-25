@@ -1,6 +1,6 @@
 {
   "name": "@stlw/warden-cli",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Developer CLI for Warden — init, start, audit, policy test, scan",
   "license": "MIT",
   "type": "module",
@@ -43,9 +43,9 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@stlw/warden": "^0.2.4",
-    "@stlw/warden-hook-server": "^0.2.4",
-    "@stlw/warden-mcp-gateway": "^0.2.4",
+    "@stlw/warden": "^0.2.5",
+    "@stlw/warden-hook-server": "^0.2.5",
+    "@stlw/warden-mcp-gateway": "^0.2.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "citty": "^0.1.6"
   }

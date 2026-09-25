@@ -4,14 +4,14 @@ import { parsePackMetadata } from "../../../scripts/verify-cli-package.mjs";
 
 describe("parsePackMetadata", () => {
   it("accepts npm 11's array-shaped pack metadata", () => {
-    expect(parsePackMetadata('[{"filename":"stlw-warden-0.2.4.tgz"}]')).toMatchObject({
-      filename: "stlw-warden-0.2.4.tgz",
+    expect(parsePackMetadata('[{"filename":"stlw-warden-0.2.5.tgz"}]')).toMatchObject({
+      filename: "stlw-warden-0.2.5.tgz",
     });
   });
 
   it("accepts npm 12's package-name-keyed pack metadata", () => {
-    expect(parsePackMetadata('{"@stlw/warden":{"filename":"stlw-warden-0.2.4.tgz"}}')).toMatchObject({
-      filename: "stlw-warden-0.2.4.tgz",
+    expect(parsePackMetadata('{"@stlw/warden":{"filename":"stlw-warden-0.2.5.tgz"}}')).toMatchObject({
+      filename: "stlw-warden-0.2.5.tgz",
     });
   });
 
