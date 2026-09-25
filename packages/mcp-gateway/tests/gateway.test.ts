@@ -286,7 +286,7 @@ describe("MCP Gateway", () => {
 
       const entries = ledger.getEntries();
       expect(entries.length).toBe(1);
-      expect(entries[0].tool).toBe("filesystem__read_file");
+      expect(entries[0].tool).toBe("mcp.filesystem.read_file");
       expect(entries[0].decision).toBe("ALLOW");
 
       const chain = ledger.verifyChain();

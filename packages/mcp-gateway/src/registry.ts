@@ -26,6 +26,15 @@ export class MCPRegistry {
     return this.servers.get(serverName);
   }
 
+  isToolAllowed(serverName: string, toolName: string): boolean {
+    return this.getAllowed(serverName)?.allowedTools.includes(toolName) ?? false;
+  }
+
+  canonicalAction(serverName: string, toolName: string): string {
+    this.assertAllowed(serverName);
+    return `mcp.${serverName}.${toolName}`;
+  }
+
   assertAllowed(serverName: string): void {
     if (!this.isAllowed(serverName)) {
       throw new SecurityError(
