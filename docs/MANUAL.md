@@ -121,7 +121,29 @@ approvalChannels:
   telegram:
     botToken: "${TELEGRAM_BOT_TOKEN}"
     chatId: "${TELEGRAM_CHAT_ID}"
+    approverUserIds: [123456789]
 ```
+
+Use one interactive channel per local hook-server process. Telegram callbacks
+must originate from the configured chat; `approverUserIds` is strongly
+recommended to restrict which Telegram users can approve.
+
+For a custom approval system, configure a signed webhook instead:
+
+```yaml
+approvalChannels:
+  webhook:
+    requestUrl: "https://approvals.example.com/warden/requests"
+    statusUrl: "https://approvals.example.com/warden/status"
+    sharedSecret: "${WARDEN_APPROVAL_WEBHOOK_SECRET}"
+```
+
+Warden sends a JSON request containing `requestId`, tool, reason, and redacted
+input. It signs that body with `X-Warden-Approval-Signature` (HMAC-SHA-256).
+Polling includes `X-Warden-Approval-Request-Id` and a signed header. The status
+service must return the same `requestId`, `approved` or `denied` status, and a
+signature over `requestId:status`; malformed, mismatched, unsigned, or expired
+decisions deny the action.
 
 **Trust levels:** `3` = SYSTEM, `2` = AGENT, `1` = TOOL, `0` = EXTERNAL
 **Actions:** `ALLOW`, `DENY`, `CONFIRM`, `QUARANTINE`

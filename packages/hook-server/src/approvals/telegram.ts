@@ -2,13 +2,16 @@ import { Bot } from "grammy";
 import type { ApprovalChannel, ApprovalRequest } from "./types.js";
 
 export class TelegramApprovalChannel implements ApprovalChannel {
+  readonly channel = "telegram" as const;
   private bot: Bot | null = null;
   private readonly botToken: string;
   private readonly chatId: string;
+  private readonly approverUserIds: ReadonlySet<number>;
 
-  constructor(botToken: string, chatId: string) {
+  constructor(botToken: string, chatId: string, approverUserIds: readonly number[] = []) {
     this.botToken = botToken;
     this.chatId = chatId;
+    this.approverUserIds = new Set(approverUserIds);
   }
 
   private getBot(): Bot {
@@ -66,7 +69,9 @@ export class TelegramApprovalChannel implements ApprovalChannel {
         if (
           cb !== undefined &&
           cb.message !== undefined &&
-          cb.message.message_id === messageId
+          cb.message.message_id === messageId &&
+          String(cb.message.chat.id) === this.chatId &&
+          (this.approverUserIds.size === 0 || this.approverUserIds.has(cb.from.id))
         ) {
           await bot.api.answerCallbackQuery(cb.id);
           return cb.data === "warden_approve";
