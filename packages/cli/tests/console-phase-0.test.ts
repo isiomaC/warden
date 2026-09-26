@@ -20,6 +20,8 @@ describe("Console Phase 0 scenarios", () => {
 
     expect(post.title).toBe("Warden Console Phase 0");
     expect(post.surfaces.map((surface) => surface.kind)).toEqual(["markdown", "json", "json"]);
+    expect(post.surfaces[0]).toHaveProperty("markdown");
+    expect(post.surfaces[1]).toHaveProperty("data");
     expect(JSON.stringify(post)).toContain("Deny wins");
     expect(JSON.stringify(post)).toContain("native tools");
     expect(JSON.stringify(post)).toContain("audit");
