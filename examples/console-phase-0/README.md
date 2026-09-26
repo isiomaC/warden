@@ -28,3 +28,11 @@ decisions never import or call this example.
 The board makes the boundary visible: Warden governs MCP tools routed through
 its proxy. Native tools are not governed by that proxy without a separate,
 verified integration.
+
+To record the actual board after the demo publishes its evidence:
+
+```bash
+npm run demo:console-phase-0:capture -- --sideshow-url http://127.0.0.1:8228 --output /tmp/warden-console-phase-0.webm
+```
+
+The recording stays local. It is not uploaded or included in the package.

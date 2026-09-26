@@ -15,4 +15,13 @@ describe("Warden Claude Code skill bundle", () => {
     expect(skill).toContain("native tools");
     expect(skill).not.toContain("hooks.json");
   });
+
+  it("is listed by the repository marketplace", () => {
+    const marketplace = JSON.parse(readFileSync(resolve(process.cwd(), ".claude-plugin/marketplace.json"), "utf8"));
+    expect(marketplace.name).toBe("stalewell");
+    expect(marketplace.plugins).toContainEqual(expect.objectContaining({
+      name: "warden-claude",
+      source: "./plugins/warden-claude",
+    }));
+  });
 });

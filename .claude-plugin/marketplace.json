@@ -1,0 +1,12 @@
+{
+  "name": "stalewell",
+  "description": "Stalewell coding-agent plugins.",
+  "owner": { "name": "Stalewell" },
+  "plugins": [
+    {
+      "name": "warden-claude",
+      "source": "./plugins/warden-claude",
+      "description": "Node-only local Warden MCP policy setup and verification guidance."
+    }
+  ]
+}
