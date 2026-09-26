@@ -24,4 +24,13 @@ describe("Warden Codex plugin bundle", () => {
     expect(readJson(".codex-plugin/plugin.json").interface.longDescription).not.toContain("Codex tools and MCP servers");
     expect(readFileSync(resolve(root, "skills/warden-policy/SKILL.md"), "utf8")).not.toContain("warden start");
   });
+
+  it("points its skill at the canonical Node-only agent setup guide", () => {
+    const skill = readFileSync(resolve(root, "skills/warden-policy/SKILL.md"), "utf8");
+    const guide = readFileSync(resolve(process.cwd(), "docs/AGENT_SETUP.md"), "utf8");
+
+    expect(skill).toContain("docs/AGENT_SETUP.md");
+    expect(guide).toContain("Node-only");
+    expect(guide).toContain("native tools");
+  });
 });
