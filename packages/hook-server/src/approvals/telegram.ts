@@ -74,6 +74,11 @@ export class TelegramApprovalChannel implements ApprovalChannel {
           (this.approverUserIds.size === 0 || this.approverUserIds.has(cb.from.id))
         ) {
           await bot.api.answerCallbackQuery(cb.id);
+          await bot.api
+            .editMessageReplyMarkup(cb.message.chat.id, messageId, {
+              reply_markup: { inline_keyboard: [] },
+            })
+            .catch(() => undefined);
           return cb.data === "warden_approve";
         }
       }

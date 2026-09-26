@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   telegramSendMessage: vi.fn(),
   telegramGetUpdates: vi.fn(),
   telegramAnswerCallbackQuery: vi.fn(),
+  telegramEditMessageReplyMarkup: vi.fn(),
 }));
 
 vi.mock("node:readline", () => ({
@@ -32,6 +33,7 @@ vi.mock("grammy", () => {
       sendMessage: mocks.telegramSendMessage,
       getUpdates: mocks.telegramGetUpdates,
       answerCallbackQuery: mocks.telegramAnswerCallbackQuery,
+      editMessageReplyMarkup: mocks.telegramEditMessageReplyMarkup,
     };
   }
   const BotSpy = vi.fn(function MockBotConstructor(_token: string) {
@@ -158,6 +160,7 @@ describe("StdoutApprovalChannel", () => {
 describe("TelegramApprovalChannel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.telegramEditMessageReplyMarkup.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -187,6 +190,11 @@ describe("TelegramApprovalChannel", () => {
     expect(result).toBe(true);
     expect(mocks.telegramSendMessage).toHaveBeenCalledTimes(1);
     expect(mocks.telegramAnswerCallbackQuery).toHaveBeenCalledWith("cb_1");
+    expect(mocks.telegramEditMessageReplyMarkup).toHaveBeenCalledWith(
+      "chat-123",
+      42,
+      { reply_markup: { inline_keyboard: [] } },
+    );
   });
 
   it("should deny when callback_data is warden_deny", async () => {
@@ -209,6 +217,26 @@ describe("TelegramApprovalChannel", () => {
     const result = await channel.request(makeReq());
 
     expect(result).toBe(false);
+  });
+
+  it("should preserve a valid decision when clearing the buttons fails", async () => {
+    mocks.telegramSendMessage.mockResolvedValue({ message_id: 42 });
+    mocks.telegramEditMessageReplyMarkup.mockRejectedValue(new Error("message unavailable"));
+    mocks.telegramGetUpdates.mockResolvedValueOnce([
+      {
+        update_id: 3,
+        callback_query: {
+          id: "cb_cleanup_failure",
+          data: "warden_approve",
+          message: { message_id: 42, chat: { id: "chat-456" } },
+        },
+      },
+    ]);
+
+    const channel = new TelegramApprovalChannel("token", "chat-456");
+
+    await expect(channel.request(makeReq())).resolves.toBe(true);
+    expect(mocks.telegramAnswerCallbackQuery).toHaveBeenCalledWith("cb_cleanup_failure");
   });
 
   it("should deny on timeout (no callback received)", async () => {
