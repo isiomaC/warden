@@ -32,6 +32,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "demo:console-phase-0": "tsx examples/console-phase-0/demo.ts",
     "lint": "tsc --noEmit",
     "verify:core-package": "node scripts/verify-core-package.mjs",
     "verify:cli-package": "node scripts/verify-cli-package.mjs",
