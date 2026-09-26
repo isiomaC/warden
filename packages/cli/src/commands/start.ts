@@ -5,6 +5,7 @@ import {
   createHookServer,
   AutoApproveApprovalChannel,
   TelegramApprovalChannel,
+  WebhookApprovalChannel,
 } from "@stlw/warden-hook-server";
 import { FileConfigSource, PersistentVault } from "@stlw/warden";
 import type { ApprovalChannelConfig, PolicyConfig } from "@stlw/warden";
@@ -22,20 +23,30 @@ function createChannelFromConfig(ac: ApprovalChannelConfig): ApprovalChannel | u
     const chatId = resolveEnv(ac.telegram.chatId);
     if (botToken && chatId) {
       process.stderr.write(`Using Telegram approval channel (chat: ${chatId})\n`);
-      return new TelegramApprovalChannel(botToken, chatId);
+      return new TelegramApprovalChannel(botToken, chatId, ac.telegram.approverUserIds);
+    }
+  }
+
+  if (ac.webhook?.requestUrl && ac.webhook?.statusUrl && ac.webhook?.sharedSecret) {
+    const requestUrl = resolveEnv(ac.webhook.requestUrl);
+    const statusUrl = resolveEnv(ac.webhook.statusUrl);
+    const sharedSecret = resolveEnv(ac.webhook.sharedSecret);
+    if (requestUrl && statusUrl && sharedSecret) {
+      process.stderr.write("Using signed webhook approval channel\n");
+      return new WebhookApprovalChannel(requestUrl, statusUrl, sharedSecret);
     }
   }
 
   return undefined;
 }
 
-function resolveApprovalChannel(config: PolicyConfig, autoApprove: boolean): { channel?: ApprovalChannel } {
+export function resolveApprovalChannel(config: PolicyConfig, autoApprove: boolean): { channel?: ApprovalChannel } {
   if (autoApprove) {
     return { channel: new AutoApproveApprovalChannel() };
   }
 
   const ac = config.approvalChannels;
-  if (!ac?.telegram) return {}; // no telegram configured — use the default (StdoutApprovalChannel in createHookServer)
+  if (!ac) return {}; // no interactive channel configured — use the default (StdoutApprovalChannel in createHookServer)
 
   const channel = createChannelFromConfig(ac);
   return channel ? { channel } : {};

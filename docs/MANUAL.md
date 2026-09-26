@@ -100,8 +100,7 @@ policies:
     match:
       tools: ["delete_file", "drop_table", "git_push"]
     action: CONFIRM
-    channel: "stdout"       # or "telegram"
-    timeoutSeconds: 60      # auto-deny after 60s
+    channel: "stdout"       # or "telegram" / "webhook"
 
   - id: "allow-reads"
     description: "Allow read operations in development"
@@ -121,7 +120,30 @@ approvalChannels:
   telegram:
     botToken: "${TELEGRAM_BOT_TOKEN}"
     chatId: "${TELEGRAM_CHAT_ID}"
+    approverUserIds: [123456789]
 ```
+
+Use one interactive channel per local hook-server process. Telegram callbacks
+must originate from the configured chat; `approverUserIds` is strongly
+recommended to restrict which Telegram users can approve.
+
+For a custom approval system, configure a signed webhook instead:
+
+```yaml
+approvalChannels:
+  webhook:
+    requestUrl: "https://approvals.example.com/warden/requests"
+    statusUrl: "https://approvals.example.com/warden/status"
+    sharedSecret: "${WARDEN_APPROVAL_WEBHOOK_SECRET}"
+```
+
+Webhook approvals require a receiver that verifies Warden's HMAC signatures,
+authenticates its own operators, and returns signed decisions. See
+[Webhook approvals](WEBHOOK_APPROVALS.md) for the complete configuration,
+receiver contract, security requirements, and verification workflow.
+
+All Warden confirmation channels have a maximum 60-second approval window;
+timeout is a denial.
 
 **Trust levels:** `3` = SYSTEM, `2` = AGENT, `1` = TOOL, `0` = EXTERNAL
 **Actions:** `ALLOW`, `DENY`, `CONFIRM`, `QUARANTINE`
