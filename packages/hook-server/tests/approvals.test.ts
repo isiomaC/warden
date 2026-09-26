@@ -336,6 +336,40 @@ describe("WebhookApprovalChannel", () => {
     vi.restoreAllMocks();
   });
 
+  it("includes approval context in the signed webhook request payload", async () => {
+    let requestBody = "";
+    const mockFetch = vi.fn(async (url: unknown, init?: RequestInit) => {
+      const urlStr = typeof url === "string" ? url : String(url);
+      if (urlStr === "https://webhook.example.com/warden/approve") {
+        requestBody = String(init?.body);
+        return { ok: true, status: 202, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ requestId: "approval-test", status: "approved" }),
+      };
+    });
+    globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+
+    const channel = new WebhookApprovalChannel(
+      "https://webhook.example.com/warden/approve",
+      "https://webhook.example.com/warden/status",
+    );
+    await expect(channel.request(makeReq({
+      environment: "production",
+      sessionId: "session-123",
+      taskId: "task-456",
+    }))).resolves.toBe(true);
+
+    expect(JSON.parse(requestBody)).toMatchObject({
+      requestId: "approval-test",
+      environment: "production",
+      sessionId: "session-123",
+      taskId: "task-456",
+    });
+  });
+
   it("should approve when poll endpoint returns approved", async () => {
     const mockFetch = vi.fn(async (url: unknown, _init?: unknown) => {
       const urlStr = typeof url === "string" ? url : String(url);

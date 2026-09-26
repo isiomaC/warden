@@ -40,13 +40,13 @@ function createChannelFromConfig(ac: ApprovalChannelConfig): ApprovalChannel | u
   return undefined;
 }
 
-function resolveApprovalChannel(config: PolicyConfig, autoApprove: boolean): { channel?: ApprovalChannel } {
+export function resolveApprovalChannel(config: PolicyConfig, autoApprove: boolean): { channel?: ApprovalChannel } {
   if (autoApprove) {
     return { channel: new AutoApproveApprovalChannel() };
   }
 
   const ac = config.approvalChannels;
-  if (!ac?.telegram) return {}; // no telegram configured — use the default (StdoutApprovalChannel in createHookServer)
+  if (!ac) return {}; // no interactive channel configured — use the default (StdoutApprovalChannel in createHookServer)
 
   const channel = createChannelFromConfig(ac);
   return channel ? { channel } : {};

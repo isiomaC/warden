@@ -28,6 +28,9 @@ export class WebhookApprovalChannel implements ApprovalChannel {
       tool: req.tool,
       reason: req.reason,
       input: req.input,
+      ...(req.environment !== undefined ? { environment: req.environment } : {}),
+      ...(req.sessionId !== undefined ? { sessionId: req.sessionId } : {}),
+      ...(req.taskId !== undefined ? { taskId: req.taskId } : {}),
     };
 
     // Fire-and-forget the approval request POST

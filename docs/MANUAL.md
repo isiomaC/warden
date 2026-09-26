@@ -100,8 +100,7 @@ policies:
     match:
       tools: ["delete_file", "drop_table", "git_push"]
     action: CONFIRM
-    channel: "stdout"       # or "telegram"
-    timeoutSeconds: 60      # auto-deny after 60s
+    channel: "stdout"       # or "telegram" / "webhook"
 
   - id: "allow-reads"
     description: "Allow read operations in development"
@@ -138,12 +137,13 @@ approvalChannels:
     sharedSecret: "${WARDEN_APPROVAL_WEBHOOK_SECRET}"
 ```
 
-Warden sends a JSON request containing `requestId`, tool, reason, and redacted
-input. It signs that body with `X-Warden-Approval-Signature` (HMAC-SHA-256).
-Polling includes `X-Warden-Approval-Request-Id` and a signed header. The status
-service must return the same `requestId`, `approved` or `denied` status, and a
-signature over `requestId:status`; malformed, mismatched, unsigned, or expired
-decisions deny the action.
+Webhook approvals require a receiver that verifies Warden's HMAC signatures,
+authenticates its own operators, and returns signed decisions. See
+[Webhook approvals](WEBHOOK_APPROVALS.md) for the complete configuration,
+receiver contract, security requirements, and verification workflow.
+
+All Warden confirmation channels have a maximum 60-second approval window;
+timeout is a denial.
 
 **Trust levels:** `3` = SYSTEM, `2` = AGENT, `1` = TOOL, `0` = EXTERNAL
 **Actions:** `ALLOW`, `DENY`, `CONFIRM`, `QUARANTINE`
