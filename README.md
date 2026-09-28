@@ -144,6 +144,18 @@ The plugin hooks into these OpenCode events:
 | `session.created` | Mint token, create task context |
 | `session.deleted` | Revoke tokens, flush ledger |
 
+To add the optional `/warden` setup skill to an OpenCode project, copy the
+versioned skill directory from this repository:
+
+```bash
+mkdir -p .opencode/skills
+cp -R .opencode/skills/warden <your-project>/.opencode/skills/
+```
+
+It provides guidance only and does not alter OpenCode configuration or the
+plugin. See [Warden agent setup](docs/AGENT_SETUP.md) for the shared Node-only
+runtime, policy verification, audit export, and native-tool boundary.
+
 ### GitHub Copilot (SDK Extension)
 
 Add Warden to your Copilot extension's `agent.json`:
