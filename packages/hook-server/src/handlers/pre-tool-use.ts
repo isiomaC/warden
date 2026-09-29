@@ -128,8 +128,18 @@ export function handlePreToolUse(
         });
 
       case "CONFIRM": {
+        if (approvalChannel?.channel && approvalChannel.channel !== decision.channel) {
+          return c.json({
+            hookSpecificOutput: {
+              hookEventName: "PreToolUse",
+              permissionDecision: "deny",
+              permissionDecisionReason: `Warden: Required ${decision.channel} approval channel is not configured.`,
+            },
+          });
+        }
         if (approvalChannel) {
           const approved = await approvalChannel.request({
+            requestId: generateId("approval"),
             tool: tool_name,
             input: redactSecrets(tool_input),
             reason: decision.reason,

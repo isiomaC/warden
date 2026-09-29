@@ -1,6 +1,7 @@
 import * as readline from "node:readline";
 
 export interface ApprovalRequest {
+  requestId?: string;
   tool: string;
   input: unknown;
   reason: string;
@@ -11,6 +12,7 @@ export interface ApprovalRequest {
 }
 
 export interface ApprovalChannel {
+  channel?: "stdout" | "telegram" | "webhook";
   request(req: ApprovalRequest): Promise<boolean>;
 }
 
@@ -28,6 +30,7 @@ export interface HookResponse {
 }
 
 export class StdoutApprovalChannel implements ApprovalChannel {
+  readonly channel = "stdout" as const;
   async request(req: ApprovalRequest): Promise<boolean> {
     const timeoutMs = Math.min(req.timeoutMs, 60_000);
 
@@ -58,12 +61,14 @@ export class StdoutApprovalChannel implements ApprovalChannel {
 }
 
 export class AutoApproveApprovalChannel implements ApprovalChannel {
+  readonly channel = "stdout" as const;
   async request(_req: ApprovalRequest): Promise<boolean> {
     return true;
   }
 }
 
 export class TimeoutApprovalChannel implements ApprovalChannel {
+  readonly channel = "stdout" as const;
   async request(req: ApprovalRequest): Promise<boolean> {
     return new Promise((resolve) => {
       setTimeout(() => {

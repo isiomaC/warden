@@ -30,7 +30,8 @@ export interface PolicyRule {
 
 export interface ApprovalChannelConfig {
   stdout?: Record<string, never>;
-  telegram?: { botToken?: string; chatId?: string };
+  telegram?: { botToken?: string; chatId?: string; approverUserIds?: number[] };
+  webhook?: { requestUrl?: string; statusUrl?: string; sharedSecret?: string };
 }
 
 export interface PolicyConfig {
