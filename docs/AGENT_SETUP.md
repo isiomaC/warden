@@ -12,7 +12,7 @@ Use Node.js 22 or later. The Warden hook server is **Node-only**. Do not run
 Install the CLI in the project that owns your Warden configuration:
 
 ```bash
-npm install --save-dev @stlw/warden-cli@0.2.5
+npm install --save-dev @stlw/warden-cli@0.2.6
 ```
 
 ## Configure the MCP proxy
