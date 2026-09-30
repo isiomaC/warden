@@ -95,6 +95,19 @@ Enterprise MCP gateways (AWS AgentCore, Google Agent Gateway, Kong, Tyk) solve p
 
 The hook server runs on `localhost:7429` and handles all 6 Claude Code hook events. See Quick Start below for setup.
 
+For portable, MCP-proxy setup guidance, install the optional Warden Claude Code
+skill bundle after adding this repository as a marketplace:
+
+```bash
+claude plugin marketplace add isiomaC/warden
+claude plugin install warden-claude@stalewell
+```
+
+The skill provides setup guidance only; it does not add hooks or rewrite an
+existing project configuration. See [Warden agent setup](docs/AGENT_SETUP.md)
+for the Node-only runtime, proxy verification, audit export, and native-tool
+enforcement boundary.
+
 ### OpenCode (Local Plugin)
 
 Copy the plugin file from the Warden repo into your project:
@@ -130,6 +143,18 @@ The plugin hooks into these OpenCode events:
 | `permission.asked` | Intercept for CONFIRM approval |
 | `session.created` | Mint token, create task context |
 | `session.deleted` | Revoke tokens, flush ledger |
+
+To add the optional `/warden` setup skill to an OpenCode project, copy the
+versioned skill directory from this repository:
+
+```bash
+mkdir -p .opencode/skills
+cp -R .opencode/skills/warden <your-project>/.opencode/skills/
+```
+
+It provides guidance only and does not alter OpenCode configuration or the
+plugin. See [Warden agent setup](docs/AGENT_SETUP.md) for the shared Node-only
+runtime, policy verification, audit export, and native-tool boundary.
 
 ### GitHub Copilot (SDK Extension)
 
@@ -201,6 +226,9 @@ Verify one expected allow and one expected deny through a proxied MCP tool.
 The plugin does not intercept native Codex tools such as Bash or apply_patch;
 policy evaluation stays local and deterministic, with no LLM in the decision
 path.
+
+See [Warden agent setup](docs/AGENT_SETUP.md) for the shared Node-only setup,
+policy verification, and audit-export workflow used by both bundles.
 
 ### Tier 2 Tools: MCP Proxy (Cursor, Windsurf, Continue.dev, Cody, Amazon Q)
 
