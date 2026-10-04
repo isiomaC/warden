@@ -19,7 +19,7 @@ policies and upstream server definition before using it.
 From this directory, register Warden as a project-scoped MCP server:
 
 ```sh
-claude mcp add --scope project warden -- npx --yes @stlw/warden-cli@0.2.6 proxy
+claude mcp add --scope project warden -- npx --yes @stlw/warden-cli@0.2.7 proxy
 claude mcp list
 ```
 
@@ -29,7 +29,7 @@ policy verification, invoke one expected allow and one expected deny through a
 Warden-provided MCP tool, then inspect the Warden ledger with:
 
 ```sh
-npx --yes @stlw/warden-cli@0.2.6 audit --export json
+npx --yes @stlw/warden-cli@0.2.7 audit --export json
 ```
 
 The Warden hook server (`warden start`) is a separate HTTP contract for clients

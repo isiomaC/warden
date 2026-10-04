@@ -5,6 +5,34 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2026-10-04
+
+### Added
+
+- Persistent, redacted JSONL audit output for OpenCode, with verification and
+  JSON/CSV export through `warden audit`.
+- Codex CLI project-level MCP setup guidance for the tested workaround when
+  the bundled plugin does not start its MCP process.
+
+### Fixed
+
+- CLI version reporting, malformed-policy diagnostics, and generated shell
+  injection patterns.
+- MCP gateway policy matching for canonical, legacy, and bare tool names;
+  approval routing now honors the configured channel, timeout, environment,
+  session, and task context, and denies when the required channel is missing.
+- OpenCode plugin audit evidence now persists between runs.
+
+### Changed
+
+- Removed unsupported Claude Code native HTTP-hook security setup and claims;
+  clarified that the MCP proxy governs only MCP tools routed through it.
+- Documented the tested Codex CLI 0.158.0 plugin-startup limitation. The
+  project-level workaround does not rewrite existing Codex configuration and
+  does not govern native Codex tools.
+- Aligned Warden package versions, internal dependency ranges, agent manifests,
+  and version-pinned MCP commands to `0.2.7`.
+
 ## [0.2.6] - 2026-09-30
 
 ### Added

@@ -12,7 +12,7 @@ Use Node.js 22 or later. The Warden hook server is **Node-only**. Do not run
 Install the CLI in the project that owns your Warden configuration:
 
 ```bash
-npm install --save-dev @stlw/warden-cli@0.2.6
+npm install --save-dev @stlw/warden-cli@0.2.7
 ```
 
 ## Configure the MCP proxy
@@ -78,7 +78,7 @@ for Codex MCP calls, add this entry yourself to the project's
 ```toml
 [mcp_servers.warden]
 command = "npx"
-args = ["--yes", "@stlw/warden-cli@0.2.6", "proxy"]
+args = ["--yes", "@stlw/warden-cli@0.2.7", "proxy"]
 ```
 
 This project-level MCP configuration workaround is the verified Codex path for

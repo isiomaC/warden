@@ -1,6 +1,6 @@
 {
   "name": "warden-claude",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Node-only local Warden policy setup and verification guidance for Claude Code.",
   "author": {
     "name": "Stalewell",

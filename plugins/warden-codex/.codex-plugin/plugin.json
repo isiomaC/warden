@@ -1,15 +1,15 @@
 {
   "name": "warden-codex",
-  "version": "0.2.6",
-  "description": "Local, fail-closed Warden policy enforcement for Codex MCP tools.",
+  "version": "0.2.7",
+  "description": "Setup guidance for Warden policy on Codex MCP tools.",
   "author": {
     "name": "Stalewell"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Warden Codex",
-    "shortDescription": "Protect proxied Codex MCP tools with local Warden policies.",
-    "longDescription": "Adds a local, deterministic Warden policy layer to MCP tools routed through its proxy.",
+    "shortDescription": "Set up Warden for MCP tools in Codex.",
+    "longDescription": "Provides setup guidance for routing MCP tools through the Warden proxy; Codex native tools are not governed.",
     "developerName": "Stalewell",
     "category": "Productivity",
     "capabilities": [],

@@ -26,13 +26,15 @@ describe("Warden Codex plugin bundle", () => {
   it("declares a version-pinned portable Warden proxy", () => {
     const server = readJson("mcp.json").mcpServers.warden;
     expect(server).toMatchObject({ type: "stdio", command: "npx" });
-    expect(server.args).toContain("@stlw/warden-cli@0.2.6");
+    expect(server.args).toContain("@stlw/warden-cli@0.2.7");
   });
 
   it("does not claim unsupported native Codex hook enforcement", () => {
     expect(readJson("plugin.json").extensions).toBeUndefined();
+    expect(readJson("plugin.json").description).toMatch(/setup guidance/i);
     expect(readJson(".codex-plugin/plugin.json").hooks).toBeUndefined();
     expect(readJson(".codex-plugin/plugin.json").interface.longDescription).toContain("MCP tools");
+    expect(readJson(".codex-plugin/plugin.json").interface.longDescription).toContain("setup guidance");
     expect(readJson(".codex-plugin/plugin.json").interface.longDescription).not.toContain("Codex tools and MCP servers");
     expect(readFileSync(resolve(root, "skills/warden-policy/SKILL.md"), "utf8")).not.toContain("warden start");
   });
