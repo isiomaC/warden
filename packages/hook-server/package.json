@@ -1,7 +1,7 @@
 {
   "name": "@stlw/warden-hook-server",
-  "version": "0.2.6",
-  "description": "HTTP hook server for Claude Code, Codex CLI, and Copilot SDK integration",
+  "version": "0.2.7",
+  "description": "HTTP hook server implementing Warden's local decision contract",
   "type": "module",
   "main": "./dist/src/server.js",
   "types": "./dist/src/server.d.ts",
@@ -40,7 +40,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@stlw/warden": "^0.2.6",
+    "@stlw/warden": "^0.2.7",
     "hono": "^4.13.0",
     "grammy": "^1.32.0"
   }

@@ -1,9 +1,8 @@
 {
   "mcpServers": {
     "warden": {
-      "type": "stdio",
       "command": "npx",
-      "args": ["--yes", "@stlw/warden-cli@0.2.5", "proxy"]
+      "args": ["--yes", "@stlw/warden-cli@0.2.7", "proxy"]
     }
   }
 }

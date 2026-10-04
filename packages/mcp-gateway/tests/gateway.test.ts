@@ -154,7 +154,101 @@ describe("MCP Gateway", () => {
     });
   });
 
-  describe("WardenGateway", () => {
+describe("WardenGateway", () => {
+  it("applies an unqualified generated read rule to a canonical MCP action", async () => {
+    const config: PolicyConfig = {
+      version: "2",
+      meta: { environment: "development", sessionApprovalRequired: false },
+      policies: [{
+        id: "allow-reads",
+        description: "Allow reads",
+        match: { tools: ["read_file"] },
+        action: "ALLOW",
+      }],
+    };
+    const registry = new Registry([
+      { name: "filesystem", type: "local", transport: "stdio", allowedTools: ["read_file"], authRequired: false },
+    ]);
+    const gateway = new WardenGateway({
+      config,
+      ledger: new MemoryLedgerStore(),
+      contextManager: new ContextManager(),
+      registry,
+    });
+    const wrapped = gateway.wrapMCP("filesystem", {
+      serverName: "filesystem",
+      allowedTools: ["read_file"],
+      trustLevel: TrustLevel.TOOL,
+      maxCallsPerMinute: 300,
+    });
+
+    await expect(wrapped.onToolCall("read_file", {}, "session", "task")).resolves.toMatchObject({ action: "ALLOW" });
+  });
+
+  it("passes policy timeout, environment, and session context to confirmations", async () => {
+    const requests: Array<{ tool: string; timeoutMs: number; environment?: string; sessionId?: string; taskId?: string }> = [];
+    const config: PolicyConfig = {
+      version: "2",
+      meta: { environment: "production", sessionApprovalRequired: false },
+      policies: [{
+        id: "confirm-delete",
+        description: "Confirm deletion",
+        match: { tools: ["delete_file"] },
+        action: "CONFIRM",
+        channel: "telegram",
+        timeoutSeconds: 17,
+      }],
+    };
+    const registry = new Registry([
+      { name: "filesystem", type: "local", transport: "stdio", allowedTools: ["delete_file"], authRequired: false },
+    ]);
+    const gateway = new WardenGateway({
+      config,
+      ledger: new MemoryLedgerStore(),
+      contextManager: new ContextManager(),
+      registry,
+      approvalChannel: { request: async (request) => { requests.push(request); return true; } },
+    });
+    const wrapped = gateway.wrapMCP("filesystem", {
+      serverName: "filesystem",
+      allowedTools: ["delete_file"],
+      trustLevel: TrustLevel.TOOL,
+      maxCallsPerMinute: 300,
+    });
+
+    await expect(wrapped.onToolCall("delete_file", { path: "/tmp/a" }, "session-42", "task-7"))
+      .resolves.toMatchObject({ action: "ALLOW" });
+    expect(requests).toEqual([expect.objectContaining({
+      tool: "mcp.filesystem.delete_file",
+      timeoutMs: 17_000,
+      environment: "production",
+      sessionId: "session-42",
+      taskId: "task-7",
+    })]);
+  });
+
+  it("denies confirmation when the configured approval channel does not match policy", async () => {
+    const config: PolicyConfig = {
+      version: "2",
+      meta: { environment: "development", sessionApprovalRequired: false },
+      policies: [{ id: "confirm-delete", description: "Confirm", match: { tools: ["delete_file"] }, action: "CONFIRM", channel: "webhook" }],
+    };
+    const registry = new Registry([
+      { name: "filesystem", type: "local", transport: "stdio", allowedTools: ["delete_file"], authRequired: false },
+    ]);
+    let requested = false;
+    const gateway = new WardenGateway({
+      config,
+      ledger: new MemoryLedgerStore(),
+      contextManager: new ContextManager(),
+      registry,
+      approvalChannel: { channel: "telegram", request: async () => { requested = true; return true; } },
+    });
+    const wrapped = gateway.wrapMCP("filesystem", { serverName: "filesystem", allowedTools: ["delete_file"], trustLevel: TrustLevel.TOOL, maxCallsPerMinute: 300 });
+
+    await expect(wrapped.onToolCall("delete_file", {}, "session", "task")).resolves.toMatchObject({ action: "DENY" });
+    expect(requested).toBe(false);
+  });
     it("should wrap an allowed MCP server", () => {
       const registry = new Registry([
         { name: "filesystem", type: "local", transport: "stdio", allowedTools: ["read_file"], authRequired: false },

@@ -13,6 +13,7 @@ import { proxyCommand } from "./commands/proxy.js";
 const main = defineCommand({
   meta: {
     name: "warden",
+    version: "0.2.7",
     description: "Warden — Security layer for MCP-connected AI agents",
   },
   subCommands: {

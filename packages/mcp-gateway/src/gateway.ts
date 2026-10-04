@@ -33,6 +33,7 @@ export interface WardenGatewayOptions {
   registry: MCPRegistry;
   oauth?: OAuthManager;
   approvalChannel?: ApprovalChannel | undefined;
+  approvalChannels?: Partial<Record<"stdout" | "telegram" | "webhook", ApprovalChannel>>;
   approvalGrants?: ApprovalGrantStore;
   logger?: WardenLogger;
 }
@@ -51,6 +52,7 @@ export class WardenGateway {
   private registry: MCPRegistry;
   private oauth: OAuthManager;
   private approvalChannel: ApprovalChannel | undefined;
+  private approvalChannels: Partial<Record<"stdout" | "telegram" | "webhook", ApprovalChannel>>;
   private approvalGrants: ApprovalGrantStore;
   private rateLimiter: SlidingWindowRateLimiter;
   private logger: WardenLogger;
@@ -62,6 +64,7 @@ export class WardenGateway {
     this.registry = options.registry;
     this.oauth = options.oauth ?? new OAuthManager();
     this.approvalChannel = options.approvalChannel;
+    this.approvalChannels = options.approvalChannels ?? {};
     this.approvalGrants = options.approvalGrants ?? new ApprovalGrantStore();
     this.logger = options.logger ?? new WardenLogger("mcp-gateway", parseLogLevel(process.env.LOG_LEVEL));
 
@@ -228,12 +231,20 @@ export class WardenGateway {
           return { action: "ALLOW" as const, reason: "Approval grant accepted." };
         }
 
-        if (decision.action === "CONFIRM" && self.approvalChannel) {
-          const approved = await self.approvalChannel.request({
+        if (decision.action === "CONFIRM") {
+          const channel = self.approvalChannels[decision.channel]
+            ?? (self.approvalChannel?.channel === undefined || self.approvalChannel.channel === decision.channel
+              ? self.approvalChannel
+              : undefined);
+          if (!channel) return { action: "DENY" as const, reason: `Required ${decision.channel} approval channel is not configured.` };
+          const approved = await channel.request({
             tool: canonicalAction,
             input: redactSecrets(toolInput),
             reason: decision.reason,
-            timeoutMs: 60_000,
+            timeoutMs: (decision.timeoutSeconds ?? 60) * 1_000,
+            sessionId,
+            taskId: currentTaskId,
+            environment: self.config.meta.environment,
           });
 
           return approved
@@ -293,12 +304,20 @@ export class WardenGateway {
       `mcp__${request.serverName}__${request.toolName}`,
       TL.TOOL,
     );
-    if (decision.action !== "CONFIRM" || !this.approvalChannel) return undefined;
-    const approved = await this.approvalChannel.request({
+    if (decision.action !== "CONFIRM") return undefined;
+    const channel = this.approvalChannels[decision.channel]
+      ?? (this.approvalChannel?.channel === undefined || this.approvalChannel.channel === decision.channel
+        ? this.approvalChannel
+        : undefined);
+    if (!channel) return undefined;
+    const approved = await channel.request({
       tool: canonicalAction,
       input: redactSecrets(request.toolInput),
       reason: decision.reason,
-      timeoutMs: 60_000,
+      timeoutMs: (decision.timeoutSeconds ?? 60) * 1_000,
+      sessionId: request.sessionId,
+      taskId: request.taskId,
+      environment: this.config.meta.environment,
     });
     if (!approved) return undefined;
     return this.approvalGrants.issue({
@@ -328,6 +347,7 @@ export class WardenGateway {
     return resolveConflicts([
       ...evaluatePolicies(this.config, buildInput(canonicalAction)),
       ...evaluatePolicies(this.config, buildInput(legacyAction)),
+      ...evaluatePolicies(this.config, buildInput(toolName)),
     ]);
   }
 }

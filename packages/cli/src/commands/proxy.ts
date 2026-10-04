@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { FileConfigSource, MemoryLedgerStore, SqliteLedgerStore, ContextManager, TrustLevel } from "@stlw/warden";
 import { WardenGateway, MCPRegistry } from "@stlw/warden-mcp-gateway";
-import { TelegramApprovalChannel } from "@stlw/warden-hook-server";
+import { createProxyApprovalChannels } from "../approval-channels.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -36,12 +36,9 @@ interface RawConfig extends RuntimeConfig {
     allowed?: RawServerEntry[];
   };
   approvalChannels?: {
-    telegram?: { botToken?: string; chatId?: string };
+    telegram?: { botToken?: string; chatId?: string; approverUserIds?: number[] };
+    webhook?: { requestUrl?: string; statusUrl?: string; sharedSecret?: string };
   };
-}
-
-function resolveEnv(value: string): string {
-  return value.replace(/\$\{(\w+)\}/g, (_, name) => process.env[name] ?? "");
 }
 
 export const proxyCommand = defineCommand({
@@ -87,12 +84,7 @@ export const proxyCommand = defineCommand({
       ? new SqliteLedgerStore(resolve(runtime.dbPath))
       : new MemoryLedgerStore();
 
-    const telegram = rawConfig.approvalChannels?.telegram;
-    const botToken = telegram?.botToken ? resolveEnv(telegram.botToken) : "";
-    const chatId = telegram?.chatId ? resolveEnv(telegram.chatId) : "";
-    const approvalChannel = botToken && chatId
-      ? new TelegramApprovalChannel(botToken, chatId)
-      : undefined;
+    const approvalChannels = createProxyApprovalChannels(rawConfig.approvalChannels);
 
     const registry = new MCPRegistry(
       serverEntries.map((s) => ({
@@ -110,7 +102,7 @@ export const proxyCommand = defineCommand({
       ledger,
       contextManager: new ContextManager(),
       registry,
-      ...(approvalChannel ? { approvalChannel } : {}),
+      approvalChannels,
     });
 
     // Build per-server wrapped instances and a flat tool → server lookup map
@@ -120,7 +112,7 @@ export const proxyCommand = defineCommand({
     const allTools: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> = [];
 
     for (const entry of serverEntries) {
-      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.6" });
+      const client = new Client({ name: `warden-proxy-${entry.name}`, version: "0.2.7" });
       if (entry.transport === "stdio") {
         if (!entry.command) {
           throw new Error(`MCP server "${entry.name}" uses stdio but has no command.`);
@@ -168,7 +160,7 @@ export const proxyCommand = defineCommand({
     }
 
     const mcpServer = new Server(
-      { name: "warden-proxy", version: "0.2.6" },
+      { name: "warden-proxy", version: "0.2.7" },
       { capabilities: { tools: {} } },
     );
 

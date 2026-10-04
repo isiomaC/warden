@@ -26,6 +26,9 @@ export const configValidateCommand = defineCommand({
       const proxyErrors = validateProxyEntries(extended.mcpServers?.allowed ?? []);
       if (proxyErrors.length > 0) throw new Error(proxyErrors.join("\n"));
 
+      if (!Array.isArray(config.policies)) {
+        throw new Error('Invalid config: "policies" must be an array.');
+      }
       const ruleIds = config.policies.map((p) => p.id);
       const duplicates = ruleIds.filter((id, i) => ruleIds.indexOf(id) !== i);
       if (duplicates.length > 0) {

@@ -46,35 +46,40 @@ const decision = await warden.evaluate(
 Unknown conditions, resolver failures, timeouts, and unmatched rules all deny.
 When several rules match, DENY wins over PENDING_APPROVAL and ALLOW.
 
-Warden sits between your LLM agent and its tools, enforcing rules on every tool call. No LLM in the security path — just deterministic policy evaluation. If Warden is down, **all tool calls are blocked**. Fail-closed, always.
+For calls routed through a supported Warden integration, Warden applies deterministic policy before the action reaches its MCP upstream or hook client. If the MCP proxy is unavailable, proxied MCP calls cannot reach their upstream. Native agent tools remain outside Warden's control.
 
-Works with Claude Code, OpenCode, and any MCP-connected agent.
+Agent integrations have different enforcement boundaries. OpenCode's project
+plugin is verified for native tool hooks; Claude Code and Codex should be
+treated as MCP-proxy integrations only for now. See the
+[agent capability matrix](docs/AGENT_SETUP.md#agent-capability-matrix) before
+choosing an integration.
 
 ## Works With
 
-Warden integrates at different depths depending on the platform's capabilities:
+See the [agent capability matrix](docs/AGENT_SETUP.md#agent-capability-matrix)
+for each platform's tested status and the distinction between native-agent
+tools and MCP tools.
 
 | Tier | Tools | Integration | Warden Capability |
 |---|---|---|---|
-| **Full hooks + MCP** | Claude Code, GitHub Copilot SDK, OpenCode | PreToolUse/PostToolUse hooks, prompt scanning, session lifecycle | Full policy enforcement, per-call inspection, CONFIRM, ledger audit |
-| **MCP only (no hooks)** | OpenAI Codex CLI, Cursor, Windsurf, Continue.dev, Cody, Amazon Q | Warden acts as an MCP proxy — all tools go through `warden.wrapMCP()` | Tool-level policy, server allowlist, rate limiting. **Cannot** intercept native or other non-MCP tools. |
+| **Agent hooks + MCP** | OpenCode (verified); GitHub Copilot SDK (example only, untested) | Agent-specific hooks plus optional MCP policy checks | Use the capability matrix for the tested scope; do not infer fail-closed behavior for an untested hook runtime. |
+| **MCP proxy** | Claude Code, OpenAI Codex CLI, Cursor, Windsurf, Continue.dev, Cody, Amazon Q | Warden acts as an MCP proxy — selected tools route through Warden | Tool-level policy, server allowlist, rate limiting. **Cannot** intercept native or other non-MCP tools. |
 | **No MCP + no hooks** | Aider | Process-level proxy or fork modification | None out of the box. Requires custom integration. |
 
 ### What's been verified
 
 | Tool | Integration path | Status | How it was tested |
 |---|---|---|---|
-| **Claude Code** | `claude -p` headless | Verified | Live: ALLOW/DENY confirmed via ledger audit with `stream-json` |
-| **Claude Code** | `claude` interactive TUI | Documented | Not automated (needs TTY); hook protocol identical to headless path |
+| **Claude Code** | MCP proxy | Documented; live validation pending | Governed MCP tools only; native HTTP hooks are unsupported for enforcement because an unavailable hook server does not block native tools |
 | **OpenCode** | `opencode run` headless | Verified | Live: `Warden BLOCKED` confirmed for write, bash injection, unknown tools |
 | **OpenCode** | `opencode` interactive TUI | Documented | Not automated (needs TTY); same plugin runtime as headless path |
 | **Cursor / Windsurf / Continue.dev / Cody / Amazon Q** | `warden proxy` (MCP stdio) | Wire protocol verified | Spawned process: `tools/list` + `tools/call` ALLOW/DENY confirmed |
 | **Cursor / Windsurf / Continue.dev / Cody / Amazon Q** | Actual GUI apps | Untested | Would require UI automation of third-party Electron apps |
 | **GitHub Copilot SDK** | Hook handler in `agent.json` | Documented, untested | Code example in README; never run against a real Copilot extension |
-| **OpenAI Codex CLI** | Bundled `warden-codex` plugin | MCP proxy verified | Governs only MCP tools routed through Warden; native Codex tools are not intercepted |
+| **OpenAI Codex CLI** | Bundled `warden-codex` plugin | Plugin MCP registration unverified | Physical CLI testing shows the installed plugin does not start its MCP process; direct project MCP registration separately passed proxy allow/deny checks |
 | **Aider** | Process-level proxy | Documented, untested | No integration built |
 
-> **Claude Code headless mode note:** `claude -p` requires `--output-format stream-json --include-hook-events --verbose` to fire hooks. The default `--output-format json` does **not** fire PreToolUse/PostToolUse/SessionStart hooks. Interactive mode (`claude` without `-p`) fires all six hooks normally.
+> **Claude Code security boundary:** Warden supports Claude Code through its MCP proxy. Native HTTP-hook enforcement is unsupported: physical testing showed Claude Code continues a native tool call when Warden's hook endpoint is unavailable.
 
 ---
 
@@ -91,9 +96,13 @@ Enterprise MCP gateways (AWS AgentCore, Google Agent Gateway, Kong, Tyk) solve p
 
 ## How It Works
 
-### Claude Code (Native Hook Server)
+### Claude Code (MCP Proxy)
 
-The hook server runs on `localhost:7429` and handles all 6 Claude Code hook events. See Quick Start below for setup.
+Claude Code can route selected MCP tools through Warden's stdio proxy. Native
+Claude Code tools remain outside Warden's enforcement boundary. Do not rely on
+Claude Code native HTTP hooks for security enforcement: when the local hook
+server is unavailable, Claude Code reports the hook error and can continue the
+native tool call.
 
 For portable, MCP-proxy setup guidance, install the optional Warden Claude Code
 skill bundle after adding this repository as a marketplace:
@@ -105,25 +114,21 @@ claude plugin install warden-claude@stalewell
 
 The skill provides setup guidance only; it does not add hooks or rewrite an
 existing project configuration. See [Warden agent setup](docs/AGENT_SETUP.md)
-for the Node-only runtime, proxy verification, audit export, and native-tool
+for proxy configuration, verification, audit export, and the native-tool
 enforcement boundary.
 
 ### OpenCode (Local Plugin)
 
-Copy the plugin file from the Warden repo into your project:
+Copy the plugin entry and its support module into your project:
 
 ```bash
-mkdir -p .opencode/plugins
-cp warden-plugin.ts .opencode/plugins/
+mkdir -p .opencode/plugins/lib
+cp packages/opencode-plugin/warden-plugin.ts .opencode/plugins/
+cp packages/opencode-plugin/lib/ledger.ts .opencode/plugins/lib/
 ```
 
-Then add to `opencode.json`:
-
-```jsonc
-{
-  "plugin": [".opencode/plugins/warden-plugin.ts"]
-}
-```
+OpenCode discovers project plugins from `.opencode/plugins/`; no edit to
+`opencode.json` is needed for this setup.
 
 The plugin requires `@stlw/warden` to be installed in your project:
 
@@ -131,7 +136,8 @@ The plugin requires `@stlw/warden` to be installed in your project:
 npm install @stlw/warden
 ```
 
-Get the latest plugin file from: `https://github.com/isiomaC/warden/blob/main/packages/opencode-plugin/warden-plugin.ts`
+Use the matching `warden-plugin.ts` and `lib/ledger.ts` files from the same
+Warden release.
 
 The plugin hooks into these OpenCode events:
 
@@ -139,8 +145,8 @@ The plugin hooks into these OpenCode events:
 |---|---|
 | `tool.execute.before` | Policy evaluation → block if DENY |
 | `tool.execute.after` | Trust-tag output |
-| `tui.prompt.append` | Injection scan → block if detected |
-| `permission.asked` | Intercept for CONFIRM approval |
+| `chat.message` | Scan text parts for injection patterns → block if detected |
+| `permission.ask` | Set permission status to deny when policy returns DENY |
 | `session.created` | Mint token, create task context |
 | `session.deleted` | Revoke tokens, flush ledger |
 
@@ -151,6 +157,15 @@ versioned skill directory from this repository:
 mkdir -p .opencode/skills
 cp -R .opencode/skills/warden <your-project>/.opencode/skills/
 ```
+
+OpenCode decisions are persisted to an append-only JSONL ledger, separate from
+the CLI's SQLite ledger. Inspect or export it with:
+
+```yaml
+npx warden audit --jsonl .warden/opencode-ledger.jsonl --export json
+```
+
+The file is project-local and does not require a native SQLite binding.
 
 It provides guidance only and does not alter OpenCode configuration or the
 plugin. See [Warden agent setup](docs/AGENT_SETUP.md) for the shared Node-only
@@ -206,12 +221,22 @@ export async function onUserPromptSubmitted(event) {
 ### OpenAI Codex CLI (Plugin)
 
 Install the bundled `plugins/warden-codex` plugin from a Warden marketplace.
-It contributes Warden's stdio MCP proxy. It is opt-in and never creates,
-merges, or overwrites `.codex/config.toml`.
+The plugin contributes setup guidance and never creates, merges, or overwrites
+`.codex/config.toml`. Physical validation with Codex CLI 0.158.0 found that the
+installed plugin does not start its bundled MCP process. Until plugin-host
+registration is resolved, add the following server entry to your project's
+`.codex/config.toml` yourself, merging it into the existing file without
+replacing other settings:
 
 ```bash
 codex plugin marketplace add isiomaC/warden
 codex plugin add warden-codex@stalewell
+```
+
+```toml
+[mcp_servers.warden]
+command = "npx"
+args = ["--yes", "@stlw/warden-cli@0.2.7", "proxy"]
 ```
 
 Before enabling it, create or review `warden.config.yml`, declare upstream MCP
@@ -223,9 +248,9 @@ warden proxy
 ```
 
 Verify one expected allow and one expected deny through a proxied MCP tool.
-The plugin does not intercept native Codex tools such as Bash or apply_patch;
-policy evaluation stays local and deterministic, with no LLM in the decision
-path.
+The tested project-level server entry does not intercept native Codex tools
+such as Bash or apply_patch; policy evaluation stays local and deterministic,
+with no LLM in the decision path.
 
 See [Warden agent setup](docs/AGENT_SETUP.md) for the shared Node-only setup,
 policy verification, and audit-export workflow used by both bundles.
@@ -322,34 +347,11 @@ This creates `warden.config.yml` and `.warden/` in your project.
 
 ### 3. Set up your agent
 
-**Claude Code — add hooks to `.claude/settings.local.json`** (Claude Code's convention for
-personal, untracked config — keep this file out of git; put the *shape* of your hooks in the
-committed `.claude/settings.json` without the secret, if you want the URLs/timeouts
-version-controlled):
-
-```json
-{
-  "hooks": {
-    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-start", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 10 }] }],
-    "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/prompt-submit", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 5 }] }],
-    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/pre-tool-use", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 10 }] }],
-    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/post-tool-use", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 5, "async": true }] }],
-    "ConfigChange": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/config-change", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 5 }] }],
-    "SessionEnd": [{ "matcher": "", "hooks": [{ "type": "http", "url": "http://localhost:7429/hooks/session-end", "headers": { "X-Warden-Auth": "REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN" }, "timeout": 10, "async": true }] }]
-  }
-}
-```
-
-Put the literal token value directly in the header — generate it once
-(`openssl rand -hex 32`), paste it into `REPLACE_WITH_YOUR_WARDEN_AUTH_TOKEN` above, and pass
-the same value as `WARDEN_AUTH_TOKEN` when you start Warden. **`${WARDEN_AUTH_TOKEN}`-style
-env-var interpolation in hook headers did not work in our end-to-end testing against a real
-`claude -p` session** — the CLI has a documented `httpHookAllowedEnvVars` allowlist for this,
-but every configuration we tried (top-level, per-hook, user- and project-scoped settings)
-resulted in an empty header, silently 401ing every hook call. A literal value in
-`.claude/settings.local.json` is the pattern we verified actually works end to end; treat
-env-var interpolation as unconfirmed until a future Claude Code release documents the
-working incantation.
+**Claude Code — route MCP tools through Warden:** configure Warden as a stdio
+MCP server in Claude Code's MCP settings. Keep upstream servers in
+`mcpServers.allowed` in `warden.config.yml`; do not register those upstream
+servers directly if they must be governed by Warden. See
+[Warden agent setup](docs/AGENT_SETUP.md) for commands and verification.
 
 **OpenCode — copy the plugin into your project:**
 
@@ -393,17 +395,18 @@ Register Warden as your MCP server. See the [MCP Proxy section](#tier-2-tools-mc
 
 ### 4. Start Warden
 
-**Claude Code** — start the hook server from your project directory:
+**Claude Code** — start `warden proxy` from the configured MCP client. The
+proxy governs calls routed through Warden; it does not intercept native Claude
+Code tools.
 
 ```bash
-warden start
+warden proxy
 ```
 
 You should see:
 
 ```
-Warden hook server running on http://localhost:7429 (Node.js)
-Press Ctrl+C to stop.
+The MCP client starts Warden as a stdio server.
 ```
 
 #### Optional: persist scoped sessions across restarts
@@ -432,38 +435,21 @@ refuses to start rather than accepting an ambiguous session. Losing the key
 requires explicitly removing `.warden/vault.enc`, which invalidates every
 persisted session.
 
-> **Required for Claude Code: set `WARDEN_AUTH_TOKEN`.** Claude Code's HTTP hooks can only
-> send static, env-var-interpolated headers fixed when `settings.json` loads — there is no
-> mechanism for it to carry a value learned from one hook's response (e.g. SessionStart's
-> minted session token) into a later hook call's headers. So a real vault-scoped Bearer
-> token can never arrive at `/hooks/*` from a real `claude` process, headless or
-> interactive. `WARDEN_AUTH_TOKEN` is the credential shape Claude Code's hook config *can*
-> send, and the hook server uses it to bootstrap a session from the request's own
-> `session_id` in place of a Bearer token. Set the env var before starting Warden
-> (`export WARDEN_AUTH_TOKEN=$(openssl rand -hex 32)`) — same value in the shell you run
-> `warden start` from and the shell you run `claude` from. Without it, `/hooks/*` hard-denies
-> every request (fail-closed default), so Claude Code integration will not work at all.
-> There's no rotation mechanism — to rotate, generate a new value and export it in both
-> shells, then restart both processes. `/health` and `/metrics` stay open regardless.
->
-> A bootstrapped session has no vault-issued scoping (no `allowedTools`/`allowedPaths`
-> restriction) — trust boundary is "knows the shared secret," not per-session scope. This
-> is the same trust level a caller gets by reaching `/hooks/session-start` at all. See
-> with a real `claude -p` session.
+The hook server remains available for clients that implement Warden's hook
+contract. Claude Code's native HTTP-hook path is not a supported enforcement
+integration because unavailable hooks do not prevent native tool execution.
 
 ### 5. Start coding
 
-**Claude Code:**
-```bash
-claude
-```
+**Claude Code:** use the MCP tools routed through Warden; native tools are not
+intercepted.
 
 **OpenCode:** Just start using it — the plugin loads automatically at startup.
 ```bash
 opencode
 ```
 
-Every tool call now flows through Warden. Verify with:
+Verify calls routed through Warden with:
 
 ```bash
 warden audit
@@ -476,8 +462,8 @@ warden audit
 | Command | Description |
 |---|---|
 | `warden init` | Initialize Warden in the current project. Creates `warden.config.yml` and `.warden/`. |
-| `warden start` | Start the hook server on `localhost:7429`. Required for Claude Code integration. |
-| `warden proxy` | Start Warden as a stdio MCP server — enforces policy for Cursor, Windsurf, and other MCP-only agents. |
+| `warden start` | Start the HTTP hook server for clients that implement Warden's hook contract. |
+| `warden proxy` | Start Warden as a stdio MCP server — enforce policy for MCP tools routed through Warden. |
 | `warden audit` | View the hash-chained ledger. Shows every tool call, decision, and chain integrity. |
 | `warden policy --tool <tool> --trust <level> --environment <env>` | Dry-run policy evaluation. See what decision a tool call would get. |
 | `warden scan --prompt "<text>"` | Scan a prompt for injection patterns. Returns clean/detected + recommendation. |
@@ -602,7 +588,7 @@ Every value in the agent's context carries a trust tag:
 
 | Scenario | Result |
 |---|---|
-| Hook server is down | All tool calls blocked. Claude Code receives non-2xx. |
+| Warden MCP proxy is down | Calls routed through Warden cannot reach upstream MCP servers; native tools are outside Warden's control. |
 | Unknown tool is called | DENY (default deny). |
 | Agent tries `rm -rf /` | DENY (shell injection pattern). |
 | Agent tries `delete_file` | CONFIRM (approval channel). 60s timeout → DENY. |
@@ -646,7 +632,6 @@ warden/
 │       └── commands/         init, start, audit, policy, scan, supply-chain
 │
 ├── warden.config.yml      # Policy config (commit this)
-├── .claude/settings.json  # Hook registrations (Claude Code integration)
 └── .warden/               # Ledger DB + tool pins (gitignore ledger.db)
 ```
 
@@ -657,15 +642,15 @@ Three ways to put Warden in the path of tool calls — choose based on your agen
 | | `warden start` (hook server) | `warden proxy` (MCP stdio) | `@stlw/warden-mcp-gateway` (library) |
 |---|---|---|---|
 | **What it is** | HTTP server on `localhost:7429` | CLI command — stdio MCP server process | TypeScript library, no transport |
-| **Who uses it** | Claude Code | Cursor, Windsurf, Continue.dev | Custom agent integrations |
-| **How it intercepts** | Claude Code calls the HTTP server before/after each tool | Agent registers `warden` as its MCP server | Your code calls `wrapMCP().onToolCall()` |
+| **Who uses it** | Custom clients implementing Warden's hook contract | Claude Code, Codex, Cursor, Windsurf, Continue.dev | Custom agent integrations |
+| **How it intercepts** | Client calls the HTTP server before/after each tool | Agent registers `warden` as its MCP server | Your code calls `wrapMCP().onToolCall()` |
 | **Protocol** | HTTP + JSON hook events | MCP stdio (JSON-RPC over stdin/stdout) | Direct function calls |
 | **Config** | `warden.config.yml` | `warden.config.yml` | Passed programmatically |
 | **Forwarding** | N/A — sits between Claude and the OS | Policy gate only — agent calls real servers separately | Your code decides what to do after ALLOW |
 | **Test it with** | `curl localhost:7429/hooks/pre-tool-use` | `echo '{"jsonrpc":"2.0",...}' \| warden proxy` | Call `onToolCall()` in unit tests |
 
 **Rule of thumb:**
-- Using Claude Code → `warden start`
+- Using Claude Code → route MCP tools through `warden proxy`; native tools are not intercepted
 - Using Cursor / Windsurf / any MCP-only agent → `warden proxy`
 - Building a custom agent in TypeScript → `@stlw/warden-mcp-gateway`
 

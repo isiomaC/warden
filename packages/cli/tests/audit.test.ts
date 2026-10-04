@@ -1,15 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SqliteLedgerStore } from "@stlw/warden";
-import { existsSync, unlinkSync } from "node:fs";
+import { FileLedgerStore, SqliteLedgerStore } from "@stlw/warden";
+import { existsSync, mkdtempSync, rmSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { auditCommand } from "../src/commands/audit";
 
 const TEST_DB = "/tmp/warden-cli-audit-export.db";
+const TEST_JSONL_DIR = mkdtempSync(join(tmpdir(), "warden-cli-audit-jsonl-"));
+const TEST_JSONL = join(TEST_JSONL_DIR, "opencode.jsonl");
 const GITHUB_TOKEN = ["ghp", "abcdefghijklmnopqrstuvwxyzABCDEF"].join("_");
 
 function cleanup() {
   if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
   if (existsSync(`${TEST_DB}-shm`)) unlinkSync(`${TEST_DB}-shm`);
   if (existsSync(`${TEST_DB}-wal`)) unlinkSync(`${TEST_DB}-wal`);
+  if (existsSync(TEST_JSONL_DIR)) rmSync(TEST_JSONL_DIR, { recursive: true, force: true });
 }
 
 function seedLedger() {
@@ -47,6 +52,27 @@ async function runAudit(args: Record<string, unknown>) {
     rawArgs: [],
     cmd: auditCommand,
   } as never);
+}
+
+function seedJsonlLedger() {
+  const ledger = new FileLedgerStore(TEST_JSONL);
+  ledger.write({
+    id: "opencode-entry-1",
+    previousHash: ledger.lastHash(),
+    timestamp: "2026-09-25T12:00:00.000Z",
+    sessionId: "opencode-session-1",
+    taskId: "opencode-task-1",
+    tool: "read",
+    toolInput: { path: "allowed.txt" },
+    trustLevel: 1,
+    trustSource: "agent",
+    policyRulesMatched: ["allow-read"],
+    decision: "ALLOW",
+    decisionReason: "Policy: allow-read",
+    hash: "",
+    previousEntryHash: ledger.lastHash(),
+  });
+  ledger.close();
 }
 
 describe("auditCommand exports", () => {
@@ -91,5 +117,20 @@ describe("auditCommand exports", () => {
       'security_event,event-1,2026-09-25T12:01:00.000Z,,,,,,,,,,,,SHADOW_MCP_BLOCKED,"{""server"":""untrusted, server""}"',
       "",
     ].join("\n"));
+  });
+
+  it("reads and verifies the OpenCode JSONL ledger", async () => {
+    seedJsonlLedger();
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await runAudit({ jsonl: TEST_JSONL, export: "json" });
+
+    const report = JSON.parse(stdout.mock.calls.join(""));
+    expect(report.chain).toEqual({ valid: true });
+    expect(report.entries).toEqual([expect.objectContaining({
+      id: "opencode-entry-1",
+      decision: "ALLOW",
+      decisionReason: "Policy: allow-read",
+    })]);
   });
 });

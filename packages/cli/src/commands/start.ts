@@ -55,7 +55,7 @@ export function resolveApprovalChannel(config: PolicyConfig, autoApprove: boolea
 export const startCommand = defineCommand({
   meta: {
     name: "start",
-    description: "Start the Warden hook server for Claude Code integration",
+    description: "Start the Warden HTTP hook server for clients implementing Warden's hook contract",
   },
   args: {
     config: {

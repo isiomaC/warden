@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initCommand } from "../src/commands/init";
-import { FileConfigSource } from "@stlw/warden";
+import { FileConfigSource, evaluate } from "@stlw/warden";
 
 async function withTmpCwd<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "warden-init-test-"));
@@ -51,6 +51,35 @@ describe("initCommand", () => {
       expect(Array.isArray(config.policies)).toBe(true);
       expect(config.policies.length).toBeGreaterThan(0);
       expect(config.policies.map((p) => p.id)).toContain("block-shell-injection");
+    });
+  });
+
+  it("generates shell-injection patterns that are valid regular expressions and deny eval", async () => {
+    await withTmpCwd(async (dir) => {
+      await initCommand.run!({
+        args: { environment: "development", force: false, _: [] },
+        rawArgs: [],
+        cmd: initCommand,
+      } as never);
+
+      const config = await new FileConfigSource(join(dir, "warden.config.yml")).load();
+      const shellRule = config.policies.find((policy) => policy.id === "block-shell-injection");
+      const patterns = shellRule?.match.inputPatterns ?? [];
+      expect(() => patterns.forEach((pattern) => new RegExp(pattern, "i"))).not.toThrow();
+      expect(evaluate(config, {
+        toolName: "Bash",
+        toolInput: { command: "eval(unsafe)" },
+        environment: "development",
+        trustSources: [],
+        serverInAllowlist: true,
+      })).toMatchObject({ action: "DENY", reason: expect.stringContaining("block-shell-injection") });
+      expect(evaluate(config, {
+        toolName: "Bash",
+        toolInput: { command: "rm -rf /tmp/warden-generated-config-probe" },
+        environment: "development",
+        trustSources: [],
+        serverInAllowlist: true,
+      })).toMatchObject({ action: "DENY", reason: expect.stringContaining("block-shell-injection") });
     });
   });
 

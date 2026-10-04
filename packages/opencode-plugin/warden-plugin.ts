@@ -17,7 +17,6 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import { join } from "node:path";
 import {
-  MemoryLedgerStore,
   ContextManager,
   LocalVault,
   FileConfigSource,
@@ -29,6 +28,7 @@ import {
   generateId,
 } from "@stlw/warden";
 import type { PolicyConfig, PolicyDecision, LedgerStore } from "@stlw/warden";
+import { createPluginLedger } from "./lib/ledger";
 
 const DEFAULT_CONFIG: PolicyConfig = {
   version: "2",
@@ -56,10 +56,10 @@ let config: PolicyConfig;
 let sessionId: string;
 let taskId: string;
 
-export const WardenPlugin: Plugin = async () => {
+export const WardenPlugin: Plugin = async (ctx) => {
   vault = new LocalVault();
-  ledger = new MemoryLedgerStore();
   contextManager = new ContextManager();
+  const projectDir = ctx.directory || process.cwd();
 
   return {
     // NOTE: "tui.prompt.append" is a real OpenCode concept, but it's an
@@ -74,12 +74,14 @@ export const WardenPlugin: Plugin = async () => {
       if (event.type === "session.created") {
         // Load config from warden.config.yml in the project root; fall back to safe defaults
         try {
-          const configPath = join(process.cwd(), "warden.config.yml");
+          const configPath = join(projectDir, "warden.config.yml");
           const source = new FileConfigSource(configPath);
           config = await source.load();
         } catch {
           config = DEFAULT_CONFIG;
         }
+
+        ledger = createPluginLedger(projectDir);
 
         sessionId = `session_${Date.now()}`;
         const ctx = contextManager.createTask(sessionId);
@@ -96,6 +98,7 @@ export const WardenPlugin: Plugin = async () => {
       if (event.type === "session.deleted") {
         vault.revokeAllForSession(sessionId);
         contextManager.expireAllForSession(sessionId);
+        ledger?.close();
       }
     },
 
