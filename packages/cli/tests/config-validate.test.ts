@@ -130,6 +130,25 @@ describe("configValidateCommand", () => {
     });
   });
 
+  it("reports an actionable schema error when policies is not an array", async () => {
+    await withTmpCwd(async (dir) => {
+      writeFileSync(
+        join(dir, "warden.config.yml"),
+        `version: "2"\nmeta:\n  environment: "development"\n  sessionApprovalRequired: false\npolicies: invalid\n`,
+      );
+      const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("EXIT");
+      });
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+      await expect(runConfigValidate()).rejects.toThrow("EXIT");
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(stderrSpy.mock.calls.join("")).toContain('"policies" must be an array');
+      expect(stderrSpy.mock.calls.join("")).not.toContain("reading 'map'");
+    });
+  });
+
   it("does not call ConfigSource.verify (regression guard for the dead hash-check branch)", async () => {
     await withTmpCwd(async (dir) => {
       writeFileSync(join(dir, "warden.config.yml"), VALID_YAML);

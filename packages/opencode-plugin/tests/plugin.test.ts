@@ -1,13 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, describe, it, expect } from "vitest";
+import { mkdtempSync, existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { TrustLevel } from "@stlw/warden";
 import { WardenPlugin } from "../warden-plugin";
+import { createPluginLedger } from "../lib/ledger";
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 
+const testProjectDir = mkdtempSync(join(tmpdir(), "warden-opencode-plugin-tests-"));
+afterAll(() => rmSync(testProjectDir, { recursive: true, force: true }));
+
 const mockCtx = {
-  project: { root: "/test", name: "test-project" },
+  project: { root: testProjectDir, name: "test-project" },
   client: {},
   $: {},
-  directory: "/test",
-  worktree: "/test/worktree",
+  directory: testProjectDir,
+  worktree: join(testProjectDir, "worktree"),
   experimental_workspace: { register: () => {} },
   serverUrl: new URL("http://localhost:0"),
 } as unknown as PluginInput;
@@ -36,6 +44,43 @@ async function beforeExecute(hooks: Hooks, tool: string, args: Record<string, un
 }
 
 describe("Warden OpenCode Plugin", () => {
+  describe("audit ledger configuration", () => {
+    it("persists decisions to the project-local JSONL ledger", () => {
+      const projectDir = mkdtempSync(join(tmpdir(), "warden-opencode-ledger-"));
+
+      try {
+        const ledger = createPluginLedger(projectDir);
+        ledger.write({
+          id: "opencode-test-entry",
+          previousHash: ledger.lastHash(),
+          timestamp: new Date().toISOString(),
+          sessionId: "session-test",
+          taskId: "task-test",
+          tool: "read",
+          toolInput: { path: "README.md" },
+          trustLevel: TrustLevel.SYSTEM,
+          trustSource: "test",
+          policyRulesMatched: [],
+          decision: "ALLOW",
+          decisionReason: "Policy: allow-read",
+          hash: "",
+          previousEntryHash: ledger.lastHash(),
+        });
+        ledger.close();
+
+        const ledgerPath = join(projectDir, ".warden", "opencode-ledger.jsonl");
+        expect(existsSync(ledgerPath)).toBe(true);
+        const reopened = createPluginLedger(projectDir);
+        expect(reopened.getEntries()).toHaveLength(1);
+        expect(reopened.getEntries()[0]?.decisionReason).toBe("Policy: allow-read");
+        expect(reopened.verifyChain().valid).toBe(true);
+        reopened.close();
+      } finally {
+        rmSync(projectDir, { recursive: true, force: true });
+      }
+    });
+  });
+
   describe("tool.execute.before — policy enforcement", () => {
     it("should ALLOW read operations in development", async () => {
       const hooks = await createPluginWithSession();

@@ -1,9 +1,9 @@
 # Warden — Testing Guide
 
 Testing plan for unit and integration tests (Layers 1–2: pre-commit, CI) plus
-the CI/coverage gate. Layer 3 is human-fidelity end-to-end testing against real
-processes: a real `claude` CLI session, a real `warden proxy`, and the real
-`warden` binary.
+the CI/coverage gate. Layer 3 is human-fidelity end-to-end testing against a
+real MCP-capable agent session routed through `warden proxy`, plus the real
+`warden` binary. Claude Code native tools are outside this tested boundary.
 
 ---
 
@@ -28,8 +28,8 @@ If you add a policy rule, add a test. If you add an injection pattern, add a tes
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│ LAYER 3: Live Claude Code Session (post-deploy)      │
-│   Real LLM making tool calls through Warden hooks    │
+│ LAYER 3: Live MCP Agent Session (manual)            │
+│   Real agent calls tools routed through Warden proxy │
 ├──────────────────────────────────────────────────────┤
 │ LAYER 2: Integration Tests (pre-deploy, CI)          │
 │   Mock LLM corpus → hook server → policy decisions   │
@@ -142,7 +142,7 @@ npm run typecheck
 
 #### Hook Server Integration (`integration.test.ts`, 56 tests)
 
-Each test fires a real HTTP request against the Hono server with a payload matching the Claude Code hook contract, including session-start input validation, configurable supply-chain pins path, and fail-closed behavior on unhandled handler errors:
+Each test fires a real HTTP request against the Hono server using Warden's hook-server contract, including session-start input validation, configurable supply-chain pins path, and fail-closed behavior on unhandled handler errors. This is not a Claude Code native-hook integration; Claude Code enforcement is supported only for MCP tools routed through `warden proxy`:
 
 | Hook Event | Scenarios | Key tests |
 |---|---|---|
@@ -199,7 +199,7 @@ are the current options; see
 | Area | Tests |
 |---|---|
 | **tool.execute.before** | ALLOW read operations in dev, ALLOW list_directory, DENY write_file (default deny — no matching policy), DENY shell injection (rm -rf, curl pipe), DENY unknown tool, DENY db_write |
-| **tui.prompt.append** | Block injection patterns (ignore instructions, you are now, [INST], `<\|system\|>`), allow clean prompts |
+| **PromptSubmit** | Block injection patterns (ignore instructions, you are now, [INST], `<\|system\|>`), allow clean prompts |
 | **Session lifecycle** | Mint token on session.created, handle session.deleted without error, allow multiple sequential sessions, handle session created/deleted without tool calls |
 
 #### MCP Gateway (`gateway.test.ts`, 25 tests)
@@ -244,7 +244,7 @@ the actual flag is `--tool`.)
 
 ## Mock LLM Corpus
 
-The integration test suite uses a **mock LLM corpus** — pre-defined HTTP payloads that mimic Claude Code hook events. No real LLM is called during integration tests. The corpus covers:
+The integration test suite uses a **mock payload corpus** — pre-defined HTTP payloads for Warden's hook-server contract. No real LLM is called during integration tests. The corpus does not verify Claude Code native HTTP hooks, which are not a supported enforcement path; Claude Code users should route governed MCP tools through `warden proxy`. The corpus covers:
 
 - All 6 hook event types (SessionStart, PreToolUse, PostToolUse, UserPromptSubmit, ConfigChange, SessionEnd)
 - All 4 policy decisions (ALLOW, DENY, CONFIRM, QUARANTINE)
@@ -483,10 +483,12 @@ Required tests:
 
 ### Layer 3: Human-fidelity end-to-end tests
 
-Layer 3 drives a real `claude` CLI session, a real `warden proxy` MCP server,
-and the real `warden` binary as separate processes rather than mocked calls.
-Exercise an allowed tool call, a denied tool call, the generated ledger, and
-client-specific configuration before production use.
+Layer 3 drives a real MCP-capable agent session, a real `warden proxy` MCP
+server, and the real `warden` binary as separate processes rather than mocked
+calls. Exercise an allowed tool call, a denied tool call, the generated ledger,
+and client-specific MCP configuration before production use. Do not treat this
+as validation of Claude Code native tools: those remain outside Warden's
+supported enforcement boundary.
 
 ---
 

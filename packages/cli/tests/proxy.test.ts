@@ -102,7 +102,7 @@ policies:
   - id: "allow-read-dev"
     description: "Allow reads in dev"
     match:
-      tools: ["filesystem__read_file"]
+      tools: ["read_file"]
       environment: ["development"]
     action: ALLOW
 `;

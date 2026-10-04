@@ -28,9 +28,9 @@ policies:
     match:
       tool: "Bash"
       inputPatterns:
-        - "rm\\\\s+-rf"
-        - "curl.*\\\\|.*sh"
-        - "eval\\\\s*\\\\("
+        - "rm\\s+-rf"
+        - "curl.*\\|.*sh"
+        - "eval\\s*\\("
     action: DENY
 
   - id: "confirm-destructive"

@@ -1,6 +1,6 @@
 # @stlw/warden-hook-server
 
-Local HTTP hooks that apply Warden policy to Claude Code, Codex CLI, and Copilot SDK tool calls. The server handles session lifecycle, prompt submission, pre-tool decisions, post-tool output tagging, and an auditable ledger.
+Local HTTP server implementing Warden's hook contract for clients and adapters that explicitly send it. It handles session lifecycle, prompt submission, pre-tool decisions, post-tool output tagging, and an auditable ledger.
 
 ## Install
 
@@ -40,6 +40,6 @@ curl http://localhost:7429/health
 
 ## Connect an agent
 
-For Claude Code, point its HTTP hooks at `http://localhost:7429/hooks/...` and include the shared-secret header. The CLI configures the same server with `warden start`; use that for the quickest setup.
+Claude Code's native HTTP hooks are not supported for native-tool enforcement: Claude Code continues through a native tool when an HTTP hook cannot connect. Route Claude Code MCP tools through `warden proxy` instead. `warden start` serves Warden's own hook contract for integrations that explicitly implement that contract; it is not a Claude Code native-hook endpoint.
 
-See the [public manual](https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md) for the complete Claude Code settings example and OpenCode integration.
+See the [public manual](https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md) for supported integration boundaries and setup.

@@ -12,6 +12,18 @@ describe("Warden Codex plugin bundle", () => {
   });
 
   it("declares a version-pinned Warden proxy", () => {
+    const packageVersion = JSON.parse(readFileSync(resolve(process.cwd(), "packages/cli/package.json"), "utf8")).version;
+    const portableServer = readJson("mcp.json").mcpServers.warden;
+    const codexServer = readJson(".mcp.json").mcpServers.warden;
+    expect(readJson("plugin.json").version).toBe(packageVersion);
+    expect(readJson(".codex-plugin/plugin.json").version).toBe(packageVersion);
+    expect(portableServer.args).toContain(`@stlw/warden-cli@${packageVersion}`);
+    expect(codexServer.args).toContain(`@stlw/warden-cli@${packageVersion}`);
+    expect(codexServer.type).toBeUndefined();
+    expect(codexServer).toMatchObject({ command: "npx" });
+  });
+
+  it("declares a version-pinned portable Warden proxy", () => {
     const server = readJson("mcp.json").mcpServers.warden;
     expect(server).toMatchObject({ type: "stdio", command: "npx" });
     expect(server.args).toContain("@stlw/warden-cli@0.2.6");

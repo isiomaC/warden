@@ -1,7 +1,10 @@
 import { createRequire } from "node:module";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, writeSync } from "node:fs";
+import { dirname } from "node:path";
 import { sha256 } from "./hash.js";
 import { generateId } from "./id.js";
 import { redactSecrets } from "./redact.js";
+import { LedgerIntegrityError } from "./errors.js";
 import type { TrustLevel } from "./trust.js";
 import type { PolicyDecision } from "./policy.js";
 
@@ -45,6 +48,142 @@ export interface LedgerStore {
   lastHash(): string;
   verifyChain(): { valid: boolean; brokenAt?: number };
   close(): void;
+}
+
+type FileLedgerRecord =
+  | { type: "entry"; entry: LedgerEntry }
+  | { type: "security_event"; event: SecurityEvent };
+
+/**
+ * Append-only JSONL ledger for runtimes that cannot load SQLite native bindings.
+ * Use one writer per file; each record is synchronously flushed before returning.
+ */
+export class FileLedgerStore implements LedgerStore {
+  private entries: LedgerEntry[] = [];
+  private events: SecurityEvent[] = [];
+  private currentHash = "0".repeat(64);
+  private closed = false;
+
+  constructor(private readonly path: string) {
+    mkdirSync(dirname(path), { recursive: true });
+    if (existsSync(path)) {
+      const text = readFileSync(path, "utf8");
+      for (const [index, line] of text.split("\n").entries()) {
+        if (!line) continue;
+        let record: FileLedgerRecord;
+        try {
+          record = JSON.parse(line) as FileLedgerRecord;
+        } catch {
+          throw new LedgerIntegrityError(`Invalid JSONL ledger record at line ${index + 1}.`);
+        }
+        if (record.type === "entry" && record.entry && typeof record.entry.hash === "string") {
+          this.entries.push(record.entry);
+        } else if (record.type === "security_event" && record.event && typeof record.event.id === "string") {
+          this.events.push(record.event);
+        } else {
+          throw new LedgerIntegrityError(`Invalid JSONL ledger record at line ${index + 1}.`);
+        }
+      }
+      this.currentHash = this.entries.at(-1)?.hash ?? this.currentHash;
+    }
+  }
+
+  write(entry: LedgerEntry): void {
+    if (this.closed) return;
+    if (!this.verifyChain().valid) throw new LedgerIntegrityError("Cannot append: ledger chain is invalid.");
+    const toolInput = redactSecrets(entry.toolInput);
+    const previousHash = this.currentHash;
+    const hash = sha256(JSON.stringify({
+      id: entry.id,
+      timestamp: entry.timestamp,
+      sessionId: entry.sessionId,
+      taskId: entry.taskId,
+      tool: entry.tool,
+      toolInput: JSON.stringify(toolInput),
+      trustLevel: entry.trustLevel,
+      trustSource: entry.trustSource,
+      policyRulesMatched: entry.policyRulesMatched,
+      decision: entry.decision,
+      decisionReason: entry.decisionReason,
+      previousHash,
+    }));
+    const stored: LedgerEntry = {
+      ...entry,
+      toolInput,
+      previousHash,
+      previousEntryHash: previousHash,
+      hash,
+    };
+    this.append({ type: "entry", entry: stored });
+    this.entries.push(stored);
+    this.currentHash = hash;
+  }
+
+  writeSecurityEvent(event: SecurityEvent): void {
+    if (this.closed) return;
+    this.append({ type: "security_event", event });
+    this.events.push(event);
+  }
+
+  writeError(err: unknown): void {
+    if (this.closed) return;
+    this.writeSecurityEvent({
+      id: generateId("err"),
+      timestamp: new Date().toISOString(),
+      eventType: "CHAIN_BROKEN",
+      details: { error: String(err) },
+    });
+  }
+
+  getEntries(sessionId?: string): LedgerEntry[] {
+    return sessionId ? this.entries.filter((entry) => entry.sessionId === sessionId) : this.entries;
+  }
+
+  getEvents(_sessionId?: string): SecurityEvent[] {
+    return this.events;
+  }
+
+  lastHash(): string {
+    return this.currentHash;
+  }
+
+  verifyChain(): { valid: boolean; brokenAt?: number } {
+    let previousHash = "0".repeat(64);
+    for (const [index, entry] of this.entries.entries()) {
+      if (entry.previousHash !== previousHash) return { valid: false, brokenAt: index };
+      const expected = sha256(JSON.stringify({
+        id: entry.id,
+        timestamp: entry.timestamp,
+        sessionId: entry.sessionId,
+        taskId: entry.taskId,
+        tool: entry.tool,
+        toolInput: JSON.stringify(entry.toolInput),
+        trustLevel: entry.trustLevel,
+        trustSource: entry.trustSource,
+        policyRulesMatched: entry.policyRulesMatched,
+        decision: entry.decision,
+        decisionReason: entry.decisionReason,
+        previousHash: entry.previousHash,
+      }));
+      if (entry.hash !== expected) return { valid: false, brokenAt: index };
+      previousHash = entry.hash;
+    }
+    return { valid: true };
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  private append(record: FileLedgerRecord): void {
+    const fd = openSync(this.path, "a");
+    try {
+      writeSync(fd, `${JSON.stringify(record)}\n`);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+  }
 }
 
 const LEDGER_SCHEMA = `

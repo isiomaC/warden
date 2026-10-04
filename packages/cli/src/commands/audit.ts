@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { MemoryLedgerStore, SqliteLedgerStore } from "@stlw/warden";
+import { FileLedgerStore, MemoryLedgerStore, SqliteLedgerStore } from "@stlw/warden";
 import { existsSync } from "node:fs";
 
 type ExportFormat = "json" | "csv";
@@ -53,15 +53,22 @@ export const auditCommand = defineCommand({
       type: "string",
       description: "Path to SQLite ledger (default: in-memory only)",
     },
+    jsonl: {
+      type: "string",
+      description: "Path to an append-only JSONL ledger",
+    },
     export: {
       type: "string",
       description: "Machine-readable format: json or csv",
     },
   },
   async run({ args }) {
-    const ledger = args.db && existsSync(args.db)
-      ? new SqliteLedgerStore(args.db)
-      : new MemoryLedgerStore();
+    if (args.db && args.jsonl) throw new TypeError("Use either --db or --jsonl, not both.");
+    const ledger = args.jsonl && existsSync(args.jsonl)
+      ? new FileLedgerStore(args.jsonl)
+      : args.db && existsSync(args.db)
+        ? new SqliteLedgerStore(args.db)
+        : new MemoryLedgerStore();
 
     const entries = ledger.getEntries();
     const chain = ledger.verifyChain();
@@ -82,7 +89,7 @@ export const auditCommand = defineCommand({
     process.stdout.write(`
 === Warden Audit ===
 
-Ledger backend: ${args.db ? `SQLite (${args.db})` : "In-memory"}
+Ledger backend: ${args.jsonl ? `JSONL (${args.jsonl})` : args.db ? `SQLite (${args.db})` : "In-memory"}
 Ledger entries: ${entries.length}
 Chain integrity: ${chain.valid ? "VALID" : "BROKEN"}
 ${chain.brokenAt !== undefined ? `Broken at entry: ${chain.brokenAt}` : ""}

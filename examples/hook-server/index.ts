@@ -1,7 +1,7 @@
 /**
  * Warden Hook Server Example
  *
- * Demonstrates creating the full Claude Code hook server with all 6 endpoints.
+ * Demonstrates creating a Warden hook server for clients implementing its local hook contract.
  * Starts on localhost:7429. Hit with curl to test each hook.
  *
  * Start:  npx tsx examples/hook-server/index.ts

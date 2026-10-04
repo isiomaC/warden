@@ -5,7 +5,7 @@ export type PolicyAction = "ALLOW" | "DENY" | "CONFIRM" | "QUARANTINE";
 export type PolicyDecision =
   | { action: "ALLOW"; reason: string }
   | { action: "DENY"; reason: string }
-  | { action: "CONFIRM"; reason: string; channel: "telegram" | "stdout" | "webhook" }
+  | { action: "CONFIRM"; reason: string; channel: "telegram" | "stdout" | "webhook"; timeoutSeconds?: number }
   | { action: "QUARANTINE"; reason: string; strippedContext: string[]; updatedInput?: Record<string, unknown>; additionalContext?: string };
 
 export interface PolicyRule {
@@ -108,6 +108,7 @@ function ruleToDecision(rule: PolicyRule, _input: EvaluateInput): PolicyDecision
         action: "CONFIRM",
         reason: `Policy: ${rule.id}${reasonSuffix}`,
         channel: rule.channel ?? "stdout",
+        ...(rule.timeoutSeconds !== undefined ? { timeoutSeconds: rule.timeoutSeconds } : {}),
       };
     case "QUARANTINE":
       return {

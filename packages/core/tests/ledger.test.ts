@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { MemoryLedgerStore } from "../src/ledger";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { FileLedgerStore, MemoryLedgerStore } from "../src/ledger";
 import type { LedgerEntry, LedgerStore, SecurityEvent } from "../src/ledger";
 import { TrustLevel } from "../src/trust";
 import { pinToolDescriptions } from "../src/pins";
@@ -24,6 +27,57 @@ function makeEntry(overrides: Partial<LedgerEntry> = {}): LedgerEntry {
     ...overrides,
   };
 }
+
+describe("FileLedgerStore", () => {
+  it("persists redacted decisions and security events across instances", () => {
+    const directory = mkdtempSync(join(tmpdir(), "warden-jsonl-ledger-"));
+    const path = join(directory, "audit", "opencode.jsonl");
+
+    try {
+      const ledger = new FileLedgerStore(path);
+      ledger.write(makeEntry({
+        toolInput: { apiKey: "sk-proj-abcdefghijklmnopqrstuvwxyz123456" },
+      }));
+      ledger.writeSecurityEvent({
+        id: "evt-1",
+        timestamp: new Date().toISOString(),
+        eventType: "CONFIG_CHANGE_BLOCKED",
+        details: { path: "warden.config.yml" },
+      });
+      expect(ledger.verifyChain()).toEqual({ valid: true });
+      ledger.close();
+
+      const reopened = new FileLedgerStore(path);
+      expect(reopened.getEntries()).toHaveLength(1);
+      expect((reopened.getEntries()[0]?.toolInput as Record<string, string>).apiKey).toContain("[REDACTED]");
+      expect(reopened.getEvents()).toHaveLength(1);
+      expect(reopened.verifyChain()).toEqual({ valid: true });
+      reopened.close();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("detects tampering and refuses to append to a broken chain", () => {
+    const directory = mkdtempSync(join(tmpdir(), "warden-jsonl-ledger-"));
+    const path = join(directory, "audit.jsonl");
+
+    try {
+      const ledger = new FileLedgerStore(path);
+      ledger.write(makeEntry());
+      ledger.close();
+      const contents = readFileSync(path, "utf8");
+      writeFileSync(path, contents.replace('"decisionReason":"test"', '"decisionReason":"changed"'));
+
+      const reopened = new FileLedgerStore(path);
+      expect(reopened.verifyChain()).toEqual({ valid: false, brokenAt: 0 });
+      expect(() => reopened.write(makeEntry({ id: "entry_2" }))).toThrow("ledger chain is invalid");
+      reopened.close();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("MemoryLedgerStore", () => {
   describe("write and read", () => {

@@ -48,7 +48,7 @@ Rules are evaluated deterministically. A request with no matching rule, an inval
 ## Use Warden with an agent
 
 - Use [`@stlw/warden-cli`](https://www.npmjs.com/package/@stlw/warden-cli) to create a `warden.config.yml`, validate policies, run the hook server, or expose an MCP proxy.
-- Use [`@stlw/warden-hook-server`](https://www.npmjs.com/package/@stlw/warden-hook-server) for Claude Code, Codex CLI, or Copilot SDK HTTP hooks.
+- Use [`@stlw/warden-hook-server`](https://www.npmjs.com/package/@stlw/warden-hook-server) for clients and adapters that implement Warden's HTTP hook contract. Claude Code native HTTP hooks are not supported for fail-closed native-tool enforcement.
 - Use [`@stlw/warden-mcp-gateway`](https://www.npmjs.com/package/@stlw/warden-mcp-gateway) to enforce an MCP server allowlist in a custom integration.
 
 See the [public manual](https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md) for policy configuration and integration examples.

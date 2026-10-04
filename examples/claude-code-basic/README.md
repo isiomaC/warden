@@ -1,21 +1,37 @@
-# Warden + Claude Code: Basic Setup
+# Warden + Claude Code: MCP proxy
 
-This example shows the minimum configuration to run Warden with Claude Code.
+This example demonstrates Warden's supported Claude Code boundary: MCP tools
+explicitly routed through the local Warden proxy. Claude Code's native HTTP
+hooks are not supported for native-tool enforcement because a failed or
+unavailable HTTP hook does not block the native tool.
 
-## Files
-- `warden.config.yml` — Policy configuration
-- `.claude/settings.json` — Claude Code hook registrations
+## Prerequisites
 
-## Usage
+- Node.js 22 or later
+- Claude Code CLI
+- A reviewed `warden.config.yml` with the upstream MCP servers to proxy
 
-1. Start Warden: `npx @stlw/warden-cli start`
-2. Start Claude Code: `claude`
-3. Try a blocked operation: Ask Claude to `rm -rf /tmp/test`
-4. Check the audit log: `npx @stlw/warden-cli audit`
+The `warden.config.yml` in this directory is a disposable example. Review its
+policies and upstream server definition before using it.
 
-This intentionally runs with no `WARDEN_AUTH_TOKEN` for the shortest possible
-path to a working demo — any local process can reach the hook server. Do not
-run it this way outside a throwaway local sandbox. For a real setup, see the
-main [README](../../README.md#4-start-warden)'s `WARDEN_AUTH_TOKEN` /
-`X-Warden-Auth` header configuration, or
-[`docs/internal/DEPLOYMENT.md`](../../docs/internal/DEPLOYMENT.md).
+## Use the proxy
+
+From this directory, register Warden as a project-scoped MCP server:
+
+```sh
+claude mcp add --scope project warden -- npx --yes @stlw/warden-cli@0.2.6 proxy
+claude mcp list
+```
+
+This is an explicit Claude Code CLI operation that writes its MCP registration
+to the selected project scope. It does not configure native Claude tools. For
+policy verification, invoke one expected allow and one expected deny through a
+Warden-provided MCP tool, then inspect the Warden ledger with:
+
+```sh
+npx --yes @stlw/warden-cli@0.2.6 audit --export json
+```
+
+The Warden hook server (`warden start`) is a separate HTTP contract for clients
+that explicitly implement Warden's hook protocol; it is not Claude Code's
+native HTTP hook endpoint.

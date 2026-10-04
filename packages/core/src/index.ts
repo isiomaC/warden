@@ -4,7 +4,7 @@ export type { TrustedValue } from "./trust.js";
 export { sha256 } from "./hash.js";
 export { generateId } from "./id.js";
 export { redactSecrets, hasSecrets } from "./redact.js";
-export { MemoryLedgerStore, SqliteLedgerStore } from "./ledger.js";
+export { FileLedgerStore, MemoryLedgerStore, SqliteLedgerStore } from "./ledger.js";
 export type { LedgerEntry, LedgerStore, SecurityEvent } from "./ledger.js";
 export { evaluate, evaluatePolicies, resolveConflicts } from "./policy.js";
 export type { PolicyAction, PolicyConfig, PolicyDecision, PolicyRule, EvaluateInput, ApprovalChannelConfig } from "./policy.js";
