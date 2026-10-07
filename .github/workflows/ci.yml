@@ -108,13 +108,6 @@ jobs:
       - name: Checkout Warden
         uses: actions/checkout@v4
 
-      - name: Checkout pinned Val CLI
-        uses: actions/checkout@v4
-        with:
-          repository: stalewell/val
-          ref: 6021faa332a94172e9dffb25f00a8a94f002d79e
-          path: val
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -124,12 +117,13 @@ jobs:
       - name: Install Warden dependencies
         run: npm ci
 
-      - name: Build pinned Val CLI
-        working-directory: val
-        run: npm ci && npm run build
+      - name: Install pinned Val CLI package
+        run: npm install --prefix "$RUNNER_TEMP/val-cli" --no-save --package-lock=false --ignore-scripts @stlw/val@0.8.0
 
       - name: Validate and run policy benchmark pack
-        run: VAL_CLI=val/dist/cli.js npm run benchmark:policy -- --split smoke
+        env:
+          VAL_CLI: ${{ runner.temp }}/val-cli/node_modules/@stlw/val/dist/cli.js
+        run: npm run benchmark:policy -- --split smoke
 
   docker-build:
     name: Docker Build Verification

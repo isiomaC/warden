@@ -249,16 +249,16 @@ Warden policy evaluator against fixed expected actions. It is a deterministic
 regression check, not a comprehensive security evaluation; it contains no
 hidden/private cases and makes no real-world coverage claim.
 
-With the pinned Val CLI built locally, run:
+With the pinned Val CLI package installed locally, run:
 
 ```bash
-VAL_CLI=../val/dist/cli.js npm run benchmark:policy -- --split smoke
+npm install --prefix ../val-cli --no-save --package-lock=false --ignore-scripts @stlw/val@0.8.0
+VAL_CLI=../val-cli/node_modules/@stlw/val/dist/cli.js npm run benchmark:policy -- --split smoke
 ```
 
 The runner validates the pack through Val, fetches the local split through
 Val's cache interface, and reports `action_accuracy`. It does not invoke an LLM
-or start Warden services. CI uses Val commit
-`6021faa332a94172e9dffb25f00a8a94f002d79e`.
+or start Warden services. CI uses the exact published Val version `0.8.0`.
 
 ---
 
