@@ -101,10 +101,40 @@ jobs:
       - name: Verify package READMEs
         run: npm run verify:package-readmes
 
+  policy-benchmark:
+    name: Deterministic Policy Benchmark Pack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Warden
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned Val CLI
+        uses: actions/checkout@v4
+        with:
+          repository: stalewell/val
+          ref: 6021faa332a94172e9dffb25f00a8a94f002d79e
+          path: val
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Warden dependencies
+        run: npm ci
+
+      - name: Build pinned Val CLI
+        working-directory: val
+        run: npm ci && npm run build
+
+      - name: Validate and run policy benchmark pack
+        run: VAL_CLI=val/dist/cli.js npm run benchmark:policy -- --split smoke
+
   docker-build:
     name: Docker Build Verification
     runs-on: ubuntu-latest
-    needs: [typecheck, test-bun, test-node, package-consumer]
+    needs: [typecheck, test-bun, test-node, package-consumer, policy-benchmark]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

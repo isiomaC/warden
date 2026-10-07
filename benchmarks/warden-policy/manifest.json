@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "val-benchmark-pack/v1",
+  "id": "warden-policy-pack",
+  "version": "0.1.0",
+  "title": "Warden Policy Behavior",
+  "description": "A small synthetic public smoke pack for deterministic Warden policy decisions. It measures action agreement on the listed cases, not comprehensive security.",
+  "license": {
+    "id": "MIT",
+    "name": "MIT License",
+    "url": "https://opensource.org/license/mit",
+    "attribution": "Warden contributors",
+    "useNotes": "Synthetic cases authored in the Warden repository; no third-party dataset is included."
+  },
+  "source": {
+    "repository": "https://github.com/isiomaC/warden",
+    "revision": "daa6cf530b68ccb99fdc521616795cb9fc2883ed",
+    "dataset": "Warden synthetic policy cases",
+    "task": "deterministic policy outcome classification",
+    "contaminationNotes": [
+      "All cases are authored examples in a public repository; this pack has no hidden evaluation data."
+    ]
+  },
+  "scorer": {
+    "id": "warden-policy-action-accuracy",
+    "version": "1.0.0",
+    "metrics": ["action_accuracy"]
+  },
+  "requirements": {
+    "network": false,
+    "credentials": []
+  },
+  "splits": [
+    {
+      "id": "smoke",
+      "role": "example",
+      "visibility": "public",
+      "assets": [
+        {
+          "path": "cases.jsonl",
+          "sizeBytes": 3710,
+          "sha256": "36c0a2753ce0b6222ec3e78e158d90d31fd971086e3627a0be2839af4fabe6ed",
+          "mediaType": "application/x-ndjson"
+        }
+      ]
+    }
+  ]
+}

@@ -710,6 +710,27 @@ npx vitest run packages/mcp-gateway/tests/   # Gateway + registry + OAuth + late
 npx vitest run packages/opencode-plugin/tests/  # Plugin lifecycle tests
 ```
 
+### Deterministic policy benchmark pack
+
+Warden includes a small, public, synthetic smoke pack for checking policy-action
+outcomes through the real `@stlw/warden` evaluator. It is a deterministic
+regression check, not a comprehensive security evaluation. The pack contains no
+hidden or private cases and makes no claim about real-world security coverage.
+
+Build the pinned Val CLI, then validate the local pack manifest and run its
+`smoke` split:
+
+```bash
+git clone https://github.com/stalewell/val.git ../val
+git -C ../val checkout 6021faa332a94172e9dffb25f00a8a94f002d79e
+(cd ../val && npm ci && npm run build)
+VAL_CLI=../val/dist/cli.js npm run benchmark:policy -- --split smoke
+```
+
+The output reports `action_accuracy` for the fixed synthetic cases. CI runs the
+same command against that exact Val commit; no model, network service, or
+credential is used by the benchmark runner.
+
 ---
 
 ## Docs

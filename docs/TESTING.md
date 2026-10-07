@@ -242,6 +242,26 @@ the actual flag is `--tool`.)
 
 ---
 
+## Warden Policy Benchmark Pack
+
+The repository includes a public, synthetic smoke pack that exercises the real
+Warden policy evaluator against fixed expected actions. It is a deterministic
+regression check, not a comprehensive security evaluation; it contains no
+hidden/private cases and makes no real-world coverage claim.
+
+With the pinned Val CLI built locally, run:
+
+```bash
+VAL_CLI=../val/dist/cli.js npm run benchmark:policy -- --split smoke
+```
+
+The runner validates the pack through Val, fetches the local split through
+Val's cache interface, and reports `action_accuracy`. It does not invoke an LLM
+or start Warden services. CI uses Val commit
+`6021faa332a94172e9dffb25f00a8a94f002d79e`.
+
+---
+
 ## Mock LLM Corpus
 
 The integration test suite uses a **mock payload corpus** — pre-defined HTTP payloads for Warden's hook-server contract. No real LLM is called during integration tests. The corpus does not verify Claude Code native HTTP hooks, which are not a supported enforcement path; Claude Code users should route governed MCP tools through `warden proxy`. The corpus covers:
