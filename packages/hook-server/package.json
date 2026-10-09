@@ -1,6 +1,6 @@
 {
   "name": "@stlw/warden-hook-server",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "HTTP hook server implementing Warden's local decision contract",
   "type": "module",
   "main": "./dist/src/server.js",
@@ -40,7 +40,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@stlw/warden": "^0.2.7",
+    "@stlw/warden": "^0.2.8",
     "hono": "^4.13.0",
     "grammy": "^1.32.0"
   }

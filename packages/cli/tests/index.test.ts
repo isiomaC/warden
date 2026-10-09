@@ -10,8 +10,8 @@ describe("warden CLI metadata", () => {
     expect(meta?.version).toBe(packageJson.version);
   });
 
-  it("aligns all release packages and agent manifests to 0.2.7", () => {
-    const version = "0.2.7";
+  it("aligns all release packages and agent manifests to 0.2.8", () => {
+    const version = "0.2.8";
     const packagePaths = [
       "packages/core/package.json",
       "packages/hook-server/package.json",

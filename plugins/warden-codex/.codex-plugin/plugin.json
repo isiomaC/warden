@@ -1,6 +1,6 @@
 {
   "name": "warden-codex",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Setup guidance for Warden policy on Codex MCP tools.",
   "author": {
     "name": "Stalewell"
