@@ -1,6 +1,10 @@
 import { defineCommand } from "citty";
-import { FileLedgerStore, MemoryLedgerStore, SqliteLedgerStore } from "@stlw/warden";
+import { FileConfigSource, FileLedgerStore, MemoryLedgerStore, SqliteLedgerStore } from "@stlw/warden";
+import type { PolicyConfig } from "@stlw/warden";
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { resolveRuntimeConfig } from "../runtime-config.js";
+import type { RuntimeConfig } from "../runtime-config.js";
 
 type ExportFormat = "json" | "csv";
 
@@ -61,13 +65,28 @@ export const auditCommand = defineCommand({
       type: "string",
       description: "Machine-readable format: json or csv",
     },
+    config: {
+      type: "string",
+      description: "Path to warden.config.yml, used to find the default ledger",
+      default: "warden.config.yml",
+    },
   },
   async run({ args }) {
     if (args.db && args.jsonl) throw new TypeError("Use either --db or --jsonl, not both.");
+    // With no --db/--jsonl, read the project's persisted ledger (the same default
+    // `warden proxy` and `warden start` write to), not an always-empty memory store.
+    let dbPath: string | undefined = args.db;
+    if (!dbPath && !args.jsonl) {
+      const configPath = resolve(args.config ?? "warden.config.yml");
+      const config = existsSync(configPath)
+        ? (await new FileConfigSource(configPath).load()) as PolicyConfig & RuntimeConfig
+        : {} as RuntimeConfig;
+      dbPath = resolveRuntimeConfig(config).dbPath;
+    }
     const ledger = args.jsonl && existsSync(args.jsonl)
       ? new FileLedgerStore(args.jsonl)
-      : args.db && existsSync(args.db)
-        ? new SqliteLedgerStore(args.db)
+      : dbPath && existsSync(dbPath)
+        ? new SqliteLedgerStore(dbPath)
         : new MemoryLedgerStore();
 
     const entries = ledger.getEntries();
@@ -89,13 +108,13 @@ export const auditCommand = defineCommand({
     process.stdout.write(`
 === Warden Audit ===
 
-Ledger backend: ${args.jsonl ? `JSONL (${args.jsonl})` : args.db ? `SQLite (${args.db})` : "In-memory"}
+Ledger backend: ${args.jsonl ? `JSONL (${args.jsonl})` : dbPath && existsSync(dbPath) ? `SQLite (${dbPath})` : "None found (nothing has been recorded yet)"}
 Ledger entries: ${entries.length}
 Chain integrity: ${chain.valid ? "VALID" : "BROKEN"}
 ${chain.brokenAt !== undefined ? `Broken at entry: ${chain.brokenAt}` : ""}
 
 Entries:
-${entries.length === 0 ? "  (no entries)" : ""}
+${entries.length === 0 ? "  (no entries). Decisions are recorded when tool calls go through `warden proxy` or `warden start`." : ""}
 `);
 
     for (const entry of entries) {

@@ -1,4 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { policyCommand } from "../src/commands/policy";
 
 async function runPolicy(args: Record<string, unknown>) {
@@ -88,5 +91,58 @@ describe("policyCommand", () => {
 
     const output = stdoutSpy.mock.calls.join("");
     expect(output).toContain("Decision: DENY");
+  });
+
+  describe("with a project config", () => {
+    const dir = mkdtempSync(join(tmpdir(), "warden-cli-policy-"));
+    const config = join(dir, "warden.config.yml");
+    writeFileSync(config, `version: "2"
+meta:
+  environment: "development"
+  sessionApprovalRequired: false
+policies:
+  - id: "block-shell-injection"
+    description: "Block dangerous shell patterns"
+    match:
+      tool: "Bash"
+      inputPatterns:
+        - "rm\\s+-rf"
+    action: DENY
+  - id: "allow-reads"
+    description: "Allow reads"
+    match:
+      tools: ["read_file"]
+    action: ALLOW
+`);
+
+    it("evaluates the project's rules, not the built-in demo", async () => {
+      const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      await runPolicy({ tool: "read_file", config });
+
+      const output = stdoutSpy.mock.calls.join("");
+      expect(output).toContain("Decision: ALLOW");
+      expect(output).toContain("allow-reads");
+    });
+
+    it("matches input patterns from --input", async () => {
+      const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      await runPolicy({ tool: "Bash", config, input: '{"command":"rm -rf /"}' });
+
+      const output = stdoutSpy.mock.calls.join("");
+      expect(output).toContain("Decision: DENY");
+      expect(output).toContain("block-shell-injection");
+    });
+
+    it("rejects a non-object --input", async () => {
+      vi.spyOn(process, "exit").mockImplementation(() => {
+        throw new Error("EXIT");
+      });
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+      await expect(runPolicy({ tool: "Bash", config, input: "[1]" })).rejects.toThrow("EXIT");
+      expect(stderrSpy.mock.calls.join("")).toContain("invalid --input");
+    });
   });
 });
