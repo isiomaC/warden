@@ -18,7 +18,7 @@ that host integration is resolved, add the following server to the project's
 ```toml
 [mcp_servers.warden]
 command = "npx"
-args = ["--yes", "@stlw/warden-cli@0.2.7", "proxy"]
+args = ["--yes", "@stlw/warden-cli@0.2.8", "proxy"]
 ```
 
 Then verify one expected allow and one expected deny through a proxied MCP

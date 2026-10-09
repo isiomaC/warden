@@ -9,7 +9,7 @@ describe("Warden Claude Code skill bundle", () => {
     const manifest = JSON.parse(readFileSync(resolve(root, ".claude-plugin/plugin.json"), "utf8"));
     const skill = readFileSync(resolve(root, "skills/warden/SKILL.md"), "utf8");
 
-    expect(manifest).toMatchObject({ name: "warden-claude", version: "0.2.7" });
+    expect(manifest).toMatchObject({ name: "warden-claude", version: "0.2.8" });
     expect(skill).toContain("docs/AGENT_SETUP.md");
     expect(skill).toContain("Node-only");
     expect(skill).toContain("native tools");
