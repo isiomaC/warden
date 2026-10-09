@@ -1,5 +1,7 @@
 import { defineCommand } from "citty";
-import { evaluate, TrustLevel } from "@stlw/warden";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { evaluate, FileConfigSource, TrustLevel } from "@stlw/warden";
 import type { PolicyConfig } from "@stlw/warden";
 
 export const policyCommand = defineCommand({
@@ -20,15 +22,41 @@ export const policyCommand = defineCommand({
     },
     environment: {
       type: "string",
-      description: "Environment (development, staging, production)",
-      default: "development",
+      description: "Environment (development, staging, production). Default: the config's environment",
+    },
+    config: {
+      type: "string",
+      description: "Path to warden.config.yml (default: ./warden.config.yml if present)",
+      default: "warden.config.yml",
+    },
+    input: {
+      type: "string",
+      description: 'Tool input as JSON, e.g. \'{"command":"rm -rf /"}\' (default: {})',
+      default: "{}",
     },
   },
   async run({ args }) {
-    const config: PolicyConfig = {
+    let toolInput: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(args.input ?? "{}");
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+      toolInput = parsed as Record<string, unknown>;
+    } catch {
+      process.stderr.write(`Warden: invalid --input. Expected a JSON object, got: ${args.input}\n`);
+      process.exit(1);
+    }
+
+    const configPath = resolve(args.config ?? "warden.config.yml");
+    const projectConfig = existsSync(configPath)
+      ? await new FileConfigSource(configPath).load()
+      : undefined;
+    const environment = args.environment ?? projectConfig?.meta.environment ?? "development";
+    const policySource = projectConfig ? (args.config ?? "warden.config.yml") : "built-in demo policy (no warden.config.yml found)";
+
+    const config: PolicyConfig = projectConfig ?? {
       version: "2",
       meta: {
-        environment: args.environment,
+        environment,
         sessionApprovalRequired: false,
       },
       policies: [
@@ -91,8 +119,8 @@ export const policyCommand = defineCommand({
 
     const result = evaluate(config, {
       toolName: args.tool,
-      toolInput: {},
-      environment: args.environment,
+      toolInput,
+      environment,
       trustSources: [{ source: "mcp__test", trust: trust as typeof TrustLevel.EXTERNAL }],
       serverInAllowlist: true,
     });
@@ -100,9 +128,10 @@ export const policyCommand = defineCommand({
     process.stdout.write(`
 === Policy Dry Run ===
 
+Policy:   ${policySource}
 Tool:     ${args.tool}
 Trust:    ${args.trust.toUpperCase()}
-Env:      ${args.environment}
+Env:      ${environment}
 Decision: ${result.action}
 Reason:   ${result.reason}
 `);

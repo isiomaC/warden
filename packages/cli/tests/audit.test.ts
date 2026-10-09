@@ -3,6 +3,7 @@ import { FileLedgerStore, SqliteLedgerStore } from "@stlw/warden";
 import { existsSync, mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeFileSync } from "node:fs";
 import { auditCommand } from "../src/commands/audit";
 
 const TEST_DB = "/tmp/warden-cli-audit-export.db";
@@ -132,5 +133,33 @@ describe("auditCommand exports", () => {
       decision: "ALLOW",
       decisionReason: "Policy: allow-read",
     })]);
+  });
+
+  it("reads the ledger path from warden.config.yml when no --db is given", async () => {
+    seedLedger();
+    const config = join(mkdtempSync(join(tmpdir(), "warden-cli-audit-cfg-")), "warden.config.yml");
+    writeFileSync(config, `version: "2"
+meta:
+  environment: "development"
+  sessionApprovalRequired: false
+ledger:
+  path: "${TEST_DB}"
+policies: []
+`);
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await runAudit({ config });
+
+    const output = stdout.mock.calls.join("");
+    expect(output).toContain("Ledger entries: 1");
+    expect(output).toContain("SQLite");
+  });
+
+  it("says no ledger was found instead of pretending it is empty", async () => {
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await runAudit({ config: join(tmpdir(), "warden-no-such-config.yml") });
+
+    expect(stdout.mock.calls.join("")).toContain("None found");
   });
 });
