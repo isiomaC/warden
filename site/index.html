@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#edf2ed">
+  <meta name="description" content="Warden applies deterministic policy to agent tool calls routed through supported integrations. Run locally, inspect every decision, and keep the enforcement boundary clear.">
+  <meta property="og:title" content="Warden — policy at the tool boundary">
+  <meta property="og:description" content="A local, deterministic policy layer for AI agent tool calls routed through Warden.">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://warden.stalewell.com/">
+  <meta property="og:url" content="https://warden.stalewell.com/">
+  <title>Warden — policy at the tool boundary</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/DMSerifDisplay-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="fonts/DMSans-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Warden","description":"A local policy layer that applies deterministic authorization to agent tool calls routed through supported integrations.","applicationCategory":"DeveloperApplication","operatingSystem":"Any","license":"https://opensource.org/licenses/MIT","url":"https://github.com/isiomaC/warden","codeRepository":"https://github.com/isiomaC/warden","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"publisher":{"@type":"Organization","name":"Stalewell","url":"https://stalewell.com"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="shell header-row">
+      <a class="brand" href="#top" aria-label="Warden home"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v10h10v6H19v10h-6V19H3v-6h10z" fill="currentColor"/></svg><span>warden</span></a>
+      <nav class="primary-nav" aria-label="Primary navigation"><a href="#how">How it works</a><a href="#integrations">Integrations</a><a href="#guides">Guides</a><a href="#faq">FAQ</a></nav>
+      <div class="header-actions"><a class="nav-github" href="https://github.com/isiomaC/warden" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a><a class="button button--small button--green" href="#install">Get started</a><button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Open navigation"><span></span><span></span></button></div>
+    </div>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation" hidden><a href="#how">How it works</a><a href="#integrations">Integrations</a><a href="#guides">Guides</a><a href="#faq">FAQ</a><a href="https://github.com/isiomaC/warden" target="_blank" rel="noreferrer">GitHub ↗</a></nav>
+  </header>
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="shell hero-inner">
+        <div class="hero-copy">
+          <h1 id="hero-title">Put policy between your agent and its tools.</h1>
+          <p class="hero-lede">Warden evaluates routed tool calls against deterministic rules before they execute. No model in the decision path. No cloud service to deploy.</p>
+          <div class="install-command" id="install"><code>npm install -g @stlw/warden-cli</code><button class="copy-button" type="button" data-copy="npm install -g @stlw/warden-cli" aria-label="Copy install command"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6.5" y="6.5" width="9" height="10" rx="1.5"/><path d="M4.5 13V5.5A1.5 1.5 0 0 1 6 4h7"/></svg><span>Copy</span></button></div>
+          <p class="hero-note"><span>Node.js 22+</span><span class="note-dot" aria-hidden="true"></span><span>MIT licensed</span><span class="note-dot" aria-hidden="true"></span><a href="https://www.npmjs.com/package/@stlw/warden-cli" target="_blank" rel="noreferrer">View on npm ↗</a></p>
+        </div>
+        <figure class="trace" aria-labelledby="trace-title">
+          <figcaption class="trace-topline"><span id="trace-title">A routed call, under policy</span><span class="trace-label"><i aria-hidden="true"></i> Illustrative trace</span></figcaption>
+          <div class="trace-path"><div class="trace-step trace-request"><span class="trace-index">REQUEST</span><strong>write_file</strong><code>trust: EXTERNAL</code></div><div class="trace-connector" aria-hidden="true"><span></span></div><div class="trace-step trace-rule"><span class="trace-index">MATCHED RULE</span><strong>quarantine-external</strong><code>external → write</code></div><div class="trace-connector" aria-hidden="true"><span></span></div><div class="trace-step trace-result"><span class="trace-index">DECISION</span><strong><i aria-hidden="true"></i> QUARANTINE</strong><code>output quarantined · ledgered</code></div></div>
+          <div class="trace-foot"><span>Policy evaluation is deterministic</span><span class="trace-hash">SHA-256 ledger entry <b aria-hidden="true">↗</b></span></div>
+        </figure>
+      </div>
+      <div class="hero-edge" aria-hidden="true"><span></span></div>
+    </section>
+    <section class="principles" aria-label="Warden at a glance"><div class="shell principle-row">
+      <p><span class="signal" aria-hidden="true"></span><strong>Deterministic</strong><span>Rules, not a second model call</span></p>
+      <p><span class="signal" aria-hidden="true"></span><strong>Local-first</strong><span>Run beside your agent</span></p>
+      <p><span class="signal" aria-hidden="true"></span><strong>Inspectable</strong><span>Decisions recorded in a hash-chained ledger</span></p>
+      <p><span class="signal" aria-hidden="true"></span><strong>Explicit boundary</strong><span>Only calls routed through Warden are governed</span></p>
+    </div></section>
+    <section class="section how-section" id="how" aria-labelledby="how-title"><div class="shell">
+      <div class="section-heading heading-wide"><h2 id="how-title">A clear rule. A recorded decision.</h2><p>Warden sits on the path between an agent and the tool call you choose to route through it. Policy decides what happens; the ledger keeps the evidence.</p></div>
+      <ol class="flow-list">
+        <li class="flow-item"><span class="flow-mark" aria-hidden="true"><span>01</span><i></i></span><div class="flow-copy"><h3>Receive the call</h3><p>A supported hook, MCP proxy, or embedded gateway passes Warden a tool call with its relevant context.</p></div><code class="flow-code">tool + trust + environment</code></li>
+        <li class="flow-item"><span class="flow-mark" aria-hidden="true"><span>02</span><i></i></span><div class="flow-copy"><h3>Evaluate policy</h3><p>Warden matches the call to your local rules. Unmatched calls and evaluation failures deny by default.</p></div><code class="flow-code">warden.config.yml</code></li>
+        <li class="flow-item"><span class="flow-mark" aria-hidden="true"><span>03</span><i></i></span><div class="flow-copy"><h3>Apply the outcome</h3><p>Allow, deny, request human confirmation, or quarantine content according to the matching rule.</p></div><code class="flow-code">ALLOW · DENY · CONFIRM · QUARANTINE</code></li>
+        <li class="flow-item"><span class="flow-mark" aria-hidden="true"><span>04</span><i></i></span><div class="flow-copy"><h3>Keep an audit trail</h3><p>Decisions are recorded in a local, hash-chained ledger you can inspect with the CLI.</p></div><code class="flow-code">warden audit</code></li>
+      </ol>
+    </div></section>
+    <section class="integration-section" id="integrations" aria-labelledby="integrations-title"><div class="shell integration-layout">
+      <div class="integration-intro"><h2 id="integrations-title">Choose where Warden sits.</h2><p>Different agents expose different enforcement points. Start with a path that routes the calls you need governed, and verify its current status before relying on it.</p><a class="text-link" href="https://github.com/isiomaC/warden/blob/main/docs/AGENT_SETUP.md" target="_blank" rel="noreferrer">Read the agent capability matrix <span aria-hidden="true">↗</span></a></div>
+      <div class="integration-list">
+        <article class="integration-row"><span class="integration-type">01 / Native plugin</span><div><h3>OpenCode</h3><p>Project plugin for native tool hooks. Headless tool enforcement is verified; see the setup guide for the tested scope.</p></div><span class="status status--verified"><i></i> Verified</span></article>
+        <article class="integration-row"><span class="integration-type">02 / MCP proxy</span><div><h3>Claude Code, Codex CLI, Cursor, Windsurf</h3><p>Route selected MCP tools through Warden. Native agent tools remain outside the proxy boundary.</p></div><span class="status status--limited"><i></i> MCP tools only</span></article>
+        <article class="integration-row"><span class="integration-type">03 / TypeScript</span><div><h3>Embed the authorization runtime</h3><p>Evaluate a policy directly in your application with <code>@stlw/warden</code>, without starting the MCP proxy.</p></div><a class="row-link" href="https://www.npmjs.com/package/@stlw/warden" target="_blank" rel="noreferrer" aria-label="View Warden on npm">↗</a></article>
+      </div>
+    </div><div class="shell boundary-note"><strong>Know the boundary.</strong><span>Warden cannot intercept native agent actions that do not pass through a supported Warden integration. Check the current capability matrix before relying on an integration for enforcement.</span></div></section>
+    <section class="section setup-section" aria-labelledby="setup-title"><div class="shell">
+      <div class="section-heading heading-wide"><h2 id="setup-title">Start with the path that fits.</h2><p>Install the CLI to initialize policy and inspect decisions. For agent-specific routing, use the tested setup instructions in the repository.</p></div>
+      <div class="setup-tabs" data-tabs>
+        <div class="tab-list" role="tablist" aria-label="Warden setup options"><button class="tab" id="tab-cli" type="button" role="tab" aria-controls="panel-cli" aria-selected="true">CLI</button><button class="tab" id="tab-opencode" type="button" role="tab" aria-controls="panel-opencode" aria-selected="false" tabindex="-1">OpenCode</button><button class="tab" id="tab-mcp" type="button" role="tab" aria-controls="panel-mcp" aria-selected="false" tabindex="-1">MCP proxy</button></div>
+        <div class="tab-panel" id="panel-cli" role="tabpanel" aria-labelledby="tab-cli"><div class="tab-copy"><h3>Install the CLI</h3><p>Initialize a project policy, then inspect a decision before connecting an agent.</p><a class="text-link" href="https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md#1-installation" target="_blank" rel="noreferrer">Read the full installation guide <span aria-hidden="true">↗</span></a></div><div class="code-window"><div class="code-window-head"><span>Terminal</span><button class="copy-button copy-button--dark" type="button" data-copy="npm install -g @stlw/warden-cli\nwarden init\nwarden policy --tool write_file --trust EXTERNAL --environment production" aria-label="Copy CLI setup commands"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6.5" y="6.5" width="9" height="10" rx="1.5"/><path d="M4.5 13V5.5A1.5 1.5 0 0 1 6 4h7"/></svg><span>Copy</span></button></div><pre><code><span class="prompt">$</span> npm install -g @stlw/warden-cli<br><span class="prompt">$</span> warden init<br><span class="prompt">$</span> warden policy --tool write_file --trust EXTERNAL --environment production</code></pre></div></div>
+        <div class="tab-panel" id="panel-opencode" role="tabpanel" aria-labelledby="tab-opencode" hidden><div class="tab-copy"><h3>Use the OpenCode plugin</h3><p>Warden's project plugin integrates with OpenCode's native tool hooks. Follow the repository guide to add the plugin and run its verification steps.</p><a class="text-link" href="https://github.com/isiomaC/warden/blob/main/docs/AGENT_SETUP.md" target="_blank" rel="noreferrer">Open the OpenCode setup guide <span aria-hidden="true">↗</span></a></div><div class="code-window"><div class="code-window-head"><span>Project root</span><a class="copy-link" href="https://github.com/isiomaC/warden/tree/main/packages/opencode-plugin" target="_blank" rel="noreferrer">Plugin files ↗</a></div><pre><code><span class="comment"># See the setup guide for the supported plugin layout</span><br>mkdir -p .opencode/plugins/lib<br>cp packages/opencode-plugin/warden-plugin.ts .opencode/plugins/<br>cp packages/opencode-plugin/lib/ledger.ts .opencode/plugins/lib/</code></pre></div></div>
+        <div class="tab-panel" id="panel-mcp" role="tabpanel" aria-labelledby="tab-mcp" hidden><div class="tab-copy"><h3>Route MCP tools through Warden</h3><p>Start Warden as a local stdio proxy and configure an MCP client to use it. Only the tools routed through the proxy are in scope.</p><a class="text-link" href="https://github.com/isiomaC/warden/blob/main/docs/AGENT_SETUP.md" target="_blank" rel="noreferrer">See client-specific configuration <span aria-hidden="true">↗</span></a></div><div class="code-window"><div class="code-window-head"><span>Terminal</span><button class="copy-button copy-button--dark" type="button" data-copy="warden init\nwarden proxy" aria-label="Copy MCP proxy commands"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6.5" y="6.5" width="9" height="10" rx="1.5"/><path d="M4.5 13V5.5A1.5 1.5 0 0 1 6 4h7"/></svg><span>Copy</span></button></div><pre><code><span class="prompt">$</span> warden init<br><span class="prompt">$</span> warden proxy</code></pre></div></div>
+      </div>
+    </div></section>
+    <section class="command-section" aria-labelledby="commands-title"><div class="shell command-layout">
+      <div class="command-intro"><h2 id="commands-title">A small command surface. A clear record.</h2><p>Use the CLI to initialize policy, run a dry evaluation, inspect decisions, and check the local setup.</p><a class="text-link" href="https://github.com/isiomaC/warden/blob/main/packages/cli/README.md" target="_blank" rel="noreferrer">Browse CLI documentation <span aria-hidden="true">↗</span></a></div>
+      <dl class="command-list"><div><dt><code>warden init</code></dt><dd>Create a project policy and runtime state.</dd></div><div><dt><code>warden proxy</code></dt><dd>Start the local stdio MCP policy proxy.</dd></div><div><dt><code>warden audit</code></dt><dd>Inspect ledger entries and chain integrity.</dd></div><div><dt><code>warden policy</code></dt><dd>Dry-run a policy decision for a tool call.</dd></div><div><dt><code>warden scan</code></dt><dd>Scan text for prompt-injection patterns.</dd></div><div><dt><code>warden supply-chain</code></dt><dd>Check package integrity against pinned hashes.</dd></div></dl>
+    </div></section>
+    <section class="section guides-section" id="guides" aria-labelledby="guides-title"><div class="shell">
+      <div class="section-heading heading-wide"><h2 id="guides-title">Go deeper, when you need to.</h2><p>Setup and reference material live with the source, where integration limits and implementation details can stay current.</p></div>
+      <div class="guide-list">
+        <a href="https://github.com/isiomaC/warden/blob/main/docs/AGENT_SETUP.md" target="_blank" rel="noreferrer"><span>Setup</span><strong>Agent setup and capability matrix</strong><small>Choose an integration and verify its enforcement boundary.</small><i aria-hidden="true">↗</i></a>
+        <a href="https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md" target="_blank" rel="noreferrer"><span>Manual</span><strong>Install, configure, and run Warden</strong><small>From project initialization to local policy checks.</small><i aria-hidden="true">↗</i></a>
+        <a href="https://github.com/isiomaC/warden/blob/main/README.md" target="_blank" rel="noreferrer"><span>Reference</span><strong>Policy model and architecture</strong><small>Rules, outcomes, trust flow, and implementation details.</small><i aria-hidden="true">↗</i></a>
+        <a href="https://www.npmjs.com/package/@stlw/warden" target="_blank" rel="noreferrer"><span>Package</span><strong><code>@stlw/warden</code> on npm</strong><small>Embed the TypeScript authorization runtime.</small><i aria-hidden="true">↗</i></a>
+      </div>
+    </div></section>
+    <section class="faq-section" id="faq" aria-labelledby="faq-title"><div class="shell faq-layout">
+      <div class="faq-intro"><h2 id="faq-title">Know what Warden does—and where it stops.</h2><p>Security tools should be precise about their guarantees. Here are the boundaries that matter most.</p></div>
+      <div class="faq-list">
+        <details><summary>Does Warden control every action my agent can take?</summary><p>No. Warden governs calls routed through a supported Warden integration. Native agent actions outside that path remain outside its control. Review the <a href="https://github.com/isiomaC/warden/blob/main/docs/AGENT_SETUP.md#agent-capability-matrix" target="_blank" rel="noreferrer">capability matrix</a> for tested scope.</p></details>
+        <details><summary>Does a language model make the policy decision?</summary><p>No. The policy evaluation path is deterministic. It matches tool-call context against configured rules; it does not ask a second model whether an action is safe.</p></details>
+        <details><summary>What happens if the MCP proxy is unavailable?</summary><p>MCP calls routed through Warden's proxy cannot reach their upstream when the proxy is unavailable. This does not extend to native agent tools that bypass Warden.</p></details>
+        <details><summary>Does Warden require a hosted service?</summary><p>No hosted Warden service is required for the local CLI, plugin, or MCP proxy workflows described here. MCP upstreams configured by you may of course be remote services.</p></details>
+        <details><summary>Where can I inspect decisions?</summary><p>Use <code>warden audit</code> to inspect the local hash-chained ledger. See the <a href="https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md" target="_blank" rel="noreferrer">manual</a> for configuration and usage.</p></details>
+      </div>
+    </div></section>
+    <section class="closing" aria-labelledby="closing-title"><div class="shell closing-inner"><div><h2 id="closing-title">Make the policy path visible.</h2><p>Install the CLI, initialize your project, and route only the calls you intend Warden to govern.</p></div><div class="closing-actions"><a class="button button--light" href="#install">Get started <span aria-hidden="true">↓</span></a><a class="closing-github" href="https://github.com/isiomaC/warden" target="_blank" rel="noreferrer">View source on GitHub ↗</a></div></div></section>
+  </main>
+  <footer class="site-footer"><div class="shell footer-top"><a class="brand brand--footer" href="#top" aria-label="Warden home"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v10h10v6H19v10h-6V19H3v-6h10z" fill="currentColor"/></svg><span>warden</span></a><p>Policy at the tool boundary.</p><nav aria-label="Footer links"><a href="https://github.com/isiomaC/warden" target="_blank" rel="noreferrer">GitHub</a><a href="https://www.npmjs.com/package/@stlw/warden-cli" target="_blank" rel="noreferrer">npm</a><a href="https://opensource.org/licenses/MIT" target="_blank" rel="noreferrer">MIT license</a></nav></div><div class="shell footer-bottom"><span>© <span id="year"></span> Stalewell</span><a href="https://stalewell.com" target="_blank" rel="noreferrer">Made by Stalewell ↗</a></div></footer>
+  <div class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

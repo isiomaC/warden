@@ -1,0 +1,17 @@
+# Warden
+
+> A local policy layer for agent tool calls routed through supported Warden integrations.
+
+Warden applies deterministic policy to routed calls. It supports native hooks/plugins where verified, a local MCP proxy for selected MCP tools, and a TypeScript authorization runtime. Decisions can be ALLOW, DENY, CONFIRM, or QUARANTINE and are recorded in a local hash-chained ledger.
+
+## Important boundary
+
+Warden does not govern native agent actions that bypass a supported integration. Check the current capability matrix before relying on an integration for enforcement.
+
+## Links
+
+- [Warden repository](https://github.com/isiomaC/warden)
+- [Agent setup and capability matrix](https://github.com/isiomaC/warden/blob/main/docs/AGENT_SETUP.md)
+- [User manual](https://github.com/isiomaC/warden/blob/main/docs/MANUAL.md)
+- [CLI on npm](https://www.npmjs.com/package/@stlw/warden-cli)
+- [TypeScript package on npm](https://www.npmjs.com/package/@stlw/warden)
