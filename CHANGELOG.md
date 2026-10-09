@@ -5,6 +5,24 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `warden policy` now evaluates the project's `warden.config.yml` (or `--config`)
+  instead of a hard-coded demo policy, and accepts `--input <json>` so rules with
+  `inputPatterns` can be tested. Without a config file it falls back to the demo policy.
+- `warden audit` with no `--db`/`--jsonl` now reads the project's persisted ledger
+  (`ledger.path`, default `.warden/ledger.db`) instead of an always-empty in-memory one,
+  and says so when no ledger exists yet.
+
+### Documentation
+
+- README: plain tagline, decisions table, a try-it block, and an explicit coverage
+  and limits section. Removed unverified claims (general fail-closed, vendor lock-in,
+  mid-session config blocking, stale test counts) and the incorrect note that
+  `warden proxy` exits when stdin closes.
+
 ## [0.2.7] - 2026-10-04
 
 ### Added
