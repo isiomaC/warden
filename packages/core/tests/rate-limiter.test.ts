@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { SlidingWindowRateLimiter } from "../src/rate-limiter";
 import type { RateLimiterConfig } from "../src/rate-limiter";
 
@@ -109,22 +109,32 @@ describe("SlidingWindowRateLimiter", () => {
     });
 
     it("should respect per-tool windowMs independent of global", () => {
-      const toolLimiter = new SlidingWindowRateLimiter({
-        maxCalls: 5,
-        windowMs: 60_000,
-        perToolLimits: {
-          bursty: { maxCalls: 3, windowMs: 1 }, // essentially tight window
-        },
-      });
+      // Fake timers: a 1ms window must not depend on the wall clock staying in one tick.
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(1_000);
+        const toolLimiter = new SlidingWindowRateLimiter({
+          maxCalls: 5,
+          windowMs: 60_000,
+          perToolLimits: {
+            bursty: { maxCalls: 3, windowMs: 1 }, // essentially tight window
+          },
+        });
 
-      // First 3 within the 1ms window should be allowed
-      toolLimiter.check("tool:bursty");
-      toolLimiter.check("tool:bursty");
-      toolLimiter.check("tool:bursty");
+        // First 3 within the 1ms window should be allowed
+        toolLimiter.check("tool:bursty");
+        toolLimiter.check("tool:bursty");
+        toolLimiter.check("tool:bursty");
 
-      // 4th call within the same ms tick — denied
-      const denied = toolLimiter.check("tool:bursty");
-      expect(denied.allowed).toBe(false);
+        // 4th call in the same tick — denied
+        expect(toolLimiter.check("tool:bursty").allowed).toBe(false);
+
+        // Once the 1ms window has passed, the tool is allowed again
+        vi.setSystemTime(1_002);
+        expect(toolLimiter.check("tool:bursty").allowed).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
