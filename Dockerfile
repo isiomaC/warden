@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM node:22 AS build
+FROM node:22@sha256:0e5f906573693feaa1e21057ebdcfdb5bd5021f050b2dc7c9deceb629c7da2a8 AS build
 WORKDIR /app
 
 # Install dependencies first (layer caching)
@@ -17,7 +17,7 @@ COPY . .
 RUN npx tsc --noEmit
 
 # ---- Runtime Stage ----
-FROM node:22-slim AS runtime
+FROM node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS runtime
 WORKDIR /app
 
 # Copy installed dependencies
@@ -49,7 +49,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://localhost:7429/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Start the hook server via tsx (TypeScript runner)
-CMD ["npx", "tsx", "packages/cli/src/bin.ts", "start", \
+CMD ["node_modules/.bin/tsx", "packages/cli/src/bin.ts", "start", \
      "--config", "warden.config.yml", \
      "--db", ".warden/ledger.db", \
      "--port", "7429", \

@@ -14,7 +14,8 @@ You will receive an acknowledgment within 48 hours and a detailed response withi
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 0.2.x   | :white_check_mark: |
+| < 0.2   | :x:                |
 
 ## Scope
 

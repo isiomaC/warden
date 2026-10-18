@@ -24,7 +24,7 @@ export function failClosedHandler(logger?: WardenLogger) {
   return (err: Error, c: Context) => {
     if (logger) {
       logger.error("Hook handler threw unhandled error — failing closed.", {
-        error: err.message,
+        errorType: err.name,
         path: c.req.path,
         method: c.req.method,
       });

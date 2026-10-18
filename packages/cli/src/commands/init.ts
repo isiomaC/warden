@@ -19,7 +19,7 @@ mcpServers:
       type: local
       transport: stdio
       command: npx
-      args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+      args: ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "."]
       allowedTools: ["read_file", "list_directory", "write_file"]
       authRequired: false
 
