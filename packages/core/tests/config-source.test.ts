@@ -155,6 +155,19 @@ policies: []
     await expect(source.load()).rejects.toThrow();
   });
 
+  it("rejects unknown policy match keys instead of interpreting them as a match-all rule", async () => {
+    writeFileSync(TEST_YAML, `version: "2"\nmeta:\n  environment: development\n  sessionApprovalRequired: false\npolicies:\n  - id: typo\n    description: typo\n    match:\n      tool_names: [read_file]\n    action: ALLOW\n`);
+    await expect(new FileConfigSource(TEST_YAML).load()).rejects.toThrow(/unknown policies\[0\]\.match key.*tool_names/);
+  });
+
+  it("rejects empty policy matches and unknown actions", async () => {
+    writeFileSync(TEST_YAML, `version: "2"\nmeta:\n  environment: development\n  sessionApprovalRequired: false\npolicies:\n  - id: empty\n    description: empty match\n    match: {}\n    action: ALLOW\n`);
+    await expect(new FileConfigSource(TEST_YAML).load()).rejects.toThrow(/match must contain at least one condition/);
+
+    writeFileSync(TEST_YAML, `version: "2"\nmeta:\n  environment: development\n  sessionApprovalRequired: false\npolicies:\n  - id: action\n    description: bad action\n    match:\n      tools: [read_file]\n    action: MAYBE\n`);
+    await expect(new FileConfigSource(TEST_YAML).load()).rejects.toThrow(/action is unknown/);
+  });
+
   it("should hash canonical JSON, not raw YAML", async () => {
     writeFileSync(TEST_YAML, validYaml + "\n# comment\n");
     const source = new FileConfigSource(TEST_YAML);

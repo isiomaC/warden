@@ -10,7 +10,7 @@ npm install @stlw/warden-hook-server @stlw/warden
 
 ## Start a server in Node.js
 
-`startHookServer` reads your `PolicyConfig`, defaults to port `7429`, and returns the server handle:
+`startHookServer` reads your `PolicyConfig`, defaults to port `7429` on `127.0.0.1`, and returns the server handle. Binding to a non-loopback host requires `WARDEN_AUTH_TOKEN` (or `authToken`):
 
 ```ts
 import { startHookServer } from "@stlw/warden-hook-server";
@@ -30,9 +30,11 @@ const config: PolicyConfig = {
 };
 
 startHookServer({ config, dbPath: ".warden/ledger.db", port: 7429 });
+// For a network-facing listener, also provide authToken or set WARDEN_AUTH_TOKEN.
+// startHookServer({ config, host: "0.0.0.0", authToken: process.env.WARDEN_AUTH_TOKEN });
 ```
 
-Set `WARDEN_AUTH_TOKEN` (or pass `authToken`) to require `X-Warden-Auth` on hook requests. `/health` remains available for readiness checks:
+When a token is configured, every `/hooks/*` request must include it in `X-Warden-Auth`. `/health` remains available for readiness checks:
 
 ```bash
 curl http://localhost:7429/health

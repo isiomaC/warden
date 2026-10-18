@@ -13,7 +13,7 @@ Agent MCP tool call → Warden stdio proxy → policy decision → upstream MCP 
                                     └→ append-only audit ledger
 ```
 
-- Runs on `localhost:7429` — never exposed to the internet
+- Binds to `127.0.0.1:7429` by default; binding to another interface requires `WARDEN_AUTH_TOKEN`
 - All decisions are deterministic — no LLM in the security path
 - Every tool call logged to a hash-chained, append-only ledger
 - Calls routed through Warden cannot reach upstream servers when the proxy is unavailable
@@ -55,10 +55,13 @@ This creates:
 | File | Purpose |
 |---|---|
 | `warden.config.yml` | Your policy rules — the single source of truth |
+| `.env` | Generated shared secret for hook requests; keep it private and out of version control |
 | `.warden/` | Runtime state directory (add to `.gitignore`) |
 | `.warden/ledger.db` | SQLite ledger — every tool call decision, tamper-evident |
 
 Environments: `development` (permissive), `staging` (moderate), `production` (strict).
+
+`warden init` generates `WARDEN_AUTH_TOKEN` in `.env` with private file permissions. `warden start` reads it automatically and binds to loopback. Requests to `/hooks/*` must send the token in `X-Warden-Auth`. Use `warden start --host 0.0.0.0` only when you intend to expose the listener on the network; Warden refuses that bind unless a token is configured.
 
 ---
 

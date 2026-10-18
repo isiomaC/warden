@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { sha256 } from "@stlw/warden";
 
@@ -88,6 +89,22 @@ export const initCommand = defineCommand({
     writeFileSync(configPath, defaultConfigYaml(args.environment));
     mkdirSync(wardenDir, { recursive: true });
 
+    const envPath = resolve(".env");
+    const generatedToken = randomBytes(32).toString("hex");
+    if (existsSync(envPath)) {
+      const envContents = readFileSync(envPath, "utf-8");
+      if (!/^\s*WARDEN_AUTH_TOKEN\s*=\s*\S+/m.test(envContents)) {
+        const assignment = /^\s*WARDEN_AUTH_TOKEN\s*=.*$/m;
+        const updated = assignment.test(envContents)
+          ? envContents.replace(assignment, `WARDEN_AUTH_TOKEN=${generatedToken}`)
+          : `${envContents}${envContents.endsWith("\n") || envContents.length === 0 ? "" : "\n"}WARDEN_AUTH_TOKEN=${generatedToken}\n`;
+        writeFileSync(envPath, updated);
+      }
+      chmodSync(envPath, 0o600);
+    } else {
+      writeFileSync(envPath, `WARDEN_AUTH_TOKEN=${generatedToken}\n`, { mode: 0o600 });
+    }
+
     const configHash = sha256(defaultConfigYaml(args.environment));
 
     process.stdout.write(`
@@ -102,6 +119,7 @@ Next steps:
   1. Review and customize warden.config.yml
   2. Run 'warden config-validate' to check the schema
   3. Run 'warden start' to launch the hook server
+     (the generated shared secret is stored in .env)
 `);
   },
 });

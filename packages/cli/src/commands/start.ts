@@ -1,11 +1,12 @@
 import { defineCommand } from "citty";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   createHookServer,
   AutoApproveApprovalChannel,
   TelegramApprovalChannel,
   WebhookApprovalChannel,
+  assertSafeBindHost,
 } from "@stlw/warden-hook-server";
 import { FileConfigSource, PersistentVault } from "@stlw/warden";
 import type { ApprovalChannelConfig, PolicyConfig } from "@stlw/warden";
@@ -15,6 +16,20 @@ import type { RuntimeConfig } from "../runtime-config.js";
 
 function resolveEnv(value: string): string {
   return value.replace(/\$\{(\w+)\}/g, (_, name) => process.env[name] ?? "");
+}
+
+function loadAuthTokenFromDotEnv(): string | undefined {
+  if (process.env.WARDEN_AUTH_TOKEN) return process.env.WARDEN_AUTH_TOKEN;
+  try {
+    const line = readFileSync(resolve(".env"), "utf-8")
+      .split(/\r?\n/)
+      .find((entry) => /^\s*WARDEN_AUTH_TOKEN\s*=/.test(entry));
+    const value = line?.replace(/^\s*WARDEN_AUTH_TOKEN\s*=\s*/, "").trim().replace(/^(?:"(.*)"|'(.*)')$/, "$1$2");
+    if (value) process.env.WARDEN_AUTH_TOKEN = value;
+    return value || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function createChannelFromConfig(ac: ApprovalChannelConfig): ApprovalChannel | undefined {
@@ -68,6 +83,11 @@ export const startCommand = defineCommand({
       description: "Port to listen on",
       default: "7429",
     },
+    host: {
+      type: "string",
+      description: "Interface to bind (loopback by default; external interfaces require WARDEN_AUTH_TOKEN)",
+      default: "127.0.0.1",
+    },
     db: {
       type: "string",
       description: "Override the ledger database path from warden.config.yml",
@@ -94,6 +114,14 @@ export const startCommand = defineCommand({
     }
 
     const port = Number.parseInt(args.port, 10);
+    const host = args.host;
+    const authToken = loadAuthTokenFromDotEnv();
+    try {
+      assertSafeBindHost(host, authToken);
+    } catch (error) {
+      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      process.exit(1);
+    }
 
     const configSource = new FileConfigSource(configPath);
     const config = await configSource.load();
@@ -131,11 +159,11 @@ export const startCommand = defineCommand({
       ...(channel ? { approvalChannel: channel } : {}),
     });
 
-    const bun = (globalThis as unknown as { Bun?: { serve: (opts: { port: number; fetch: typeof fetch }) => { port: number } } }).Bun;
+    const bun = (globalThis as unknown as { Bun?: { serve: (opts: { port: number; hostname: string; fetch: typeof fetch }) => { port: number } } }).Bun;
 
     if (bun) {
-      const server = bun.serve({ port, fetch });
-      process.stdout.write(`Warden hook server running on http://localhost:${server.port}\n`);
+      const server = bun.serve({ port, hostname: host, fetch });
+      process.stdout.write(`Warden hook server running on http://${host}:${server.port}\n`);
     } else {
       const { createServer } = await import("node:http");
       createServer(async (req, res) => {
@@ -152,8 +180,8 @@ export const startCommand = defineCommand({
         }));
         res.writeHead(response.status, Object.fromEntries(response.headers));
         res.end(await response.text());
-      }).listen(port, () => {
-        process.stdout.write(`Warden hook server running on http://localhost:${port} (Node.js)\n`);
+      }).listen(port, host, () => {
+        process.stdout.write(`Warden hook server running on http://${host}:${port} (Node.js)\n`);
       });
     }
 

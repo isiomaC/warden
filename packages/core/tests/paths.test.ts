@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { extractPaths, isPathAllowed } from "../src/paths";
 
 describe("extractPaths", () => {
@@ -10,8 +13,10 @@ describe("extractPaths", () => {
     expect(extractPaths({ FILE_PATH: "/a", Directory: "/b" })).toEqual(["/a", "/b"]);
   });
 
-  it("ignores non-string and empty values", () => {
-    expect(extractPaths({ path: 42, dir: "", target: null })).toEqual([]);
+  it("rejects non-string and empty values in path fields", () => {
+    expect(() => extractPaths({ path: 42 })).toThrow(/unparseable path/i);
+    expect(() => extractPaths({ dir: "" })).toThrow(/unparseable path/i);
+    expect(() => extractPaths({ target: null })).toThrow(/unparseable path/i);
   });
 
   it("returns empty array for non-object input", () => {
@@ -19,11 +24,20 @@ describe("extractPaths", () => {
     expect(extractPaths("str")).toEqual([]);
     expect(extractPaths(undefined)).toEqual([]);
   });
+
+  it("walks nested input and arrays to find path values", () => {
+    expect(extractPaths({ options: { path: "/etc/passwd" }, files: [{ filePath: "/tmp/a" }], paths: ["/tmp/b"] }))
+      .toEqual(["/etc/passwd", "/tmp/a", "/tmp/b"]);
+  });
+
+  it("rejects path-like fields with unsupported values", () => {
+    expect(() => extractPaths({ path: { value: "/etc/passwd" } })).toThrow(/unparseable path/i);
+  });
 });
 
 describe("isPathAllowed", () => {
-  it("allows everything when the allowlist is empty", () => {
-    expect(isPathAllowed("/etc/passwd", [])).toBe(true);
+  it("denies everything when the allowlist is empty", () => {
+    expect(isPathAllowed("/etc/passwd", [])).toBe(false);
   });
 
   it("allows exact match and children of an allowed directory", () => {
@@ -68,5 +82,19 @@ describe("isPathAllowed", () => {
 
   it("treats a root allowlist entry as allow-all", () => {
     expect(isPathAllowed("/anything/at/all", ["/"])).toBe(true);
+  });
+
+  it("denies paths that escape an allowed root through a symlink", () => {
+    const temp = mkdtempSync(join(tmpdir(), "warden-path-symlink-"));
+    const allowed = join(temp, "allowed");
+    const outside = join(temp, "outside");
+    mkdirSync(allowed);
+    mkdirSync(outside);
+    symlinkSync(outside, join(allowed, "link"));
+    try {
+      expect(isPathAllowed(join(allowed, "link", "secret.txt"), [allowed])).toBe(false);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 });

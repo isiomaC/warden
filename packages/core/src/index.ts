@@ -22,6 +22,7 @@ export { TrustRegistry, sanitizeExternalValues } from "./trust-registry.js";
 export type { TrustRegistryStore } from "./trust-registry.js";
 export { FileConfigSource } from "./config-source.js";
 export type { ConfigSource } from "./config-source.js";
+export { validatePolicyConfig } from "./config-validation.js";
 export { WardenLogger, LogLevel, parseLogLevel } from "./logger.js";
 export type { LogEntry } from "./logger.js";
 export { SlidingWindowRateLimiter } from "./rate-limiter.js";
