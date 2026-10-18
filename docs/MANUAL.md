@@ -63,6 +63,16 @@ Environments: `development` (permissive), `staging` (moderate), `production` (st
 
 `warden init` generates `WARDEN_AUTH_TOKEN` in `.env` with private file permissions. `warden start` reads it automatically and binds to loopback. Requests to `/hooks/*` must send the token in `X-Warden-Auth`. Use `warden start --host 0.0.0.0` only when you intend to expose the listener on the network; Warden refuses that bind unless a token is configured.
 
+`warden start` checks the `WARDEN_AUTH_TOKEN` process environment first, then
+`.env` in the current working directory. Without either, loopback startup is
+allowed but shared-secret checks on `/hooks/*` are disabled; a non-loopback
+bind is refused. The `--config` option selects the policy file only. It does
+not change where Warden looks for `.env`, and Warden does not currently
+provide an automatic global config directory or `init --global` mode. For a
+config stored elsewhere, export `WARDEN_AUTH_TOKEN` before starting. See the
+[CLI package README](../packages/cli/README.md#token-and-configuration-locations)
+for a global-config example.
+
 ---
 
 ## 3. Configure Policies

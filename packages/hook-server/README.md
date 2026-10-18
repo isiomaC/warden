@@ -10,7 +10,7 @@ npm install @stlw/warden-hook-server @stlw/warden
 
 ## Start a server in Node.js
 
-`startHookServer` reads your `PolicyConfig`, defaults to port `7429` on `127.0.0.1`, and returns the server handle. Binding to a non-loopback host requires `WARDEN_AUTH_TOKEN` (or `authToken`):
+`startHookServer` reads your `PolicyConfig`, defaults to port `7429` on `127.0.0.1`, and returns the server handle. A non-loopback bind requires a shared secret from `WARDEN_AUTH_TOKEN` or the `authToken` option. Supplying a secret also enables shared-secret checks on `/hooks/*` when bound to loopback.
 
 ```ts
 import { startHookServer } from "@stlw/warden-hook-server";
@@ -29,15 +29,40 @@ const config: PolicyConfig = {
   ],
 };
 
+// Local-only; without a shared secret, /hooks/* shared-secret checks are off.
 startHookServer({ config, dbPath: ".warden/ledger.db", port: 7429 });
-// For a network-facing listener, also provide authToken or set WARDEN_AUTH_TOKEN.
-// startHookServer({ config, host: "0.0.0.0", authToken: process.env.WARDEN_AUTH_TOKEN });
+
+// Local listener with shared-secret checks enabled.
+startHookServer({
+  config,
+  dbPath: ".warden/ledger.db",
+  port: 7429,
+  authToken: process.env.WARDEN_AUTH_TOKEN,
+});
+
+// Network listener: set WARDEN_AUTH_TOKEN in the process environment first.
+startHookServer({
+  config,
+  dbPath: ".warden/ledger.db",
+  port: 7429,
+  host: "0.0.0.0",
+});
 ```
 
-When a token is configured, every `/hooks/*` request must include it in `X-Warden-Auth`. `/health` remains available for readiness checks:
+The library does not generate or persist the secret. Supply it through your
+deployment's secret manager/environment or pass it as `authToken`. The
+`WARDEN_AUTH_TOKEN` environment variable is also read by `startHookServer`.
+When a token is configured, every `/hooks/*` request must include it in
+`X-Warden-Auth`. `/health` remains available without the token for readiness
+checks:
 
 ```bash
 curl http://localhost:7429/health
+
+curl --request POST http://localhost:7429/hooks/session-start \
+  --header "X-Warden-Auth: $WARDEN_AUTH_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"session_id":"example","allowedTools":["read_file"]}'
 ```
 
 ## Connect an agent
