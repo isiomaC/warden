@@ -26,6 +26,8 @@ import { handlePromptSubmit } from "./handlers/prompt-submit.js";
 import { handleConfigChange } from "./handlers/config-change.js";
 import { StdoutApprovalChannel, AutoApproveApprovalChannel } from "./approvals/index.js";
 import type { ApprovalChannel } from "./approvals/index.js";
+import { assertSafeBindHost } from "./bind.js";
+export { assertSafeBindHost, isLoopbackHost } from "./bind.js";
 export type { ApprovalChannel, ApprovalRequest } from "./approvals/index.js";
 
 export { AutoApproveApprovalChannel };
@@ -39,11 +41,12 @@ export interface HookServerOptions {
   contextManager?: ContextStore;
   approvalChannel?: ApprovalChannel;
   port?: number;
+  host?: string;
   dbPath?: string;
   tokenTTLSeconds?: number;
   logLevel?: LogLevel;
   pinsPath?: string;
-  /** Shared secret required in the X-Warden-Auth header on all /hooks/* routes. Defaults to WARDEN_AUTH_TOKEN env var; unset disables the check. */
+  /** Shared secret required in the X-Warden-Auth header on all /hooks/* routes. Defaults to WARDEN_AUTH_TOKEN env var. */
   authToken?: string;
 }
 
@@ -159,13 +162,15 @@ export function createHookServer(options: HookServerOptions) {
 export function startHookServer(options: HookServerOptions) {
   const { fetch, logger } = createHookServer(options);
   const port = options.port ?? 7429;
+  const host = options.host ?? "127.0.0.1";
+  assertSafeBindHost(host, options.authToken ?? process.env.WARDEN_AUTH_TOKEN);
 
-  const bun = (globalThis as unknown as { Bun?: { serve: (opts: { port: number; fetch: typeof fetch }) => unknown } }).Bun;
+  const bun = (globalThis as unknown as { Bun?: { serve: (opts: { port: number; hostname: string; fetch: typeof fetch }) => unknown } }).Bun;
   const server = bun
-    ? bun.serve({ port, fetch })
-    : { port, fetch, stop: () => {} };
+    ? bun.serve({ port, hostname: host, fetch })
+    : { port, hostname: host, fetch, stop: () => {} };
 
-  logger.info("Hook server listening.", { port });
+  logger.info("Hook server listening.", { port, host });
 
   return server;
 }

@@ -37,8 +37,19 @@ export function handlePreToolUse(
       }, 403);
     }
 
-    if (token?.allowedPaths && token.allowedPaths.length > 0) {
-      const paths = extractPaths(tool_input);
+    if (token?.allowedPaths !== undefined) {
+      let paths: string[];
+      try {
+        paths = extractPaths(tool_input);
+      } catch (error) {
+        return c.json({
+          hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "deny",
+            permissionDecisionReason: error instanceof Error ? error.message : "Warden: Unparseable path input.",
+          },
+        });
+      }
       const denied = paths.filter((p) => !isPathAllowed(p, token.allowedPaths!));
       if (denied.length > 0) {
         return c.json({

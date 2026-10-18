@@ -5,6 +5,22 @@ All notable changes to Warden will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-10-18
+
+### Security
+
+- Bind the hook server to loopback by default, require a shared secret for
+  non-loopback listeners, and generate a private token during `warden init`.
+- Enforce nested, symlink-aware path allowlists and reject malformed session
+  bootstrap input and invalid policy configuration.
+
+### Documentation
+
+- Document token and config-file locations, including missing `.env` and
+  manually configured global policy-file scenarios.
+- Document local and network listener setup, shared-secret authentication,
+  and the limits of path scoping for shell command strings.
+
 ## [0.2.8] - 2026-10-09
 
 ### Fixed

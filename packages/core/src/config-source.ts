@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { sha256 } from "./hash.js";
 import type { PolicyConfig } from "./policy.js";
+import { validatePolicyConfig } from "./config-validation.js";
 
 export interface ConfigSource {
   load(): Promise<PolicyConfig>;
@@ -18,7 +19,7 @@ export class FileConfigSource implements ConfigSource {
 
   async load(): Promise<PolicyConfig> {
     const raw = readFileSync(this.path, "utf-8");
-    const parsed = this.parseYaml(raw) as PolicyConfig;
+    const parsed = validatePolicyConfig(this.parseYaml(raw));
     const canonical = JSON.stringify(parsed);
     this.loadedHash = sha256(canonical);
     return parsed;
@@ -173,6 +174,8 @@ export class FileConfigSource implements ConfigSource {
   }
 
   private parseScalar(value: string): unknown {
+    if (value === "{}") return {};
+    if (value === "[]") return [];
     if (value === "true") return true;
     if (value === "false") return false;
     if (value === "null" || value === "~") return null;

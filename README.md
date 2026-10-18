@@ -227,7 +227,7 @@ codex plugin add warden-codex@stalewell
 ```toml
 [mcp_servers.warden]
 command = "npx"
-args = ["--yes", "@stlw/warden-cli@0.2.8", "proxy"]
+args = ["--yes", "@stlw/warden-cli@0.2.9", "proxy"]
 ```
 
 Before enabling it, create or review `warden.config.yml`, declare upstream MCP
@@ -627,7 +627,7 @@ Three ways to put Warden in the path of tool calls — choose based on your agen
 
 | | `warden start` (hook server) | `warden proxy` (MCP stdio) | `@stlw/warden-mcp-gateway` (library) |
 |---|---|---|---|
-| **What it is** | HTTP server on `localhost:7429` | CLI command — stdio MCP server process | TypeScript library, no transport |
+| **What it is** | HTTP server on `127.0.0.1:7429` by default | CLI command — stdio MCP server process | TypeScript library, no transport |
 | **Who uses it** | Custom clients implementing Warden's hook contract | Claude Code, Codex, Cursor, Windsurf, Continue.dev | Custom agent integrations |
 | **How it intercepts** | Client calls the HTTP server before/after each tool | Agent registers `warden` as its MCP server | Your code calls `wrapMCP().onToolCall()` |
 | **Protocol** | HTTP + JSON hook events | MCP stdio (JSON-RPC over stdin/stdout) | Direct function calls |
@@ -638,6 +638,10 @@ Three ways to put Warden in the path of tool calls — choose based on your agen
 **Rule of thumb:**
 - Using Claude Code → route MCP tools through `warden proxy`; native tools are not intercepted
 - Using Cursor / Windsurf / any MCP-only agent → `warden proxy`
+
+Filesystem `allowedPaths` checks inspect nested structured path fields and
+resolve symlinks. They do not parse shell command strings, so they do not limit
+paths embedded inside commands.
 - Building a custom agent in TypeScript → `@stlw/warden-mcp-gateway`
 
 ---

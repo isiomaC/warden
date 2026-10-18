@@ -32,6 +32,8 @@ describe("initCommand", () => {
 
       expect(existsSync(join(dir, "warden.config.yml"))).toBe(true);
       expect(existsSync(join(dir, ".warden"))).toBe(true);
+      const env = readFileSync(join(dir, ".env"), "utf-8");
+      expect(env).toMatch(/^WARDEN_AUTH_TOKEN=[a-f0-9]{64}$/m);
     });
   });
 

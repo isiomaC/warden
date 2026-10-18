@@ -107,6 +107,40 @@ describe("policy engine", () => {
       expect(result.action).toBe("DENY");
     });
 
+    it("does not let serverNotInAllowlist bypass other match conditions", () => {
+      const config: PolicyConfig = {
+        version: "2",
+        meta: { environment: "development", sessionApprovalRequired: false },
+        policies: [{
+          id: "deny-unlisted-filesystem",
+          description: "Only deny unlisted read tools",
+          match: { serverNotInAllowlist: true, tools: ["read_file"] },
+          action: "DENY",
+        }],
+      };
+      const result = evaluate(config, {
+        toolName: "write_file", toolInput: {}, environment: "development",
+        trustSources: [], serverInAllowlist: true,
+      });
+      expect(result.action).toBe("DENY");
+      expect(result.reason).toContain("No matching policy rule");
+    });
+
+    it("matches an explicit serverNotInAllowlist false condition", () => {
+      const config: PolicyConfig = {
+        version: "2",
+        meta: { environment: "development", sessionApprovalRequired: false },
+        policies: [{
+          id: "confirm-listed", description: "Confirm listed tools",
+          match: { serverNotInAllowlist: false }, action: "CONFIRM",
+        }],
+      };
+      expect(evaluate(config, {
+        toolName: "read_file", toolInput: {}, environment: "development",
+        trustSources: [], serverInAllowlist: true,
+      }).action).toBe("CONFIRM");
+    });
+
     it("should DENY write_file in production even if also matches ALLOW", () => {
       const result = evaluate(testConfig, {
         toolName: "write_file",

@@ -161,6 +161,7 @@ jobs:
 
           docker run -d \
             --name warden-test \
+            -e WARDEN_AUTH_TOKEN=ci-smoke-token \
             -v /tmp/warden-ci-config.yml:/app/warden.config.yml:ro \
             -v /tmp/warden-persist:/app/.warden \
             -p 7429:7429 \

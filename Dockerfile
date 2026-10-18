@@ -52,4 +52,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 CMD ["npx", "tsx", "packages/cli/src/bin.ts", "start", \
      "--config", "warden.config.yml", \
      "--db", ".warden/ledger.db", \
-     "--port", "7429"]
+     "--port", "7429", \
+     "--host", "0.0.0.0"]

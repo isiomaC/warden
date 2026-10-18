@@ -114,8 +114,16 @@ export class WardenGateway {
         const serverEntry = self.registry.getAllowed(serverName);
 
         // Path allowlist enforcement — reject if tool input references a path outside allowedPaths
-        if (serverEntry?.allowedPaths && serverEntry.allowedPaths.length > 0) {
-          const paths = extractPaths(toolInput);
+        if (serverEntry?.allowedPaths !== undefined) {
+          let paths: string[];
+          try {
+            paths = extractPaths(toolInput);
+          } catch (error) {
+            return {
+              action: "DENY" as const,
+              reason: error instanceof Error ? error.message : "Unparseable path input.",
+            };
+          }
           const denied = paths.filter((p) => !isPathAllowed(p, serverEntry.allowedPaths!));
           if (denied.length > 0) {
             return {

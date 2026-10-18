@@ -819,6 +819,30 @@ describe("Hook Server — Mock LLM Integration", () => {
       const data = await res.json() as Record<string, unknown>;
       expect(getDecision(data)).toBe("allow");
     });
+
+    it("should DENY nested paths outside the session allowlist", async () => {
+      const srv = createTestServer();
+      const startRes = await srv.fetch(new Request("http://localhost:7429/hooks/session-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer init-token" },
+        body: JSON.stringify({
+          session_id: "nested-path-scope",
+          allowedTools: ["read_file"],
+          allowedPaths: ["/tmp/warden-scope"],
+          environment: "development",
+        }),
+      }));
+      const startData = await startRes.json() as Record<string, unknown>;
+      const token = (startData.hookSpecificOutput as Record<string, string>).sessionToken;
+      const res = await authRequest(srv, token, "/hooks/pre-tool-use", {
+        tool_name: "read_file",
+        tool_input: { options: { path: "/etc/passwd" } },
+        session_id: "nested-path-scope",
+      });
+      const data = await res.json() as Record<string, unknown>;
+      expect(getDecision(data)).toBe("deny");
+      expect((data.hookSpecificOutput as Record<string, string>).permissionDecisionReason).toContain("/etc/passwd");
+    });
   });
 
   describe("Session TTL enforcement", () => {
@@ -1118,6 +1142,32 @@ describe("Hook Server — session-start input validation", () => {
     const data = await res.json() as Record<string, unknown>;
     const output = data.hookSpecificOutput as Record<string, string>;
     expect(output.permissionDecision).toBe("deny");
+  });
+
+  it("should DENY when allowedTools is omitted instead of minting a wildcard token", async () => {
+    const srv = freshServer();
+    const res = await srv.fetch(new Request("http://localhost:7429/hooks/session-start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: "missing-scope", environment: "development" }),
+    }));
+    const data = await res.json() as Record<string, unknown>;
+    const output = data.hookSpecificOutput as Record<string, string>;
+    expect(output.permissionDecision).toBe("deny");
+    expect(output.permissionDecisionReason).toContain("allowedTools must be a non-empty array");
+  });
+
+  it("should DENY when path allowlist contains non-string entries", async () => {
+    const srv = freshServer();
+    const res = await srv.fetch(new Request("http://localhost:7429/hooks/session-start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: "bad-paths", allowedTools: ["read_file"], allowedPaths: [42] }),
+    }));
+    const data = await res.json() as Record<string, unknown>;
+    const output = data.hookSpecificOutput as Record<string, string>;
+    expect(output.permissionDecision).toBe("deny");
+    expect(output.permissionDecisionReason).toContain("allowedPaths");
   });
 
   it("should ALLOW for staging and production, the other two recognized environments", async () => {

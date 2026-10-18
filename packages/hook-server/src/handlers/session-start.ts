@@ -61,32 +61,54 @@ export function handleSessionStart(
   approvalChannel?: ApprovalChannel,
 ) {
   return async (c: Context) => {
-    const body = await c.req.json().catch(() => ({}));
-    const sessionId: string = body.session_id ?? "default";
-    const allowedTools: string[] = body.allowedTools ?? ["*"];
-    const allowedPaths: string[] | undefined = Array.isArray(body.allowedPaths)
-      ? (body.allowedPaths as string[])
-      : undefined;
-    const environment: string = body.environment ?? "development";
+    const body = await c.req.json().catch(() => undefined);
+    const deny = (reason: string, status: 200 | 400 = 200) => c.json({
+      hookSpecificOutput: {
+        hookEventName: "SessionStart",
+        permissionDecision: "deny",
+        permissionDecisionReason: reason,
+      },
+    }, status);
 
-    if (!Array.isArray(allowedTools) || allowedTools.length === 0) {
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return deny("Warden: Session start requires a valid JSON object.", 400);
+    }
+
+    const input = body as Record<string, unknown>;
+    const sessionId = input.session_id;
+    const allowedToolsInput = input.allowedTools;
+    const allowedPathsInput = input.allowedPaths;
+    const environment = input.environment ?? "development";
+
+    if (typeof sessionId !== "string" || sessionId.trim() === "") {
+      return deny("Warden: session_id must be a non-empty string.", 400);
+    }
+
+    if (!Array.isArray(allowedToolsInput) || allowedToolsInput.length === 0 ||
+        !allowedToolsInput.every((tool) => typeof tool === "string" && tool.trim() !== "")) {
       return c.json({
         hookSpecificOutput: {
           hookEventName: "SessionStart",
           permissionDecision: "deny",
           permissionDecisionReason: "Warden: allowedTools must be a non-empty array.",
         },
-      });
+      }, 400);
+    }
+
+    if (allowedPathsInput !== undefined &&
+        (!Array.isArray(allowedPathsInput) || !allowedPathsInput.every((path) => typeof path === "string" && path.trim() !== ""))) {
+      return deny("Warden: allowedPaths must be an array of non-empty strings.", 400);
+    }
+
+    const allowedTools = allowedToolsInput as string[];
+    const allowedPaths = allowedPathsInput as string[] | undefined;
+
+    if (typeof environment !== "string") {
+      return deny("Warden: environment must be a string.", 400);
     }
 
     if (!VALID_ENVIRONMENTS.includes(environment)) {
-      return c.json({
-        hookSpecificOutput: {
-          hookEventName: "SessionStart",
-          permissionDecision: "deny",
-          permissionDecisionReason: `Warden: invalid environment "${environment}". Must be one of: ${VALID_ENVIRONMENTS.join(", ")}.`,
-        },
-      });
+      return deny(`Warden: invalid environment "${environment}". Must be one of: ${VALID_ENVIRONMENTS.join(", ")}.`, 400);
     }
 
     // Supply-chain check — only if pins are configured

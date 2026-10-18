@@ -298,7 +298,7 @@ describe("E2E — Full session lifecycle", () => {
     expect(getDecision(data)).toBe("deny");
   });
 
-  it("should handle malformed body on session-start gracefully (catch clause)", async () => {
+  it("should deny a malformed session-start body", async () => {
     const server = createHookServer({ config: e2eConfig });
 
     const res = await server.fetch(
@@ -309,11 +309,11 @@ describe("E2E — Full session lifecycle", () => {
       }),
     );
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const data = await res.json() as Record<string, unknown>;
     const output = data.hookSpecificOutput as Record<string, string>;
-    expect(output.permissionDecision).toBe("allow");
-    expect(output.sessionToken).toBeTruthy();
+    expect(output.permissionDecision).toBe("deny");
+    expect(output.permissionDecisionReason).toContain("valid JSON object");
   });
 
   it("should handle concurrent tool calls without corruption", async () => {
@@ -912,7 +912,7 @@ describe("CLI Commands", () => {
         const body = await health.json() as Record<string, unknown>;
         expect(body.status).toBe("ok");
         expect(body.chainValid).toBe(true);
-        expect(stdout).toContain(`http://localhost:${port}`);
+        expect(stdout).toContain(`http://127.0.0.1:${port}`);
       } finally {
         if (typeof child.pid === "number") {
           try {

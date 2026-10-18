@@ -49,7 +49,7 @@ const decision = await filesystem.onToolCall(
 if (decision.action !== "ALLOW") throw new Error(decision.reason);
 ```
 
-`config` is the `PolicyConfig` loaded from your Warden configuration. Keep the registry restrictive: an unlisted server or tool is denied before policy evaluation. Use `allowedPaths` for filesystem boundaries and `authRequired: true` for servers that need OAuth credentials.
+`config` is the `PolicyConfig` loaded from your Warden configuration. Keep the registry restrictive: an unlisted server or tool is denied before policy evaluation. Use `allowedPaths` for filesystem boundaries and `authRequired: true` for servers that need OAuth credentials. Path checks inspect nested structured path fields and resolve symlinks. They do not parse shell command strings, so path scoping does not constrain paths embedded in commands.
 
 ## Discovery and approvals
 

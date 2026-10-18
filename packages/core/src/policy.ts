@@ -56,7 +56,7 @@ function matchRule(rule: PolicyRule, input: EvaluateInput): boolean {
   const m = rule.match;
 
   if (m.serverNotInAllowlist !== undefined) {
-    if (m.serverNotInAllowlist && !input.serverInAllowlist) return true;
+    if (m.serverNotInAllowlist !== !input.serverInAllowlist) return false;
   }
 
   if (m.tools && m.tools.length > 0) {
