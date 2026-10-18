@@ -81,4 +81,30 @@ describe("redact", () => {
       expect(hasSecrets("hello world")).toBe(false);
     });
   });
+
+  describe("broader secret shapes", () => {
+    const stripeKey = ["sk", "live", "abcdefghijklmnopqrstuvwxyz1234"].join("_");
+    it("redacts underscore-style provider keys", () => {
+      expect(redactSecrets(`key ${stripeKey}`)).toBe("key [REDACTED]");
+    });
+    it("redacts a bare JWT", () => {
+      expect(redactSecrets(`t=${jwtTok}`)).not.toContain(jwtTok);
+    });
+    it("redacts key=value credentials but keeps the key name", () => {
+      expect(redactSecrets("password=hunter2 next")).toBe("password=[REDACTED] next");
+    });
+    it("redacts credentials in connection strings", () => {
+      expect(redactSecrets("postgres://user:pw@db:5432/x")).not.toContain("pw");
+    });
+    it("redacts private key blocks", () => {
+      const pem = "-----BEGIN RSA PRIVATE KEY-----\nabc\n-----END RSA PRIVATE KEY-----";
+      expect(redactSecrets(`k ${pem} z`)).toBe("k [REDACTED] z");
+    });
+    it("redacts values under secret-looking object keys", () => {
+      expect(redactSecrets({ password: "x", nested: { apiKey: "y", ok: "z" } })).toEqual({
+        password: "[REDACTED]",
+        nested: { apiKey: "[REDACTED]", ok: "z" },
+      });
+    });
+  });
 });
