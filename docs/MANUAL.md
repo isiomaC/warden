@@ -133,8 +133,10 @@ approvalChannels:
 ```
 
 Use one interactive channel per local hook-server process. Telegram callbacks
-must originate from the configured chat; `approverUserIds` is strongly
-recommended to restrict which Telegram users can approve.
+must originate from the configured chat, and `approverUserIds` is required:
+only those Telegram users can approve. With no approval channel configured,
+confirmations are denied; `--auto-approve` is refused when
+`meta.environment` is `production`.
 
 For a custom approval system, configure a signed webhook instead:
 

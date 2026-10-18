@@ -172,8 +172,8 @@ export function handlePreToolUse(
         return c.json({
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
-            permissionDecision: "allow",
-            permissionDecisionReason: `${decision.reason} (stdout — no approval channel configured)`,
+            permissionDecision: "deny",
+            permissionDecisionReason: `${decision.reason} (denied: no approval channel configured)`,
           },
         });
       }
