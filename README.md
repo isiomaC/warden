@@ -227,7 +227,7 @@ codex plugin add warden-codex@stalewell
 ```toml
 [mcp_servers.warden]
 command = "npx"
-args = ["--yes", "@stlw/warden-cli@0.2.8", "proxy"]
+args = ["--yes", "@stlw/warden-cli@0.2.9", "proxy"]
 ```
 
 Before enabling it, create or review `warden.config.yml`, declare upstream MCP
