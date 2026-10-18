@@ -11,6 +11,9 @@ export class TelegramApprovalChannel implements ApprovalChannel {
   constructor(botToken: string, chatId: string, approverUserIds: readonly number[] = []) {
     this.botToken = botToken;
     this.chatId = chatId;
+    if (approverUserIds.length === 0) {
+      throw new Error("Telegram approval requires approverUserIds; without it any chat member could approve.");
+    }
     this.approverUserIds = new Set(approverUserIds);
   }
 
@@ -71,7 +74,7 @@ export class TelegramApprovalChannel implements ApprovalChannel {
           cb.message !== undefined &&
           cb.message.message_id === messageId &&
           String(cb.message.chat.id) === this.chatId &&
-          (this.approverUserIds.size === 0 || this.approverUserIds.has(cb.from.id))
+          this.approverUserIds.has(cb.from.id)
         ) {
           await bot.api.answerCallbackQuery(cb.id);
           await bot.api

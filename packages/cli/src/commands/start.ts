@@ -143,6 +143,9 @@ export const startCommand = defineCommand({
       }
     }
 
+    if (args["auto-approve"] && config.meta.environment === "production") {
+      throw new Error("--auto-approve is not allowed when meta.environment is \"production\".");
+    }
     if (args["auto-approve"]) {
       process.stderr.write("⚠️  --auto-approve enabled: all confirmations will be automatically approved.\n");
     }
@@ -166,20 +169,35 @@ export const startCommand = defineCommand({
       process.stdout.write(`Warden hook server running on http://${host}:${server.port}\n`);
     } else {
       const { createServer } = await import("node:http");
+      const MAX_BODY = 1_048_576;
       createServer(async (req, res) => {
-        const url = `http://localhost${req.url}`;
-        const body = req.method !== "GET" && req.method !== "HEAD"
-          ? await new Promise<string>((ok) => {
-              let d = ""; req.on("data", (c) => d += c); req.on("end", () => ok(d));
-            })
-          : undefined;
-        const response = await fetch(new Request(url, {
-          method: req.method ?? "GET",
-          headers: req.headers as Record<string, string>,
-          body: body || null,
-        }));
-        res.writeHead(response.status, Object.fromEntries(response.headers));
-        res.end(await response.text());
+        try {
+          const url = `http://localhost${req.url}`;
+          const chunks: Buffer[] = [];
+          let size = 0;
+          if (req.method !== "GET" && req.method !== "HEAD") {
+            for await (const c of req) {
+              size += (c as Buffer).length;
+              if (size > MAX_BODY) {
+                res.writeHead(413).end("Payload too large");
+                req.destroy();
+                return;
+              }
+              chunks.push(c as Buffer);
+            }
+          }
+          const body = Buffer.concat(chunks).toString();
+          const response = await fetch(new Request(url, {
+            method: req.method ?? "GET",
+            headers: req.headers as Record<string, string>,
+            body: body || null,
+          }));
+          res.writeHead(response.status, Object.fromEntries(response.headers));
+          res.end(await response.text());
+        } catch {
+          if (!res.headersSent) res.writeHead(400);
+          res.end();
+        }
       }).listen(port, host, () => {
         process.stdout.write(`Warden hook server running on http://${host}:${port} (Node.js)\n`);
       });

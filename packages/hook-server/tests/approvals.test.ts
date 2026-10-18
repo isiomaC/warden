@@ -178,13 +178,14 @@ describe("TelegramApprovalChannel", () => {
           callback_query: {
             id: "cb_1",
             data: "warden_approve",
+            from: { id: 42 },
             message: { message_id: 42, chat: { id: "chat-123" } },
           },
         },
       ])
       .mockResolvedValue([]);
 
-    const channel = new TelegramApprovalChannel("token", "chat-123");
+    const channel = new TelegramApprovalChannel("token", "chat-123", [42]);
     const result = await channel.request(makeReq());
 
     expect(result).toBe(true);
@@ -207,13 +208,14 @@ describe("TelegramApprovalChannel", () => {
           callback_query: {
             id: "cb_2",
             data: "warden_deny",
+            from: { id: 42 },
             message: { message_id: 42, chat: { id: "chat-456" } },
           },
         },
       ])
       .mockResolvedValue([]);
 
-    const channel = new TelegramApprovalChannel("token", "chat-456");
+    const channel = new TelegramApprovalChannel("token", "chat-456", [42]);
     const result = await channel.request(makeReq());
 
     expect(result).toBe(false);
@@ -228,12 +230,13 @@ describe("TelegramApprovalChannel", () => {
         callback_query: {
           id: "cb_cleanup_failure",
           data: "warden_approve",
+          from: { id: 42 },
           message: { message_id: 42, chat: { id: "chat-456" } },
         },
       },
     ]);
 
-    const channel = new TelegramApprovalChannel("token", "chat-456");
+    const channel = new TelegramApprovalChannel("token", "chat-456", [42]);
 
     await expect(channel.request(makeReq())).resolves.toBe(true);
     expect(mocks.telegramAnswerCallbackQuery).toHaveBeenCalledWith("cb_cleanup_failure");
@@ -243,7 +246,7 @@ describe("TelegramApprovalChannel", () => {
     mocks.telegramSendMessage.mockResolvedValue({ message_id: 42 });
     mocks.telegramGetUpdates.mockResolvedValue([]);
 
-    const channel = new TelegramApprovalChannel("token", "chat-789");
+    const channel = new TelegramApprovalChannel("token", "chat-789", [42]);
     const result = await channel.request(makeReq({ timeoutMs: 100 }));
 
     expect(result).toBe(false);
@@ -265,7 +268,7 @@ describe("TelegramApprovalChannel", () => {
       ])
       .mockResolvedValue([]);
 
-    const channel = new TelegramApprovalChannel("token", "chat-0");
+    const channel = new TelegramApprovalChannel("token", "chat-0", [42]);
     const result = await channel.request(makeReq({ timeoutMs: 100 }));
 
     expect(result).toBe(false);
@@ -285,7 +288,7 @@ describe("TelegramApprovalChannel", () => {
       },
     ]).mockResolvedValue([]);
 
-    const channel = new TelegramApprovalChannel("token", "chat-expected");
+    const channel = new TelegramApprovalChannel("token", "chat-expected", [42]);
     await expect(channel.request(makeReq({ timeoutMs: 100 }))).resolves.toBe(false);
   });
 
@@ -307,11 +310,15 @@ describe("TelegramApprovalChannel", () => {
     await expect(channel.request(makeReq({ timeoutMs: 100 }))).resolves.toBe(false);
   });
 
+  it("should refuse to be constructed without approver ids", () => {
+    expect(() => new TelegramApprovalChannel("token", "chat-1")).toThrow(/approverUserIds/);
+  });
+
   it("should lazily create the Bot instance", async () => {
     mocks.telegramSendMessage.mockResolvedValue({ message_id: 1 });
     mocks.telegramGetUpdates.mockResolvedValue([]);
 
-    const channel = new TelegramApprovalChannel("lazy-token", "lazy-chat");
+    const channel = new TelegramApprovalChannel("lazy-token", "lazy-chat", [42]);
     await channel.request(makeReq({ timeoutMs: 50 }));
 
     const { Bot: MockBot } = await import("grammy");
